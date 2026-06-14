@@ -17,8 +17,10 @@ import httpx
 from fastapi import BackgroundTasks, FastAPI, Header, HTTPException, Request
 from pydantic import BaseModel, Field
 
+from app.queue_store import QueueStore
+
 APP_NAME = "Hermes OpenClaw Adapter"
-APP_VERSION = "0.4.0"
+APP_VERSION = "0.5.0"
 
 # --- Paths -------------------------------------------------------------------
 DATA_DIR = Path(os.getenv("DATA_DIR", "data"))
@@ -60,6 +62,25 @@ CALLBACK_TIMEOUT_SECONDS = float(os.getenv("CALLBACK_TIMEOUT_SECONDS", "20"))
 
 # v0.4 第一版只允許 Level 0 / 1 自動執行。
 MAX_AUTO_SAFETY_LEVEL = 1
+
+# --- v0.5 Queue Worker config ------------------------------------------------
+# EXECUTION_MODE:
+#   queue      = 寫入本地 SQLite queue，由 `python -m app.worker` 執行（v0.5 預設）
+#   background = v0.4 舊行為，直接用 FastAPI BackgroundTasks 執行（不需 worker）
+EXECUTION_MODE = os.getenv("EXECUTION_MODE", "queue").strip().lower()
+QUEUE_DB_PATH = os.getenv("QUEUE_DB_PATH", str(DATA_DIR / "queue.db"))
+QUEUE_MAX_ATTEMPTS = int(os.getenv("QUEUE_MAX_ATTEMPTS", "3"))
+
+# 懶初始化 queue store（background 模式完全用不到，不會建立 db）。
+_queue_store: QueueStore | None = None
+
+
+def get_queue() -> QueueStore:
+    global _queue_store
+    if _queue_store is None:
+        ensure_data_dir()
+        _queue_store = QueueStore(QUEUE_DB_PATH)
+    return _queue_store
 
 app = FastAPI(
     title=APP_NAME,
@@ -417,7 +438,9 @@ def health() -> dict[str, Any]:
         "ok": True,
         "app": APP_NAME,
         "version": APP_VERSION,
-        "mode": "async-background+callback",
+        "mode": "queue-worker" if EXECUTION_MODE != "background" else "async-background+callback",
+        "execution_mode": EXECUTION_MODE,
+        "queue_db_path": QUEUE_DB_PATH if EXECUTION_MODE != "background" else None,
         "openclaw_cli_bin": OPENCLAW_CLI_BIN,
         "openclaw_timeout_seconds": OPENCLAW_TIMEOUT_SECONDS,
         "callback_enabled": CALLBACK_ENABLED,
@@ -461,23 +484,51 @@ async def dispatch_task(
         append_task_status(task_id, "rejected", reason=reason, **common)
         return {"status": "rejected", "task_id": task_id, "reason": reason}
 
-    # --- Accept: queue + schedule background run ---
+    # --- Accept: 寫 ledger（tasks.jsonl）→ 排程執行 ---
     append_task_status(
         task_id,
         "queued",
         client_host=request.client.host if request.client else None,
         hermes_task=task.model_dump(),
+        execution_mode=EXECUTION_MODE,
         **common,
     )
-    background_tasks.add_task(run_openclaw_and_callback, task.model_dump(), task_id, correlation_id)
+
+    if EXECUTION_MODE == "background":
+        # v0.4 舊路徑：FastAPI BackgroundTasks 直接執行（不需要 worker）。
+        background_tasks.add_task(
+            run_openclaw_and_callback, task.model_dump(), task_id, correlation_id
+        )
+    else:
+        # v0.5 路徑：寫入持久化 queue，由 app.worker 取出執行。
+        get_queue().enqueue(
+            task_id=task_id,
+            title=task.title,
+            task_text=task.task_text,
+            safety_level=level,
+            payload=task.model_dump(),
+            correlation_id=correlation_id,
+            max_attempts=QUEUE_MAX_ATTEMPTS,
+        )
 
     return {
         "status": "accepted",
         "task_id": task_id,
         "correlation_id": correlation_id,
         "assumed_safety_level": assumed,
-        "message": "任務已送出，OpenClaw 會在背景執行，完成後 callback Hermes。",
+        "execution_mode": EXECUTION_MODE,
+        "message": "任務已送出，OpenClaw 會在背景執行，完成後寫入 results.jsonl。",
     }
+
+
+def _queue_state(task_id: str) -> dict[str, Any] | None:
+    """v0.5：附帶 queue 內部狀態（background 模式下為 None，向後相容）。"""
+    if EXECUTION_MODE == "background":
+        return None
+    try:
+        return get_queue().get(task_id)
+    except Exception:  # noqa: BLE001 - 查詢端點不該因 queue 故障而 500
+        return None
 
 
 @app.get("/tasks/{task_id}/result")
@@ -485,20 +536,56 @@ def get_task_result(task_id: str, x_adapter_token: str | None = Header(default=N
     require_token(x_adapter_token)
     task = latest_task(task_id)
     result = find_result(task_id)
-    if task is None and result is None:
+    queue_item = _queue_state(task_id)
+    if task is None and result is None and queue_item is None:
         raise HTTPException(status_code=404, detail="Task not found")
     if result is not None:
-        return {"task_id": task_id, "task": task, "result": result}
-    return {"task_id": task_id, "status": task.get("status") if task else "unknown", "result": None}
+        return {"task_id": task_id, "task": task, "result": result, "queue": queue_item}
+    status = (queue_item or {}).get("status") or (task.get("status") if task else "unknown")
+    return {"task_id": task_id, "status": status, "result": None, "queue": queue_item}
 
 
 @app.get("/tasks/{task_id}")
 def get_task(task_id: str, x_adapter_token: str | None = Header(default=None)) -> dict[str, Any]:
     require_token(x_adapter_token)
     task = latest_task(task_id)
-    if task is None:
+    queue_item = _queue_state(task_id)
+    if task is None and queue_item is None:
         raise HTTPException(status_code=404, detail="Task not found")
-    return {"task_id": task_id, "task": task, "result": find_result(task_id)}
+    return {
+        "task_id": task_id,
+        "task": task,
+        "result": find_result(task_id),
+        "queue": queue_item,
+    }
+
+
+@app.post("/tasks/{task_id}/cancel")
+def cancel_task(task_id: str, x_adapter_token: str | None = Header(default=None)) -> dict[str, Any]:
+    """只能取消仍在 queued 的任務（running/completed/failed 無法取消）。"""
+    require_token(x_adapter_token)
+    if EXECUTION_MODE == "background":
+        raise HTTPException(status_code=400, detail="Cancel only supported in queue execution mode.")
+    item = get_queue().get(task_id)
+    if item is None:
+        raise HTTPException(status_code=404, detail="Task not found in queue")
+    if get_queue().cancel_if_queued(task_id):
+        append_task_status(task_id, "cancelled")
+        return {"task_id": task_id, "status": "cancelled"}
+    return {
+        "task_id": task_id,
+        "status": item["status"],
+        "message": "Only queued tasks can be cancelled.",
+    }
+
+
+@app.get("/queue")
+def queue_overview(x_adapter_token: str | None = Header(default=None)) -> dict[str, Any]:
+    require_token(x_adapter_token)
+    if EXECUTION_MODE == "background":
+        return {"execution_mode": EXECUTION_MODE, "counts": {}, "items": []}
+    q = get_queue()
+    return {"execution_mode": EXECUTION_MODE, "counts": q.counts(), "items": q.list(limit=50)}
 
 
 @app.get("/tasks")
