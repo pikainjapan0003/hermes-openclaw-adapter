@@ -1,371 +1,163 @@
-# Hermes → Adapter → OpenClaw MVP 專案
+# Hermes → Adapter → OpenClaw
 
-這是一個給新手小白使用的最小可行版本專案。
-
-目標只有一個：
+把任務從 **Hermes 主腦**送到 **OpenClaw 執行端**的中間轉接層（Adapter）。
+Hermes 透過 MCP 工具呼叫 Adapter，Adapter 在背景用 **OpenClaw CLI** 執行，完成後把結果寫進 `results.jsonl`，Hermes 再查回結果。
 
 ```text
-Hermes 主腦
-↓
-Adapter 翻譯官
-↓
-OpenClaw 執行端
+Discord / Hermes 聊天
+        ↓
+Hermes 主腦  ──(MCP: dispatch_to_openclaw / get_openclaw_task_result)──┐
+        ↓                                                              │
+Adapter (FastAPI, :8000)  POST /tasks/dispatch → 背景執行             │
+        ↓                                                              │
+OpenClaw CLI (openclaw agent ...)                                     │
+        ↓                                                              │
+data/results.jsonl  ──(GET /tasks/{id}/result)───────────────────────┘
 ```
-
-這版先不做 Queue，也先不做 Callback。  
-先確認 Hermes 可以成功派任務給 OpenClaw。
 
 ---
 
-## 1. 這個專案在做什麼？
+## 目前版本
 
-這個 Adapter 是中間轉接層。
+**`v0.4.1-discord-e2e-verified`**（async background + callback，已完成 Discord 端到端驗證）
 
-Hermes 送來這種任務：
+> 完整驗收報告：[`docs/V0.4_DISCORD_E2E_VERIFICATION.md`](docs/V0.4_DISCORD_E2E_VERIFICATION.md)
+
+### 已完成
+
+- ✅ **Hermes MCP 串接** —— stdio MCP server（`mcp/openclaw_mcp.py`），暴露兩個工具
+- ✅ **Adapter v0.4 async background + callback** —— `POST /tasks/dispatch` 立刻回 `accepted` + `task_id`，任務在背景執行
+- ✅ **OpenClaw CLI 背景執行** —— `openclaw agent --message ... --json`（不經 shell）
+- ✅ **`results.jsonl`** —— 每筆任務結果寫入 `data/results.jsonl`（TaskResult schema v1：`completed` / `failed`）
+- ✅ **`get_openclaw_task_result`** —— 用 `task_id` 查 `completed` / `result_text`
+- ✅ **Discord E2E 驗證** —— Discord → Hermes → MCP → Adapter v0.4 → OpenClaw → `results.jsonl`，實測 `completed` / `PONG`（`task-b7c8c2dd81d9`）
+- ✅ **GitHub 備份** —— `master` 與全部 tags（`v0.1` ～ `v0.4.1`）已推上 GitHub private repo
+
+### 目前限制
+
+- ⛔ **還沒有 Queue**（目前用 FastAPI BackgroundTasks，單機背景執行）
+- ⛔ **還沒有 DLQ**（失敗任務沒有死信佇列 / 自動重試編排）
+- ⚠️ **Adapter / Hermes Gateway 目前不是開機自動啟動** —— WSL/機器重啟後要手動拉起
+- ⚠️ **新增 MCP tool 後需要重啟 Hermes Gateway** —— 長駐 Gateway 只在啟動時載入一次 MCP 工具清單；新註冊的工具要重啟才看得到（細節見驗收報告第 8、9 節）
+
+---
+
+## 新手小白操作
+
+> 前提：在 **WSL Ubuntu**、用跟 OpenClaw 同一個使用者執行（才讀得到 `~/.openclaw` 與 gateway token），且 `openclaw` 指令在 PATH 內。專案位置：`~/projects/hermes-openclaw-adapter`。
+
+### 1. 啟動 Adapter v0.4
+
+```bash
+cd ~/projects/hermes-openclaw-adapter
+source .venv/bin/activate
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --env-file .env
+```
+
+要常駐在背景（關掉終端機也不中斷）可以：
+
+```bash
+setsid nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 --env-file .env \
+  > /tmp/adapter_v04.log 2>&1 < /dev/null &
+```
+
+> 第一次安裝套件：`python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt`，
+> 並 `cp .env.example .env`（`.env` 不會進 git）。
+
+### 2. Health check（確認是 v0.4）
+
+```bash
+curl http://127.0.0.1:8000/health
+```
+
+應看到 `"version":"0.4.0"`：
 
 ```json
-{
-  "title": "整理商品資料",
-  "goal": "找出商品價格與來源",
-  "task_text": "請幫我整理指定商品的名稱、價格、來源與備註"
-}
+{"ok":true,"app":"Hermes OpenClaw Adapter","version":"0.4.0",
+ "mode":"async-background+callback","callback_enabled":true,
+ "callback_mode":"ledger_only","token_required":true}
 ```
 
-Adapter 會把它翻譯成一段清楚的任務文字，再透過 **OpenClaw CLI**（`openclaw agent --message "..." --json`）派給真實 OpenClaw。
+### 3. 跑一次 PONG 測試（最安全的連線驗證）
 
-> 為什麼是 CLI？因為真實 OpenClaw 沒有可直接 POST 的 REST/Webhook 任務 API，它是 WebSocket Gateway。
-> CLI 會自動處理 token 與連線握手，是新手最容易先跑通的真實入口。
-> （本機快速測試時，也可以維持舊的 Mock 模式，見下方。）
+```bash
+./scripts/test_callback_pong.sh
+```
+
+會立刻回 `accepted` 與一個 `task_id`：
+
+```json
+{"status":"accepted","task_id":"task-xxxxxxxxxxxx",
+ "message":"任務已送出，OpenClaw 會在背景執行，完成後 callback Hermes。"}
+```
+
+> 這個任務內容是「請只回覆 PONG，不要操作任何檔案、不要登入、不要下單、不要發訊息」（安全等級 Level 0），不會產生任何副作用。
+
+### 4. 查任務結果
+
+把上一步拿到的 `task_id` 帶進去：
+
+```bash
+./scripts/check_task_result.sh task-xxxxxxxxxxxx
+```
+
+成功時會看到 `completed` 與 `PONG`：
+
+```json
+{"task_id":"task-xxxxxxxxxxxx",
+ "task":{"status":"completed", ...},
+ "result":{"status":"completed","result_text":"PONG","error":null}}
+```
+
+> 背景任務需要幾十秒跑完；剛送出馬上查可能是 `running`，稍等再查即可。
+
+### 5. 看完整驗收報告
+
+```bash
+less docs/V0.4_DISCORD_E2E_VERIFICATION.md
+```
+
+裡面有這次正式切換 + Discord 端到端驗證的所有佐證（health、gateway 重啟、MCP 載入、task_id、`tasks.jsonl` / `results.jsonl` 紀錄、根因分析）。
 
 ---
 
-## 2. 專案結構
+## 專案結構（重點）
 
 ```text
 hermes-openclaw-adapter/
-├── app/
-│   └── main.py                  # Adapter 主程式
-├── mock_openclaw_server.py       # 假的 OpenClaw，方便本機測試
+├── app/main.py                       # Adapter 主程式（dispatch / result / 背景執行 / callback）
+├── mcp/openclaw_mcp.py               # Hermes 端 stdio MCP server（dispatch_to_openclaw / get_openclaw_task_result）
 ├── scripts/
-│   └── test_send_task.py         # 測試送任務腳本
+│   ├── test_callback_pong.sh         # 送一個 Level 0 PONG 任務
+│   └── check_task_result.sh          # 用 task_id 查結果
+├── data/                             # 執行期產生（tasks.jsonl / results.jsonl）— 不進 git
 ├── docs/
-│   ├── ARCHITECTURE.md           # 架構說明
-│   ├── HERMES_PROMPT_TEMPLATE.md # Hermes 端提示詞模板
-│   └── TASK_FORMAT.md            # 任務格式說明
-├── .env.example                  # 環境變數範本
-├── requirements.txt              # Python 套件
-├── Dockerfile
-├── docker-compose.yml
+│   ├── V0.4_DISCORD_E2E_VERIFICATION.md   # 本版驗收報告
+│   ├── V0.4_CALLBACK_MVP.md
+│   ├── HERMES_MCP_SETUP.md
+│   └── ...
+├── .env.example                      # 環境變數範本（.env 不進 git）
 └── README.md
 ```
 
 ---
 
-## 3. 本機啟動方式
+## API 速查
 
-### 第一步：安裝套件
+| 方法 | 路徑 | 說明 |
+|---|---|---|
+| GET | `/health` | 健康檢查（免 token） |
+| POST | `/tasks/dispatch` | 派任務，立刻回 `accepted` + `task_id`（需 `X-Adapter-Token`） |
+| GET | `/tasks/{task_id}` | 查任務狀態 |
+| GET | `/tasks/{task_id}/result` | 查任務結果（`completed` / `result_text`） |
 
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
-
-Windows PowerShell：
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-```
+> 認證用 header `X-Adapter-Token`（不是 `Authorization: Bearer`）。token 在 `.env` 的 `HERMES_ADAPTER_TOKEN`。
 
 ---
 
-### 第二步：建立 `.env`
+## 下一步建議
 
-```bash
-cp .env.example .env
-```
+1. **`v0.4.2-service-units`** —— 把 Adapter 與 Hermes Gateway 做成 systemd unit，開機自動啟動、崩潰自動重啟（解掉目前「要手動拉起」的限制）。
+2. **`v0.5-queue-worker`** —— 之後才導入 Queue / Worker（以及 DLQ、重試編排），提升吞吐與失敗韌性。
 
-Windows 可直接複製 `.env.example`，重新命名成 `.env`。
-
----
-
-### 第三步：先開假的 OpenClaw 測試服務
-
-開第一個終端機：
-
-```bash
-uvicorn mock_openclaw_server:app --reload --port 9000
-```
-
-這會啟動一個假的 OpenClaw：
-
-```text
-http://127.0.0.1:9000/openclaw/webhook
-```
-
----
-
-### 第四步：啟動 Adapter
-
-開第二個終端機：
-
-```bash
-uvicorn app.main:app --reload --port 8000
-```
-
-Adapter 會在：
-
-```text
-http://127.0.0.1:8000
-```
-
----
-
-### 第五步：測試送任務
-
-開第三個終端機：
-
-```bash
-python scripts/test_send_task.py
-```
-
-成功時會看到：
-
-```json
-{
-  "ok": true,
-  "adapter_status": "sent",
-  "message": "任務已轉送給 OpenClaw。"
-}
-```
-
----
-
-## 4. 用 curl 測試
-
-```bash
-curl -X POST "http://127.0.0.1:8000/tasks/dispatch" \
-  -H "Content-Type: application/json" \
-  -H "X-Adapter-Token: change-me" \
-  -d '{
-    "title": "第一個測試任務",
-    "goal": "確認 Hermes 可以透過 Adapter 派任務給 OpenClaw",
-    "task_text": "請回覆：OpenClaw 已收到任務。",
-    "priority": "normal"
-  }'
-```
-
----
-
-## 5. Docker 啟動方式
-
-你也可以用 Docker 一次啟動 Adapter + 假 OpenClaw。
-
-```bash
-docker compose up --build
-```
-
-測試：
-
-```bash
-python scripts/test_send_task.py
-```
-
----
-
-## 5.5 真實 OpenClaw CLI 模式啟動方式（正式串接）
-
-這是把 Adapter 接到**真實 OpenClaw**的方式。Adapter 會用
-`asyncio.create_subprocess_exec` 呼叫 OpenClaw CLI（不經過 shell）：
-
-```bash
-openclaw agent --message "<Hermes 任務內容>" --json --timeout 600
-```
-
-### 前置條件
-
-- Adapter 必須跑在**能存取 `openclaw` 指令的環境**（例如 WSL Ubuntu，且 PATH 內有 `openclaw`）。
-- 用跟 OpenClaw 同一個使用者執行（才讀得到 `~/.openclaw/openclaw.json` 與 gateway token）。
-- 先手動確認 OpenClaw 正常：
-
-  ```bash
-  openclaw status
-  openclaw gateway call health --json
-  ```
-
-### 第一步：設定 `.env`
-
-```env
-HERMES_ADAPTER_TOKEN=change-me
-OPENCLAW_TRANSPORT=cli
-OPENCLAW_CLI_BIN=openclaw
-OPENCLAW_CLI_TIMEOUT_SECONDS=600
-# 可選：OPENCLAW_AGENT_ID=main
-DATA_DIR=data
-```
-
-> 若暫時沒有 OpenClaw，可把 `OPENCLAW_TRANSPORT=dry_run`，Adapter 只會組任務文字、不真的呼叫 CLI。
-
-### 第二步：啟動 Adapter
-
-```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --env-file .env
-```
-
-### 第三步：送一個安全測試任務
-
-```bash
-python scripts/test_send_task.py
-```
-
-這個測試任務的內容是「**請只回覆 PONG，不要操作任何檔案、不要執行外部動作**」，
-所以不會讓 OpenClaw 產生任何副作用，適合第一次驗證連線。
-
-成功時會看到類似：
-
-```json
-{
-  "ok": true,
-  "adapter_status": "sent",
-  "transport": "cli",
-  "task_id": "task-xxxxxxxx",
-  "openclaw_response": { "...": "OpenClaw agent 的 JSON 回覆" }
-}
-```
-
-失敗時會看到：
-
-```json
-{
-  "ok": false,
-  "adapter_status": "failed",
-  "transport": "cli",
-  "task_id": "task-xxxxxxxx",
-  "error": "OpenClaw CLI 以非零代碼結束 ...",
-  "stderr": "...",
-  "exit_code": 1
-}
-```
-
-> 注意：`openclaw agent` 真的會呼叫模型（會消耗額度），逾時也較長（預設 600 秒）。
-> 因此測試腳本的 HTTP 逾時會自動設得比 CLI 逾時更長。
-
----
-
-## 6. Replit 使用方式
-
-1. 建立新的 Replit Python 專案
-2. 把這個專案檔案上傳
-3. 在 Secrets 加入：
-
-```text
-HERMES_ADAPTER_TOKEN=change-me
-OPENCLAW_TRANSPORT=dry_run
-```
-
-> 注意：Replit 等遠端容器裡通常**沒有 `openclaw` 指令**，無法用 CLI 模式。
-> 在 Replit 建議先用 `OPENCLAW_TRANSPORT=dry_run` 測流程；要真的串 OpenClaw，
-> 請把 Adapter 跑在與 OpenClaw 同一台機器（WSL），或改用 WebSocket RPC 模式。
-
-4. Run 指令使用：
-
-```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8000
-```
-
----
-
-## 7. 正式接 OpenClaw 時要改哪裡？
-
-最重要的是 `.env`：
-
-```env
-OPENCLAW_TRANSPORT=cli
-OPENCLAW_CLI_BIN=openclaw
-OPENCLAW_CLI_TIMEOUT_SECONDS=600
-```
-
-如果要調整「組給 OpenClaw 的任務文字長相」，請改這個 function：
-
-```python
-build_openclaw_message()
-```
-
-如果要調整「實際呼叫 OpenClaw 的指令」（例如加參數、改成別的子指令），請改：
-
-```python
-build_openclaw_command()   # 組指令
-run_openclaw_cli()         # 用 asyncio.create_subprocess_exec 執行
-```
-
-位置都在：
-
-```text
-app/main.py
-```
-
-這就是 Adapter 的核心翻譯與執行區。
-
----
-
-## 8. Hermes 端要怎麼接？
-
-Hermes 只要能呼叫 HTTP API，就送 POST 到：
-
-```text
-POST /tasks/dispatch
-```
-
-Header：
-
-```text
-X-Adapter-Token: change-me
-```
-
-Body：
-
-```json
-{
-  "title": "任務標題",
-  "goal": "任務目標",
-  "task_text": "完整任務內容",
-  "priority": "normal",
-  "metadata": {}
-}
-```
-
----
-
-## 9. 第一版成功標準
-
-只要你做到下面這件事，就算第一版成功：
-
-```text
-Hermes 發任務
-↓
-Adapter 收到任務
-↓
-Adapter 轉成 OpenClaw 格式
-↓
-OpenClaw 收到任務
-```
-
-這就是 Hermes → Adapter → OpenClaw 的 MVP。
-
----
-
-## 10. 下一版才做什麼？
-
-第一版完成後，再做：
-
-```text
-OpenClaw → Callback → Hermes
-```
-
-再下一版才做：
-
-```text
-Hermes → Adapter → Queue → OpenClaw Worker
-```
+> 維持原則：先穩定運維（service units），再擴充架構（queue）。
