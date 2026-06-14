@@ -126,3 +126,55 @@ hermes -z '請呼叫 dispatch_to_openclaw 工具：title="PONG 安全測試"；g
 6. Hermes、Adapter log、tasks.jsonl 三處 `task_id` 一致。
 
 → **結論：整條鏈路已通。** 下一步可開始設計第一個安全的真實小任務（例如「三點摘要」），或視需要再做 Callback / Queue（目前不需要）。
+
+---
+
+## 第一個安全真實小任務測試
+
+> 測試日期：2026-06-14（PONG 之後的進階驗證）
+
+### 1. 測試目標
+
+確認 `Hermes → MCP → Adapter → OpenClaw` 不只會回 PONG，**也能完成一個安全的真實文字整理任務**。
+
+### 2. 任務內容
+
+- **title**：第一個安全真實小任務：三點摘要
+- **goal**：確認 Hermes 可以透過 MCP 把一個簡單文字整理任務交給 OpenClaw，並取得可讀結果。
+- **task_text**：
+  ```text
+  請閱讀以下需求，整理成三點摘要。不要操作任何檔案、不要執行外部命令、不要登入任何帳號、不要呼叫任何外部平台。
+
+  需求內容：
+  我正在建立一套 Hermes + OpenClaw 多 AI Agent 工作流系統。Hermes 負責主腦、規劃、記憶、任務拆解；OpenClaw 負責執行、自動化、任務落地。中間透過 MCP tool 與 Adapter 串接，Adapter 再呼叫真實 OpenClaw CLI。
+  ```
+- **priority**：low
+- **metadata**：`{"source":"hermes_mcp_real_task_test","workflow":"first_safe_real_task"}`
+
+### 3. 測試結果（第二次完整成功）
+
+- **task_id**：`task-2000b69a1a97`
+- **OpenClaw 回傳三點摘要**：
+  1. **角色分工**：Hermes 主腦，負責規劃、記憶、任務拆解；OpenClaw 執行端，負責自動化與任務落地。
+  2. **串接介面**：兩者透過 MCP tool + Adapter 中介層串接，而非直接呼叫。
+  3. **呼叫鏈**：Adapter 進一步呼叫真實 OpenClaw CLI 執行底層操作。
+
+### 4. 驗證證據
+
+- ✅ Hermes **自動呼叫** MCP tool `dispatch_to_openclaw`（Hermes 自述：「已透過 MCP stdio 呼叫 dispatch_to_openclaw，不是用 curl」）。
+- ✅ MCP server log（`~/.hermes/logs/mcp-stderr.log`）有 **`CallToolRequest`** → 緊接 `HTTP Request: POST http://127.0.0.1:8000/tasks/dispatch "HTTP/1.1 200 OK"`。
+- ✅ Adapter 收到 **`POST /tasks/dispatch` 並回 `200 OK`**。
+- ✅ `data/tasks.jsonl` 有同一個 **`task_id: task-2000b69a1a97`**（`adapter_status: sent`、title 一致），且行數 +1（剛好新增一筆）。
+- ✅ Hermes **看得到** OpenClaw 回傳的三點摘要，並完整回報給使用者（Hermes exit code 0）。
+- ✅ 整條鏈路**不是人工 curl**，也**不是直接呼叫 Adapter 或 OpenClaw CLI** —— 完全由 Hermes 經 MCP 工具觸發。
+
+### 5. 第一次 timeout 說明
+
+第一次測試把 narration 的 timeout 設為 **320 秒**；因為「三點摘要」比 PONG 重，Hermes 在**工具已完成**但要輸出最終回覆時被 timeout 截斷（鏈路本身仍成功，task 與摘要都有正常產生，task_id 為 `task-c70455d71eea`）。
+第二次把 timeout 調整為 **600 秒**後完整成功。
+→ 這是**測試腳本 timeout 設定問題，不是系統串接問題**。
+
+### 6. 結論
+
+`Hermes → MCP → Adapter → OpenClaw CLI → 真實 OpenClaw → 回傳 Hermes` 已完成**非 PONG 真實小任務**驗證。
+**可以確認第一個安全真實小任務跑通。**
