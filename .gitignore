@@ -15,5 +15,8 @@ data/
 # Log
 *.log
 
+# 本機診斷報告（含 token 片段與本機 token 存放位置，不公開）
+OPENCLAW_INTEGRATION_DIAGNOSIS.md
+
 # OS
 .DS_Store
