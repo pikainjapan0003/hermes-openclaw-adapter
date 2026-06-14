@@ -1,0 +1,19 @@
+# 環境變數與密鑰（絕不 commit）
+.env
+
+# Python 虛擬環境
+.venv/
+venv/
+
+# Python 快取
+__pycache__/
+*.pyc
+
+# 任務紀錄資料（執行期產生）
+data/
+
+# Log
+*.log
+
+# OS
+.DS_Store
