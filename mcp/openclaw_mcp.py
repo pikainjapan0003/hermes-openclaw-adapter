@@ -1,18 +1,16 @@
 #!/usr/bin/env python3
 """
-OpenClaw MCP bridge for Hermes.
+OpenClaw MCP bridge for Hermes (v0.4 — async dispatch + result polling).
 
-Exposes a single MCP tool, ``dispatch_to_openclaw``, that forwards a task to the
-local Adapter (``POST /tasks/dispatch``). The Adapter then runs the task through
-the real OpenClaw CLI.
+Two MCP tools:
+- ``dispatch_to_openclaw``   → POST /tasks/dispatch ; returns the Adapter's
+  *accepted* response immediately (the task runs in the Adapter's background).
+- ``get_openclaw_task_result`` → GET /tasks/{task_id}/result ; poll for the
+  completed/failed result later.
 
 Design rules (intentional):
-- This MCP server ONLY makes an HTTP POST to the Adapter.
-- It NEVER calls the ``openclaw`` CLI directly.
-- It NEVER uses a shell (no ``shell=True``).
-
-Runs as a stdio MCP server (the transport Hermes spawns via
-``hermes mcp add --command <python> --args <this file>``).
+- This MCP server ONLY makes HTTP calls to the Adapter.
+- It NEVER calls the ``openclaw`` CLI directly and NEVER uses a shell.
 """
 from __future__ import annotations
 
@@ -23,30 +21,28 @@ import httpx
 from mcp.server.fastmcp import FastMCP
 
 # --- Config from environment (with safe defaults) ----------------------------
-ADAPTER_URL = os.getenv(
-    "OPENCLAW_ADAPTER_URL", "http://127.0.0.1:8000/tasks/dispatch"
-)
+# Base for /tasks/dispatch; the result endpoint is derived from the same host.
+ADAPTER_URL = os.getenv("OPENCLAW_ADAPTER_URL", "http://127.0.0.1:8000/tasks/dispatch")
+ADAPTER_BASE = ADAPTER_URL.rsplit("/tasks/dispatch", 1)[0] or "http://127.0.0.1:8000"
 ADAPTER_TOKEN = os.getenv("OPENCLAW_ADAPTER_TOKEN", "change-me")
-ADAPTER_TIMEOUT_SECONDS = float(os.getenv("OPENCLAW_ADAPTER_TIMEOUT_SECONDS", "900"))
+# Dispatch now returns fast (accepted), so a short timeout is fine.
+DISPATCH_TIMEOUT_SECONDS = float(os.getenv("OPENCLAW_ADAPTER_TIMEOUT_SECONDS", "60"))
+RESULT_TIMEOUT_SECONDS = float(os.getenv("OPENCLAW_ADAPTER_RESULT_TIMEOUT_SECONDS", "30"))
 
 mcp = FastMCP("openclaw")
+
+_HEADERS = {"Content-Type": "application/json", "X-Adapter-Token": ADAPTER_TOKEN}
 
 
 def _safe_json(resp: httpx.Response) -> Any | None:
     try:
         return resp.json()
-    except Exception:  # noqa: BLE001 - non-JSON body
+    except Exception:  # noqa: BLE001
         return None
 
 
 def _error(message: str, **extra: Any) -> dict[str, Any]:
-    return {
-        "ok": False,
-        "adapter_status": "failed",
-        "transport": "mcp->adapter",
-        "error": message,
-        **extra,
-    }
+    return {"ok": False, "error": message, **extra}
 
 
 @mcp.tool()
@@ -57,24 +53,20 @@ def dispatch_to_openclaw(
     priority: str = "low",
     metadata: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """把任務送到 OpenClaw 執行端（透過本機 Adapter /tasks/dispatch）。
+    """把任務送到 OpenClaw 執行端（透過本機 Adapter /tasks/dispatch），**立刻**回傳。
 
-    只在需要實際「執行 / 操作 / 自動化 / CLI / 跨平台」任務時使用；
-    能直接回答的問題請不要用這個工具。
-    高風險動作（改檔 / 刪資料 / 登入 / 操作平台 / 對外發送）請先向使用者確認。
-    不要把密碼、API key、token 等敏感資訊放進 task_text 或 metadata。
+    v0.4 是非同步派工：這個工具不會等 OpenClaw 做完，而是馬上回傳
+    {"status":"accepted","task_id":...}。任務會在 Adapter 背景執行，
+    完成後寫入 results。要拿結果，之後用 get_openclaw_task_result(task_id) 查。
 
-    參數：
-        title:     任務標題（短）
-        goal:      這個任務想達成什麼
-        task_text: 完整、明確、可驗證的指令（必填）
-        priority:  low | normal | high（預設 low）
-        metadata:  附加資訊（選填，例如 {"source": "hermes"}）
+    只在需要實際「執行 / 操作 / 自動化 / CLI / 跨平台 / 固定格式整理」任務時使用。
+    高風險動作（改檔 / 刪資料 / 登入 / 下單 / 發送訊息）請先向使用者確認，
+    且只送 Level 0 / Level 1 任務（在 metadata.safety_level 標註）。
+    不要把密碼、API key、token 放進 task_text 或 metadata。
 
     回傳：
-        Adapter 的 JSON。成功時含 ok=true / adapter_status="sent" / transport /
-        task_id / openclaw_response（最終文字在 openclaw_response.payloads[0].text）。
-        失敗時含 ok=false / error，視情況另有 stderr / exit_code / status_code。
+        accepted → {"status":"accepted","task_id":...,"message":...}
+        rejected → {"status":"rejected","task_id":...,"reason":...}（高風險被擋）
     """
     payload = {
         "title": title,
@@ -83,47 +75,29 @@ def dispatch_to_openclaw(
         "priority": priority,
         "metadata": metadata if metadata is not None else {"source": "hermes"},
     }
-    headers = {
-        "Content-Type": "application/json",
-        "X-Adapter-Token": ADAPTER_TOKEN,
-    }
-
     try:
-        resp = httpx.post(
-            ADAPTER_URL, json=payload, headers=headers, timeout=ADAPTER_TIMEOUT_SECONDS
-        )
+        resp = httpx.post(ADAPTER_URL, json=payload, headers=_HEADERS, timeout=DISPATCH_TIMEOUT_SECONDS)
     except httpx.ConnectError:
         return _error(
             f"無法連線到 Adapter（{ADAPTER_URL}）。請先啟動 Adapter："
-            "cd ~/projects/hermes-openclaw-adapter && source .venv/bin/activate && "
             "uvicorn app.main:app --host 0.0.0.0 --port 8000 --env-file .env"
         )
     except httpx.TimeoutException:
-        return _error(
-            f"呼叫 Adapter 超過 {ADAPTER_TIMEOUT_SECONDS:.0f} 秒逾時。"
-            "任務可能太重，或 OpenClaw 端卡住。"
-        )
-    except Exception as exc:  # noqa: BLE001 - surface anything unexpected clearly
+        return _error(f"呼叫 Adapter 超過 {DISPATCH_TIMEOUT_SECONDS:.0f} 秒逾時。")
+    except Exception as exc:  # noqa: BLE001
         return _error(f"呼叫 Adapter 發生未預期錯誤：{type(exc).__name__}: {exc}")
 
-    # Map common HTTP error codes to clear messages.
     if resp.status_code in (401, 403):
         return _error(
-            f"Adapter 拒絕請求（HTTP {resp.status_code}）。X-Adapter-Token 可能不正確；"
-            "請確認此 MCP 的 OPENCLAW_ADAPTER_TOKEN 與 Adapter 的 HERMES_ADAPTER_TOKEN 一致。",
+            f"Adapter 拒絕請求（HTTP {resp.status_code}）。請確認 OPENCLAW_ADAPTER_TOKEN 與 "
+            "Adapter 的 HERMES_ADAPTER_TOKEN 一致。",
             status_code=resp.status_code,
         )
     if resp.status_code == 422:
         return _error(
-            "Adapter 回 422（欄位驗證失敗）。最常見原因是缺少必填欄位 task_text。",
+            "Adapter 回 422（欄位驗證失敗），最常見原因是缺少必填欄位 task_text。",
             status_code=422,
             detail=_safe_json(resp),
-        )
-    if resp.status_code >= 500:
-        return _error(
-            f"Adapter 內部錯誤（HTTP {resp.status_code}）。",
-            status_code=resp.status_code,
-            detail=resp.text[:2000],
         )
     if resp.status_code != 200:
         return _error(
@@ -132,7 +106,38 @@ def dispatch_to_openclaw(
             detail=resp.text[:2000],
         )
 
-    # HTTP 200: return the Adapter's JSON as-is (ok / adapter_status decide success).
+    parsed = _safe_json(resp)
+    if parsed is None:
+        return _error("Adapter 回傳非 JSON 內容。", status_code=200, raw=resp.text[:2000])
+    return parsed
+
+
+@mcp.tool()
+def get_openclaw_task_result(task_id: str) -> dict[str, Any]:
+    """查詢某個 OpenClaw 任務的結果（透過 Adapter GET /tasks/{task_id}/result）。
+
+    用在 dispatch_to_openclaw 之後。回傳：
+        - 還在執行：{"task_id":...,"status":"queued"/"running",...,"result":null}
+        - 已完成/失敗：{"task_id":...,"task":{...},"result":{...}}（result.status = completed/failed）
+        - 找不到：{"ok":false,"error":"...","status_code":404}
+    """
+    url = f"{ADAPTER_BASE}/tasks/{task_id}/result"
+    try:
+        resp = httpx.get(url, headers=_HEADERS, timeout=RESULT_TIMEOUT_SECONDS)
+    except httpx.ConnectError:
+        return _error(f"無法連線到 Adapter（{url}）。請確認 Adapter 已啟動。")
+    except httpx.TimeoutException:
+        return _error(f"查詢結果超過 {RESULT_TIMEOUT_SECONDS:.0f} 秒逾時。")
+    except Exception as exc:  # noqa: BLE001
+        return _error(f"查詢結果發生未預期錯誤：{type(exc).__name__}: {exc}")
+
+    if resp.status_code == 404:
+        return _error(f"找不到 task_id={task_id}。", status_code=404)
+    if resp.status_code in (401, 403):
+        return _error(f"Adapter 拒絕查詢（HTTP {resp.status_code}），token 可能不符。", status_code=resp.status_code)
+    if resp.status_code != 200:
+        return _error(f"Adapter 回傳非預期狀態碼（HTTP {resp.status_code}）。", status_code=resp.status_code, detail=resp.text[:2000])
+
     parsed = _safe_json(resp)
     if parsed is None:
         return _error("Adapter 回傳非 JSON 內容。", status_code=200, raw=resp.text[:2000])
@@ -140,5 +145,4 @@ def dispatch_to_openclaw(
 
 
 if __name__ == "__main__":
-    # stdio transport (default). Hermes connects to this over stdin/stdout.
-    mcp.run()
+    mcp.run()  # stdio transport

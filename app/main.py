@@ -1,106 +1,123 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import hmac
 import json
 import os
+import re
+import threading
+import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
 
-from fastapi import FastAPI, Header, HTTPException, Request
+import httpx
+from fastapi import BackgroundTasks, FastAPI, Header, HTTPException, Request
 from pydantic import BaseModel, Field
 
 APP_NAME = "Hermes OpenClaw Adapter"
-DATA_DIR = Path(os.getenv("DATA_DIR", "data"))
-TASK_LOG_PATH = DATA_DIR / "tasks.jsonl"
+APP_VERSION = "0.4.0"
 
-# --- OpenClaw CLI 模式設定 ----------------------------------------------------
+# --- Paths -------------------------------------------------------------------
+DATA_DIR = Path(os.getenv("DATA_DIR", "data"))
+TASKS_PATH = DATA_DIR / "tasks.jsonl"
+RESULTS_PATH = DATA_DIR / "results.jsonl"
+CALLBACKS_PATH = DATA_DIR / "callbacks.jsonl"
+CALLBACK_ERRORS_PATH = DATA_DIR / "callback_errors.jsonl"
+
+# --- OpenClaw CLI config -----------------------------------------------------
 # 真實 OpenClaw 沒有可直接 POST 的 REST/Webhook 任務 API，它是 WebSocket Gateway。
-# 最簡單的真實任務入口是 CLI：
-#     openclaw agent --message "<任務>" --json
-# 所以 Adapter 改成用 asyncio.create_subprocess_exec 呼叫 OpenClaw CLI（不用 shell=True）。
-OPENCLAW_TRANSPORT = os.getenv("OPENCLAW_TRANSPORT", "cli").strip().lower()
+# 最簡單的真實任務入口是 CLI：openclaw agent --message "<任務>" --json
 OPENCLAW_CLI_BIN = os.getenv("OPENCLAW_CLI_BIN", "openclaw").strip()
-OPENCLAW_CLI_TIMEOUT_SECONDS = float(os.getenv("OPENCLAW_CLI_TIMEOUT_SECONDS", "600"))
-# 要跑哪個 agent（對應 `openclaw status` 顯示的 default agent，通常是 main）。
-# openclaw agent 需要一個 target session，否則會回 "No target session selected"，
-# 所以這裡預設 main。設成空字串才會不傳 --agent。
 OPENCLAW_AGENT_ID = os.getenv("OPENCLAW_AGENT_ID", "main").strip()
-# 每個 Hermes 任務用獨立 session（避免不同任務互相污染上下文）。
-# 最終 session-key = agent:<agent_id>:<prefix>-<task_id>。
 OPENCLAW_SESSION_KEY_PREFIX = os.getenv("OPENCLAW_SESSION_KEY_PREFIX", "hermes").strip()
+# v0.4: default 180s (fallback to the older var name if present).
+OPENCLAW_TIMEOUT_SECONDS = float(
+    os.getenv("OPENCLAW_TIMEOUT_SECONDS", os.getenv("OPENCLAW_CLI_TIMEOUT_SECONDS", "180"))
+)
 
 HERMES_ADAPTER_TOKEN = os.getenv("HERMES_ADAPTER_TOKEN", "").strip()
 
+
+def _env_bool(name: str, default: bool) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in ("1", "true", "yes", "on")
+
+
+# --- Callback config ---------------------------------------------------------
+CALLBACK_ENABLED = _env_bool("CALLBACK_ENABLED", True)
+HERMES_CALLBACK_MODE = os.getenv("HERMES_CALLBACK_MODE", "ledger_only").strip().lower()
+HERMES_CALLBACK_URL = os.getenv(
+    "HERMES_CALLBACK_URL", "http://127.0.0.1:8644/webhooks/openclaw-result"
+).strip()
+HERMES_CALLBACK_SECRET = os.getenv("HERMES_CALLBACK_SECRET", "").strip()
+CALLBACK_MAX_RETRIES = int(os.getenv("CALLBACK_MAX_RETRIES", "3"))
+CALLBACK_TIMEOUT_SECONDS = float(os.getenv("CALLBACK_TIMEOUT_SECONDS", "20"))
+
+# v0.4 第一版只允許 Level 0 / 1 自動執行。
+MAX_AUTO_SAFETY_LEVEL = 1
+
 app = FastAPI(
     title=APP_NAME,
-    version="0.2.0",
-    description="讓 Hermes 把任務送到 Adapter，再透過 OpenClaw CLI 派給真實 OpenClaw。",
+    version=APP_VERSION,
+    description="Hermes → MCP → Adapter →（背景執行 OpenClaw CLI）→ callback Hermes。",
 )
 
 
+# =============================================================================
+# Models
+# =============================================================================
 class TaskEnvelope(BaseModel):
-    """Hermes 傳給 Adapter 的任務格式。"""
+    """Hermes 傳給 Adapter 的任務格式（與舊版相容）。"""
 
     task_id: str | None = Field(default=None, description="任務 ID；不填會自動產生")
-    title: str = Field(..., description="任務標題，例如：整理商品資料")
-    goal: str = Field(..., description="任務目標，例如：找出商品價格與來源")
-    task_text: str = Field(..., description="給 OpenClaw 的完整任務指令（instruction）")
+    title: str = Field(..., description="任務標題")
+    goal: str = Field(..., description="任務目標")
+    task_text: str = Field(..., description="給 OpenClaw 的完整任務指令（必填）")
     priority: Literal["low", "normal", "high"] = "normal"
     source: str = "hermes"
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
-class DispatchResponse(BaseModel):
-    """Adapter 回給 Hermes 的結果。
-
-    成功時帶 openclaw_response；失敗時帶 error / stderr / exit_code。
-    """
-
-    ok: bool
-    adapter_status: Literal["sent", "failed", "dry_run"]
-    transport: str
-    task_id: str
-    message: str | None = None
-    # 成功欄位
-    openclaw_response: Any | None = None
-    # 失敗欄位
-    error: str | None = None
-    stderr: str | None = None
-    exit_code: int | None = None
-    # 除錯用：實際組給 OpenClaw 的 message 與指令
-    openclaw_message: str | None = None
-    openclaw_command: list[str] | None = None
+class OpenClawCliError(Exception):
+    def __init__(self, code: str, message: str, retryable: bool) -> None:
+        super().__init__(message)
+        self.code = code
+        self.message = message
+        self.retryable = retryable
 
 
+# =============================================================================
+# Small helpers
+# =============================================================================
 def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def require_token(x_adapter_token: str | None) -> None:
-    """簡單保護 Adapter：有設定 HERMES_ADAPTER_TOKEN 時，請求必須帶 X-Adapter-Token。"""
-    if not HERMES_ADAPTER_TOKEN:
-        return
-    if x_adapter_token != HERMES_ADAPTER_TOKEN:
-        raise HTTPException(status_code=401, detail="Invalid or missing X-Adapter-Token")
+_write_lock = threading.Lock()
 
 
 def ensure_data_dir() -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def append_task_log(record: dict[str, Any]) -> None:
+def append_jsonl(path: Path, record: dict[str, Any]) -> None:
     ensure_data_dir()
-    with TASK_LOG_PATH.open("a", encoding="utf-8") as f:
-        f.write(json.dumps(record, ensure_ascii=False) + "\n")
+    line = json.dumps(record, ensure_ascii=False)
+    with _write_lock:
+        with path.open("a", encoding="utf-8") as f:
+            f.write(line + "\n")
 
 
-def read_task_logs() -> list[dict[str, Any]]:
-    if not TASK_LOG_PATH.exists():
+def read_jsonl(path: Path) -> list[dict[str, Any]]:
+    if not path.exists():
         return []
     rows: list[dict[str, Any]] = []
-    with TASK_LOG_PATH.open("r", encoding="utf-8") as f:
+    with path.open("r", encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             if not line:
@@ -112,15 +129,65 @@ def read_task_logs() -> list[dict[str, Any]]:
     return rows
 
 
-def build_openclaw_message(task: TaskEnvelope, task_id: str) -> str:
-    """
-    Adapter 的核心：把 Hermes 任務翻譯成一段清楚的文字，餵給 OpenClaw agent。
+def append_task_status(task_id: str, status: str, **extra: Any) -> None:
+    record = {"task_id": task_id, "status": status, "ts": utc_now_iso(), **extra}
+    append_jsonl(TASKS_PATH, record)
 
-    優先使用 Hermes 傳進來的：instruction(task_text)、goal、title、metadata。
-    之後若要接 WebSocket RPC 或其他模式，只要改這個 function 的輸出即可。
+
+def latest_task(task_id: str) -> dict[str, Any] | None:
+    match = [r for r in read_jsonl(TASKS_PATH) if r.get("task_id") == task_id]
+    return match[-1] if match else None
+
+
+def find_result(task_id: str) -> dict[str, Any] | None:
+    match = [r for r in read_jsonl(RESULTS_PATH) if r.get("task_id") == task_id]
+    return match[-1] if match else None
+
+
+def require_token(x_adapter_token: str | None) -> None:
+    if not HERMES_ADAPTER_TOKEN:
+        return
+    if x_adapter_token != HERMES_ADAPTER_TOKEN:
+        raise HTTPException(status_code=401, detail="Invalid or missing X-Adapter-Token")
+
+
+def parse_safety_level(metadata: dict[str, Any]) -> tuple[int, bool]:
+    """Return (level, assumed). assumed=True only when safety_level is absent.
+
+    Accepts "Level 0", "level_0", "0", 0, etc. If present but unparseable,
+    returns a high level (99) so it is treated as high-risk and refused.
     """
-    lines: list[str] = []
-    lines.append(f"# Hermes 任務 {task_id}")
+    raw = metadata.get("safety_level")
+    if raw is None or (isinstance(raw, str) and raw.strip() == ""):
+        return 0, True
+    m = re.search(r"(\d+)", str(raw))
+    if not m:
+        return 99, False
+    return int(m.group(1)), False
+
+
+def extract_result_text(stdout: str) -> str:
+    """Pull the final assistant text out of `openclaw agent --json` output."""
+    try:
+        data = json.loads(stdout)
+    except json.JSONDecodeError:
+        return stdout.strip()
+    if isinstance(data, dict):
+        payloads = data.get("payloads")
+        if isinstance(payloads, list) and payloads and isinstance(payloads[0], dict):
+            text = payloads[0].get("text")
+            if text:
+                return str(text)
+        meta = data.get("meta") if isinstance(data.get("meta"), dict) else {}
+        agent_meta = meta.get("agentMeta") if isinstance(meta.get("agentMeta"), dict) else {}
+        text = agent_meta.get("finalAssistantVisibleText")
+        if text:
+            return str(text)
+    return stdout.strip()
+
+
+def build_openclaw_message(task: TaskEnvelope, task_id: str) -> str:
+    lines: list[str] = [f"# Hermes 任務 {task_id}"]
     if task.title:
         lines.append(f"標題：{task.title}")
     if task.goal:
@@ -129,19 +196,14 @@ def build_openclaw_message(task: TaskEnvelope, task_id: str) -> str:
     lines.append("")
     lines.append("## 指令")
     lines.append(task.task_text.strip())
-
     if task.metadata:
         lines.append("")
         lines.append("## 附加資訊 (metadata)")
         lines.append(json.dumps(task.metadata, ensure_ascii=False, indent=2))
-
     return "\n".join(lines)
 
 
-def build_openclaw_command(
-    message: str, timeout_seconds: float, task_id: str
-) -> list[str]:
-    """組出要執行的 OpenClaw CLI 指令（list 形式，給 create_subprocess_exec 用，不經過 shell）。"""
+def build_openclaw_command(message: str, timeout_seconds: float, task_id: str) -> list[str]:
     cmd = [
         OPENCLAW_CLI_BIN,
         "agent",
@@ -151,7 +213,6 @@ def build_openclaw_command(
         "--timeout",
         str(int(timeout_seconds)),
     ]
-    # openclaw agent 需要一個 target session。優先用 --agent + 每任務獨立的 --session-key。
     if OPENCLAW_AGENT_ID:
         cmd.extend(["--agent", OPENCLAW_AGENT_ID])
         if OPENCLAW_SESSION_KEY_PREFIX:
@@ -159,18 +220,12 @@ def build_openclaw_command(
     return cmd
 
 
-async def run_openclaw_cli(
-    message: str, timeout_seconds: float, task_id: str
-) -> dict[str, Any]:
-    """
-    用 asyncio.create_subprocess_exec 呼叫 OpenClaw CLI（不用 shell=True）。
-
-    回傳 dict：
-      成功 -> {"ok": True, "openclaw_response": <parsed/raw>, "command": [...], "stderr": "..."}
-      失敗 -> {"ok": False, "error": "...", "stderr": "...", "exit_code": <int|None>, "command": [...]}
-    """
+# =============================================================================
+# OpenClaw CLI execution (no shell=True, never crashes the Adapter)
+# =============================================================================
+async def run_openclaw_cli(message: str, timeout_seconds: float, task_id: str) -> str:
+    """Run `openclaw agent ... --json` and return stdout. Raise OpenClawCliError on failure."""
     cmd = build_openclaw_command(message, timeout_seconds, task_id)
-
     try:
         proc = await asyncio.create_subprocess_exec(
             *cmd,
@@ -178,167 +233,276 @@ async def run_openclaw_cli(
             stderr=asyncio.subprocess.PIPE,
         )
     except FileNotFoundError:
-        return {
-            "ok": False,
-            "error": f"找不到 OpenClaw CLI 執行檔：{OPENCLAW_CLI_BIN}。請確認 Adapter 跑在能存取 openclaw 的環境（WSL）。",
-            "stderr": "",
-            "exit_code": None,
-            "command": cmd,
-        }
+        raise OpenClawCliError(
+            "OPENCLAW_CLI_NOT_FOUND",
+            f"找不到 OpenClaw CLI 執行檔：{OPENCLAW_CLI_BIN}。請確認 Adapter 跑在能存取 openclaw 的環境（WSL）。",
+            retryable=False,
+        )
 
-    # 比 CLI 自身的 --timeout 再多給一點緩衝，避免 process 卡住時 Adapter 永遠等下去。
     hard_timeout = timeout_seconds + 30
     try:
-        stdout_b, stderr_b = await asyncio.wait_for(
-            proc.communicate(), timeout=hard_timeout
-        )
+        stdout_b, stderr_b = await asyncio.wait_for(proc.communicate(), timeout=hard_timeout)
     except asyncio.TimeoutError:
         proc.kill()
         await proc.wait()
-        return {
-            "ok": False,
-            "error": f"OpenClaw CLI 超過 {hard_timeout:.0f} 秒未回應，已強制結束。",
-            "stderr": "",
-            "exit_code": None,
-            "command": cmd,
-        }
+        raise OpenClawCliError(
+            "OPENCLAW_TIMEOUT",
+            f"OpenClaw CLI 超過 {hard_timeout:.0f} 秒未回應，已強制結束。",
+            retryable=True,
+        )
 
     stdout = stdout_b.decode("utf-8", "replace").strip()
     stderr = stderr_b.decode("utf-8", "replace").strip()
 
     if proc.returncode != 0:
-        return {
-            "ok": False,
-            "error": f"OpenClaw CLI 以非零代碼結束 (exit_code={proc.returncode})。",
-            "stderr": stderr,
-            "exit_code": proc.returncode,
-            "command": cmd,
-        }
+        raise OpenClawCliError(
+            "OPENCLAW_CLI_ERROR",
+            stderr or f"OpenClaw CLI 以非零代碼結束 (exit_code={proc.returncode})。",
+            retryable=True,
+        )
+    return stdout
 
-    # 嘗試把 --json 輸出解析成 JSON；解析不了就回原始文字。
-    parsed: Any
-    try:
-        parsed = json.loads(stdout)
-    except json.JSONDecodeError:
-        parsed = {"raw_text": stdout}
 
+def build_task_result(
+    *,
+    task_id: str,
+    correlation_id: str,
+    status: str,
+    title: str,
+    goal: str,
+    result_text: str,
+    error: dict[str, Any] | None,
+) -> dict[str, Any]:
+    summary = "OpenClaw 已完成任務。" if status == "completed" else "OpenClaw 執行失敗。"
     return {
-        "ok": True,
-        "openclaw_response": parsed,
-        "stderr": stderr,
-        "exit_code": proc.returncode,
-        "command": cmd,
+        "schema_version": "v1",
+        "task_id": task_id,
+        "correlation_id": correlation_id,
+        "status": status,
+        "finished_at": int(time.time()),
+        "title": title,
+        "goal": goal,
+        "summary": summary,
+        "result_text": result_text,
+        "error": error,
     }
 
 
+# =============================================================================
+# Background runner
+# =============================================================================
+async def run_openclaw_and_callback(
+    task_dict: dict[str, Any], task_id: str, correlation_id: str
+) -> None:
+    """Run the task in the background; never raises (logs a failed result instead)."""
+    try:
+        envelope = TaskEnvelope(**task_dict)
+        append_task_status(task_id, "running", correlation_id=correlation_id)
+        message = build_openclaw_message(envelope, task_id)
+
+        try:
+            stdout = await run_openclaw_cli(message, OPENCLAW_TIMEOUT_SECONDS, task_id)
+            result_text = extract_result_text(stdout)
+            result = build_task_result(
+                task_id=task_id,
+                correlation_id=correlation_id,
+                status="completed",
+                title=envelope.title,
+                goal=envelope.goal,
+                result_text=result_text,
+                error=None,
+            )
+        except OpenClawCliError as exc:
+            result = build_task_result(
+                task_id=task_id,
+                correlation_id=correlation_id,
+                status="failed",
+                title=envelope.title,
+                goal=envelope.goal,
+                result_text="",
+                error={"code": exc.code, "message": exc.message, "retryable": exc.retryable},
+            )
+
+        append_jsonl(RESULTS_PATH, result)
+        append_task_status(task_id, result["status"], correlation_id=correlation_id)
+
+        if CALLBACK_ENABLED:
+            await send_callback_to_hermes(result)
+
+    except Exception as exc:  # noqa: BLE001 - background must never crash the server
+        result = build_task_result(
+            task_id=task_id,
+            correlation_id=correlation_id,
+            status="failed",
+            title=str(task_dict.get("title", "")),
+            goal=str(task_dict.get("goal", "")),
+            result_text="",
+            error={
+                "code": "ADAPTER_INTERNAL_ERROR",
+                "message": f"{type(exc).__name__}: {exc}",
+                "retryable": False,
+            },
+        )
+        append_jsonl(RESULTS_PATH, result)
+        append_task_status(task_id, "failed", correlation_id=correlation_id)
+        if CALLBACK_ENABLED:
+            try:
+                await send_callback_to_hermes(result)
+            except Exception:  # noqa: BLE001
+                pass
+
+
+# =============================================================================
+# Callback sender
+# =============================================================================
+async def send_callback_to_hermes(result: dict[str, Any]) -> None:
+    """ledger_only: no HTTP (results.jsonl is the ledger). http: POST with HMAC + retries."""
+    if HERMES_CALLBACK_MODE != "http":
+        # ledger_only (default): the result already lives in results.jsonl.
+        return
+
+    body_bytes = json.dumps(result, ensure_ascii=False).encode("utf-8")
+    signature = hmac.new(
+        HERMES_CALLBACK_SECRET.encode("utf-8"), body_bytes, hashlib.sha256
+    ).hexdigest()
+    headers = {
+        "Content-Type": "application/json",
+        "X-Hermes-OpenClaw-Signature": f"sha256={signature}",
+    }
+
+    last_error = ""
+    for attempt in range(1, CALLBACK_MAX_RETRIES + 1):
+        try:
+            async with httpx.AsyncClient(timeout=CALLBACK_TIMEOUT_SECONDS) as client:
+                resp = await client.post(HERMES_CALLBACK_URL, content=body_bytes, headers=headers)
+            if 200 <= resp.status_code < 300:
+                append_jsonl(
+                    CALLBACKS_PATH,
+                    {
+                        "task_id": result.get("task_id"),
+                        "correlation_id": result.get("correlation_id"),
+                        "ts": utc_now_iso(),
+                        "url": HERMES_CALLBACK_URL,
+                        "status_code": resp.status_code,
+                        "attempt": attempt,
+                    },
+                )
+                return
+            last_error = f"HTTP {resp.status_code}: {resp.text[:500]}"
+        except Exception as exc:  # noqa: BLE001
+            last_error = f"{type(exc).__name__}: {exc}"
+
+        if attempt < CALLBACK_MAX_RETRIES:
+            await asyncio.sleep(min(2 ** attempt, 10))
+
+    append_jsonl(
+        CALLBACK_ERRORS_PATH,
+        {
+            "task_id": result.get("task_id"),
+            "correlation_id": result.get("correlation_id"),
+            "ts": utc_now_iso(),
+            "url": HERMES_CALLBACK_URL,
+            "attempts": CALLBACK_MAX_RETRIES,
+            "error": last_error,
+        },
+    )
+
+
+# =============================================================================
+# Endpoints
+# =============================================================================
 @app.get("/health")
 def health() -> dict[str, Any]:
     return {
         "ok": True,
         "app": APP_NAME,
-        "transport": OPENCLAW_TRANSPORT,
+        "version": APP_VERSION,
+        "mode": "async-background+callback",
         "openclaw_cli_bin": OPENCLAW_CLI_BIN,
-        "openclaw_cli_timeout_seconds": OPENCLAW_CLI_TIMEOUT_SECONDS,
+        "openclaw_timeout_seconds": OPENCLAW_TIMEOUT_SECONDS,
+        "callback_enabled": CALLBACK_ENABLED,
+        "callback_mode": HERMES_CALLBACK_MODE,
         "token_required": bool(HERMES_ADAPTER_TOKEN),
     }
 
 
-@app.post("/tasks/dispatch", response_model=DispatchResponse)
+@app.post("/tasks/dispatch")
 async def dispatch_task(
     task: TaskEnvelope,
     request: Request,
+    background_tasks: BackgroundTasks,
     x_adapter_token: str | None = Header(default=None),
-) -> DispatchResponse:
-    """
-    Hermes 呼叫這個 API，Adapter 會用 OpenClaw CLI 把任務派給真實 OpenClaw。
-    """
+) -> dict[str, Any]:
+    """非同步派工：立刻回 accepted，OpenClaw 在背景執行，完成後寫 results + callback。"""
     require_token(x_adapter_token)
 
     task_id = task.task_id or f"task-{uuid.uuid4().hex[:12]}"
-    message = build_openclaw_message(task, task_id)
+    correlation_id = str(task.metadata.get("correlation_id") or f"corr-{uuid.uuid4().hex[:12]}")
+    level, assumed = parse_safety_level(task.metadata)
 
-    base_log = {
-        "task_id": task_id,
-        "received_at": utc_now_iso(),
-        "transport": OPENCLAW_TRANSPORT,
-        "client_host": request.client.host if request.client else None,
-        "hermes_task": task.model_dump(),
-        "openclaw_message": message,
+    common = {
+        "correlation_id": correlation_id,
+        "title": task.title,
+        "goal": task.goal,
+        "priority": task.priority,
+        "safety_level": level,
+        "assumed_safety_level": assumed,
+        "metadata": task.metadata,
     }
 
-    # dry_run：不真的呼叫 OpenClaw，只組 message（方便沒裝 OpenClaw 時測流程）。
-    if OPENCLAW_TRANSPORT != "cli":
-        append_task_log({**base_log, "adapter_status": "dry_run"})
-        return DispatchResponse(
-            ok=True,
-            adapter_status="dry_run",
-            transport=OPENCLAW_TRANSPORT,
-            task_id=task_id,
-            message=(
-                f"OPENCLAW_TRANSPORT={OPENCLAW_TRANSPORT}（非 cli），"
-                "只組出 OpenClaw message，沒有真的呼叫 CLI。"
-            ),
-            openclaw_message=message,
-        )
+    # --- Safety gate: only Level 0 / 1 auto-run in v0.4 ---
+    if level > MAX_AUTO_SAFETY_LEVEL:
+        if level >= 3:
+            reason = "High risk task requires human confirmation before OpenClaw execution."
+        elif level == 2:
+            reason = "Level 2 tasks are not auto-run in v0.4 (only Level 0/1). Needs human review."
+        else:
+            reason = "Unrecognized safety_level; refusing to auto-run. Please set safety_level to 0 or 1."
+        append_task_status(task_id, "rejected", reason=reason, **common)
+        return {"status": "rejected", "task_id": task_id, "reason": reason}
 
-    result = await run_openclaw_cli(message, OPENCLAW_CLI_TIMEOUT_SECONDS, task_id)
-
-    if result["ok"]:
-        append_task_log(
-            {
-                **base_log,
-                "adapter_status": "sent",
-                "openclaw_command": result["command"],
-                "openclaw_response": result["openclaw_response"],
-                "stderr": result.get("stderr", ""),
-            }
-        )
-        return DispatchResponse(
-            ok=True,
-            adapter_status="sent",
-            transport="cli",
-            task_id=task_id,
-            message="任務已透過 OpenClaw CLI 送出。",
-            openclaw_response=result["openclaw_response"],
-            openclaw_message=message,
-            openclaw_command=result["command"],
-        )
-
-    append_task_log(
-        {
-            **base_log,
-            "adapter_status": "failed",
-            "openclaw_command": result.get("command"),
-            "error": result.get("error"),
-            "stderr": result.get("stderr", ""),
-            "exit_code": result.get("exit_code"),
-        }
+    # --- Accept: queue + schedule background run ---
+    append_task_status(
+        task_id,
+        "queued",
+        client_host=request.client.host if request.client else None,
+        hermes_task=task.model_dump(),
+        **common,
     )
-    return DispatchResponse(
-        ok=False,
-        adapter_status="failed",
-        transport="cli",
-        task_id=task_id,
-        message="任務透過 OpenClaw CLI 送出失敗，請檢查下方 error / stderr。",
-        error=result.get("error"),
-        stderr=result.get("stderr", ""),
-        exit_code=result.get("exit_code"),
-        openclaw_message=message,
-        openclaw_command=result.get("command"),
-    )
+    background_tasks.add_task(run_openclaw_and_callback, task.model_dump(), task_id, correlation_id)
+
+    return {
+        "status": "accepted",
+        "task_id": task_id,
+        "correlation_id": correlation_id,
+        "assumed_safety_level": assumed,
+        "message": "任務已送出，OpenClaw 會在背景執行，完成後 callback Hermes。",
+    }
+
+
+@app.get("/tasks/{task_id}/result")
+def get_task_result(task_id: str, x_adapter_token: str | None = Header(default=None)) -> dict[str, Any]:
+    require_token(x_adapter_token)
+    task = latest_task(task_id)
+    result = find_result(task_id)
+    if task is None and result is None:
+        raise HTTPException(status_code=404, detail="Task not found")
+    if result is not None:
+        return {"task_id": task_id, "task": task, "result": result}
+    return {"task_id": task_id, "status": task.get("status") if task else "unknown", "result": None}
 
 
 @app.get("/tasks/{task_id}")
 def get_task(task_id: str, x_adapter_token: str | None = Header(default=None)) -> dict[str, Any]:
     require_token(x_adapter_token)
-    rows = [row for row in read_task_logs() if row.get("task_id") == task_id]
-    if not rows:
+    task = latest_task(task_id)
+    if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
-    return rows[-1]
+    return {"task_id": task_id, "task": task, "result": find_result(task_id)}
 
 
 @app.get("/tasks")
 def list_tasks(x_adapter_token: str | None = Header(default=None)) -> dict[str, Any]:
     require_token(x_adapter_token)
-    rows = read_task_logs()
+    rows = read_jsonl(TASKS_PATH)
     return {"count": len(rows), "items": rows[-50:]}
