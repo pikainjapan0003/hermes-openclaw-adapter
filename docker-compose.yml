@@ -1,0 +1,21 @@
+services:
+  adapter:
+    build: .
+    container_name: hermes-openclaw-adapter
+    ports:
+      - "8000:8000"
+    environment:
+      HERMES_ADAPTER_TOKEN: change-me
+      OPENCLAW_WEBHOOK_URL: http://openclaw-mock:9000/openclaw/webhook
+      DATA_DIR: data
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - openclaw-mock
+
+  openclaw-mock:
+    build: .
+    container_name: openclaw-mock
+    command: ["uvicorn", "mock_openclaw_server:app", "--host", "0.0.0.0", "--port", "9000"]
+    ports:
+      - "9000:9000"
