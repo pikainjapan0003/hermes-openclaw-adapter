@@ -1,0 +1,10 @@
+# Dependencies for the OpenClaw MCP bridge (mcp/openclaw_mcp.py).
+# Installed in an ISOLATED venv (mcp/.venv) — kept separate from the Adapter's
+# .venv because the `mcp` package pulls a newer starlette/pydantic that would
+# break the Adapter's pinned FastAPI 0.115.6.
+#
+# Setup:
+#   python3 -m venv mcp/.venv
+#   mcp/.venv/bin/pip install -r mcp/requirements.txt
+mcp[cli]>=1.27.0
+httpx>=0.28.0
