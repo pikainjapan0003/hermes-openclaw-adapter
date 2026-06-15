@@ -229,3 +229,58 @@ class QueueStore:
         finally:
             conn.close()
         return {r["status"]: r["n"] for r in rows}
+
+    # --- v0.5.1 觀測用唯讀方法（只 SELECT，不改任何狀態）-----------------------
+    def counts_by_status(self) -> dict[str, int]:
+        """像 counts()，但保證五種狀態都有 key（沒有的補 0）。唯讀。"""
+        base = {s: 0 for s in (QUEUED, RUNNING, COMPLETED, FAILED, CANCELLED)}
+        base.update(self.counts())
+        return base
+
+    def total(self) -> int:
+        """queue 內任務總數。唯讀。"""
+        conn = self._connect()
+        try:
+            row = conn.execute("SELECT COUNT(*) AS n FROM queue").fetchone()
+        finally:
+            conn.close()
+        return int(row["n"]) if row else 0
+
+    def list_page(
+        self, status: Optional[str] = None, limit: int = 20, offset: int = 0
+    ) -> tuple[list[dict[str, Any]], int]:
+        """分頁列出任務（created_at DESC）。回傳 (items, total)，
+
+        total 為符合 status 篩選的總數（與分頁無關）。唯讀。
+        """
+        conn = self._connect()
+        try:
+            if status:
+                total = conn.execute(
+                    "SELECT COUNT(*) AS n FROM queue WHERE status=?", (status,)
+                ).fetchone()["n"]
+                rows = conn.execute(
+                    "SELECT * FROM queue WHERE status=? ORDER BY created_at DESC LIMIT ? OFFSET ?",
+                    (status, limit, offset),
+                ).fetchall()
+            else:
+                total = conn.execute("SELECT COUNT(*) AS n FROM queue").fetchone()["n"]
+                rows = conn.execute(
+                    "SELECT * FROM queue ORDER BY created_at DESC LIMIT ? OFFSET ?",
+                    (limit, offset),
+                ).fetchall()
+        finally:
+            conn.close()
+        return [dict(r) for r in rows], int(total)
+
+    def recent_failed(self, limit: int = 10) -> list[dict[str, Any]]:
+        """最近進入 failed 的任務（updated_at DESC）。唯讀。"""
+        conn = self._connect()
+        try:
+            rows = conn.execute(
+                "SELECT * FROM queue WHERE status=? ORDER BY updated_at DESC LIMIT ?",
+                (FAILED, limit),
+            ).fetchall()
+        finally:
+            conn.close()
+        return [dict(r) for r in rows]

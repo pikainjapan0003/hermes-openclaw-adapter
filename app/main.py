@@ -17,10 +17,10 @@ import httpx
 from fastapi import BackgroundTasks, FastAPI, Header, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from app.queue_store import QueueStore
+from app.queue_store import QueueStore, VALID_STATUSES
 
 APP_NAME = "Hermes OpenClaw Adapter"
-APP_VERSION = "0.5.0"
+APP_VERSION = "0.5.1"
 
 # --- Paths -------------------------------------------------------------------
 DATA_DIR = Path(os.getenv("DATA_DIR", "data"))
@@ -593,3 +593,180 @@ def list_tasks(x_adapter_token: str | None = Header(default=None)) -> dict[str, 
     require_token(x_adapter_token)
     rows = read_jsonl(TASKS_PATH)
     return {"count": len(rows), "items": rows[-50:]}
+
+
+# =============================================================================
+# v0.5.1 Queue Observability — 唯讀觀測 API
+#
+# 原則：所有 /queue/* 觀測端點只讀 queue（SELECT）與既有 ledger（tasks/results.jsonl），
+# 絕不修改 queue 狀態、不觸發 worker claim/retry/cancel、不呼叫 OpenClaw CLI。
+# background 執行模式下沒有持久化 queue，回傳空集合 / 404 而非報錯。
+# =============================================================================
+OBSERVABILITY_MODE = "queue-observability"
+
+# 觀測端點對外公開的狀態白名單（沿用 queue_store 的合法狀態）。
+_OBS_COUNT_KEYS = ("queued", "running", "completed", "failed", "cancelled")
+
+
+def _parse_payload_metadata(payload_json: str | None) -> dict[str, Any]:
+    """從 queue row 的 payload(JSON 字串) 取出 metadata。失敗回 {}。唯讀。"""
+    if not payload_json:
+        return {}
+    try:
+        payload = json.loads(payload_json)
+    except (json.JSONDecodeError, TypeError):
+        return {}
+    md = payload.get("metadata") if isinstance(payload, dict) else None
+    return md if isinstance(md, dict) else {}
+
+
+def _obs_worker_status(counts: dict[str, int]) -> dict[str, Any]:
+    """無 worker 心跳機制；用是否有 running 任務做保守推斷（唯讀，不代表確定在線）。"""
+    status = "online" if counts.get("running", 0) > 0 else "unknown"
+    return {"status": status, "last_seen": None}
+
+
+def _obs_task_summary(item: dict[str, Any]) -> dict[str, Any]:
+    """列表用的精簡任務樣貌。"""
+    return {
+        "task_id": item.get("task_id"),
+        "status": item.get("status"),
+        "title": item.get("title"),
+        "created_at": item.get("created_at"),
+        "updated_at": item.get("updated_at"),
+        "attempts": item.get("attempts"),
+        "max_attempts": item.get("max_attempts"),
+        "error_message": item.get("error"),
+    }
+
+
+def _obs_task_detail(item: dict[str, Any]) -> dict[str, Any]:
+    """單筆任務詳情。started_at 取自 tasks.jsonl 首筆 running；finished_at / result_text 取自 results.jsonl。"""
+    task_id = item["task_id"]
+    result = find_result(task_id)
+    started_at = None
+    for r in read_jsonl(TASKS_PATH):
+        if r.get("task_id") == task_id and r.get("status") == "running":
+            started_at = r.get("ts")
+            break
+    return {
+        "task_id": task_id,
+        "status": item.get("status"),
+        "title": item.get("title"),
+        "task_text": item.get("task_text"),
+        "created_at": item.get("created_at"),
+        "updated_at": item.get("updated_at"),
+        "started_at": started_at,
+        "finished_at": (result or {}).get("finished_at"),
+        "attempts": item.get("attempts"),
+        "max_attempts": item.get("max_attempts"),
+        "result_text": (result or {}).get("result_text"),
+        "error_message": item.get("error"),
+        "metadata": _parse_payload_metadata(item.get("payload")),
+    }
+
+
+@app.get("/queue/overview")
+def queue_obs_overview(x_adapter_token: str | None = Header(default=None)) -> dict[str, Any]:
+    require_token(x_adapter_token)
+    if EXECUTION_MODE == "background":
+        counts = {k: 0 for k in _OBS_COUNT_KEYS}
+        total = 0
+    else:
+        q = get_queue()
+        counts = q.counts_by_status()
+        total = q.total()
+    return {
+        "version": APP_VERSION,
+        "mode": OBSERVABILITY_MODE,
+        "counts": counts,
+        "total": total,
+        "worker": _obs_worker_status(counts),
+        "generated_at": utc_now_iso(),
+    }
+
+
+@app.get("/queue/tasks")
+def queue_obs_tasks(
+    status: str | None = None,
+    limit: int = 20,
+    offset: int = 0,
+    x_adapter_token: str | None = Header(default=None),
+) -> dict[str, Any]:
+    require_token(x_adapter_token)
+    limit = max(1, min(limit, 200))
+    offset = max(0, offset)
+    if status is not None and status not in VALID_STATUSES:
+        raise HTTPException(status_code=400, detail=f"Invalid status: {status}")
+    if EXECUTION_MODE == "background":
+        return {"items": [], "limit": limit, "offset": offset, "total": 0}
+    items, total = get_queue().list_page(status=status, limit=limit, offset=offset)
+    return {
+        "items": [_obs_task_summary(i) for i in items],
+        "limit": limit,
+        "offset": offset,
+        "total": total,
+    }
+
+
+@app.get("/queue/recent-errors")
+def queue_obs_recent_errors(
+    limit: int = 10,
+    x_adapter_token: str | None = Header(default=None),
+) -> dict[str, Any]:
+    require_token(x_adapter_token)
+    limit = max(1, min(limit, 200))
+    if EXECUTION_MODE == "background":
+        return {"items": []}
+    items = get_queue().recent_failed(limit=limit)
+    return {
+        "items": [
+            {
+                "task_id": i.get("task_id"),
+                "title": i.get("title"),
+                "error_message": i.get("error"),
+                "updated_at": i.get("updated_at"),
+            }
+            for i in items
+        ]
+    }
+
+
+@app.get("/queue/health")
+def queue_obs_health(x_adapter_token: str | None = Header(default=None)) -> dict[str, Any]:
+    require_token(x_adapter_token)
+    if EXECUTION_MODE == "background":
+        return {
+            "ok": True,
+            "queue_db_exists": False,
+            "queue_db_path": None,
+            "counts": {},
+            "execution_mode": EXECUTION_MODE,
+        }
+    db_exists = Path(QUEUE_DB_PATH).exists()
+    counts: dict[str, int] = {}
+    ok = True
+    try:
+        counts = get_queue().counts_by_status()
+    except Exception:  # noqa: BLE001 - 觀測端點不該因 queue 故障而 500
+        ok = False
+    return {
+        "ok": ok,
+        "queue_db_exists": db_exists,
+        "queue_db_path": QUEUE_DB_PATH,
+        "counts": counts,
+        "execution_mode": EXECUTION_MODE,
+    }
+
+
+@app.get("/queue/tasks/{task_id}")
+def queue_obs_task_detail(
+    task_id: str, x_adapter_token: str | None = Header(default=None)
+) -> dict[str, Any]:
+    require_token(x_adapter_token)
+    if EXECUTION_MODE == "background":
+        raise HTTPException(status_code=404, detail="Queue not available in background mode")
+    item = get_queue().get(task_id)
+    if item is None:
+        raise HTTPException(status_code=404, detail="Task not found in queue")
+    return _obs_task_detail(item)
