@@ -153,6 +153,32 @@ hermes-openclaw-adapter/
 
 > 認證用 header `X-Adapter-Token`（不是 `Authorization: Bearer`）。token 在 `.env` 的 `HERMES_ADAPTER_TOKEN`。
 
+### Queue 觀測 API（v0.5.1，唯讀）
+
+| 方法 | 路徑 | 說明 |
+|---|---|---|
+| GET | `/queue/overview` | 各狀態計數、total、worker 狀態 |
+| GET | `/queue/tasks` | 任務列表（支援 `status` / `limit` / `offset`） |
+| GET | `/queue/tasks/{task_id}` | 單筆任務詳情 |
+| GET | `/queue/recent-errors` | 最近 failed 任務 |
+| GET | `/queue/health` | queue db 健康狀態 |
+
+---
+
+## Read-only Dashboard（v0.5.2，本機唯讀）
+
+掛在同一個 FastAPI Adapter 裡的 server-side 渲染頁面（FastAPI + Jinja2，無 React / 無前後端分離 / 無登入）。
+只「讀」資料、重用上面 `/queue/*` 的觀測唯讀邏輯，**不會修改任何 queue 狀態、不呼叫 OpenClaw CLI、不碰 Discord / Hermes**。
+
+| 路徑 | 說明 |
+|---|---|
+| `GET /dashboard` | Overview：version / execution_mode / 各狀態計數 / total / queue_db_exists / worker status |
+| `GET /dashboard/tasks` | 任務列表（表格，支援 `status` / `limit` / `offset`，每筆連到詳情頁） |
+| `GET /dashboard/tasks/{task_id}` | 任務詳情（task_text / result_text / error_message / metadata 等；找不到回 404） |
+
+> 純本機使用，頁面頂部標示「Hermes x OpenClaw Queue Control Board」與「Read-only Dashboard」。
+> 樣式：[`static/dashboard.css`](static/dashboard.css)；模板：[`templates/`](templates/)。
+
 ---
 
 ## 下一步建議

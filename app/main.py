@@ -15,6 +15,9 @@ from typing import Any, Literal
 
 import httpx
 from fastapi import BackgroundTasks, FastAPI, Header, HTTPException, Request
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 
 from app.queue_store import QueueStore, VALID_STATUSES
@@ -666,16 +669,18 @@ def _obs_task_detail(item: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _obs_counts_total() -> tuple[dict[str, int], int]:
+    """共用唯讀 helper：取 queue 各狀態計數與總數（background 模式回全 0）。"""
+    if EXECUTION_MODE == "background":
+        return {k: 0 for k in _OBS_COUNT_KEYS}, 0
+    q = get_queue()
+    return q.counts_by_status(), q.total()
+
+
 @app.get("/queue/overview")
 def queue_obs_overview(x_adapter_token: str | None = Header(default=None)) -> dict[str, Any]:
     require_token(x_adapter_token)
-    if EXECUTION_MODE == "background":
-        counts = {k: 0 for k in _OBS_COUNT_KEYS}
-        total = 0
-    else:
-        q = get_queue()
-        counts = q.counts_by_status()
-        total = q.total()
+    counts, total = _obs_counts_total()
     return {
         "version": APP_VERSION,
         "mode": OBSERVABILITY_MODE,
@@ -770,3 +775,102 @@ def queue_obs_task_detail(
     if item is None:
         raise HTTPException(status_code=404, detail="Task not found in queue")
     return _obs_task_detail(item)
+
+
+# =============================================================================
+# v0.5.2 — Read-only Dashboard（本機唯讀 UI）
+#
+# 原則：Dashboard 只「讀」資料，重用上面 v0.5.1 的 observability 唯讀 helper
+# （_obs_counts_total / _obs_task_summary / _obs_task_detail / _obs_worker_status），
+# 不另寫一套查 DB 邏輯、不改任何 queue 狀態、不呼叫 OpenClaw CLI、不碰 Discord/Hermes。
+# 純 server-side render（FastAPI + Jinja2），無前後端分離、無登入。
+# =============================================================================
+BASE_DIR = Path(__file__).resolve().parent.parent
+TEMPLATES_DIR = BASE_DIR / "templates"
+STATIC_DIR = BASE_DIR / "static"
+
+# templates / static 目錄一定存在（隨原始碼一起 commit），缺了直接讓它噴出來。
+templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+DASHBOARD_TITLE = "Hermes x OpenClaw Queue Control Board"
+
+
+@app.get("/dashboard", response_class=HTMLResponse)
+def dashboard_home(request: Request) -> HTMLResponse:
+    """Dashboard 首頁 / Overview（唯讀）。"""
+    counts, total = _obs_counts_total()
+    worker = _obs_worker_status(counts)
+    queue_db_exists = (
+        False if EXECUTION_MODE == "background" else Path(QUEUE_DB_PATH).exists()
+    )
+    return templates.TemplateResponse(
+        "dashboard.html",
+        {
+            "request": request,
+            "title": DASHBOARD_TITLE,
+            "version": APP_VERSION,
+            "execution_mode": EXECUTION_MODE,
+            "counts": counts,
+            "total": total,
+            "queue_db_exists": queue_db_exists,
+            "worker": worker,
+            "generated_at": utc_now_iso(),
+        },
+    )
+
+
+@app.get("/dashboard/tasks", response_class=HTMLResponse)
+def dashboard_tasks(
+    request: Request,
+    status: str | None = None,
+    limit: int = 20,
+    offset: int = 0,
+) -> HTMLResponse:
+    """任務列表（唯讀）。重用 observability 的分頁與精簡樣貌 helper。"""
+    limit = max(1, min(limit, 200))
+    offset = max(0, offset)
+    invalid_status = status is not None and status not in VALID_STATUSES
+    if EXECUTION_MODE == "background" or invalid_status:
+        items: list[dict[str, Any]] = []
+        total = 0
+    else:
+        rows, total = get_queue().list_page(status=status, limit=limit, offset=offset)
+        items = [_obs_task_summary(i) for i in rows]
+    return templates.TemplateResponse(
+        "tasks.html",
+        {
+            "request": request,
+            "title": DASHBOARD_TITLE,
+            "items": items,
+            "total": total,
+            "status": status,
+            "limit": limit,
+            "offset": offset,
+            "invalid_status": invalid_status,
+            "valid_statuses": sorted(VALID_STATUSES),
+            "has_prev": offset > 0,
+            "has_next": offset + limit < total,
+            "prev_offset": max(0, offset - limit),
+            "next_offset": offset + limit,
+        },
+    )
+
+
+@app.get("/dashboard/tasks/{task_id}", response_class=HTMLResponse)
+def dashboard_task_detail(request: Request, task_id: str) -> HTMLResponse:
+    """任務詳情（唯讀）。找不到回 404。重用 observability detail helper。"""
+    if EXECUTION_MODE == "background":
+        raise HTTPException(status_code=404, detail="Queue not available in background mode")
+    item = get_queue().get(task_id)
+    if item is None:
+        raise HTTPException(status_code=404, detail="Task not found in queue")
+    detail = _obs_task_detail(item)
+    return templates.TemplateResponse(
+        "task_detail.html",
+        {
+            "request": request,
+            "title": DASHBOARD_TITLE,
+            "task": detail,
+        },
+    )

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<p><a href="/dashboard/tasks">&laquo; 回任務列表</a></p>
+<h2>Task Detail</h2>
+
+<table class="kv">
+  <tbody>
+    <tr><th>task_id</th><td>{{ task.task_id }}</td></tr>
+    <tr><th>status</th><td class="status status-{{ task.status }}">{{ task.status }}</td></tr>
+    <tr><th>title</th><td>{{ task.title or "" }}</td></tr>
+    <tr><th>attempts</th><td>{{ task.attempts }} / {{ task.max_attempts }}</td></tr>
+    <tr><th>created_at</th><td>{{ task.created_at or "" }}</td></tr>
+    <tr><th>updated_at</th><td>{{ task.updated_at or "" }}</td></tr>
+    <tr><th>started_at</th><td>{{ task.started_at or "" }}</td></tr>
+    <tr><th>finished_at</th><td>{{ task.finished_at or "" }}</td></tr>
+  </tbody>
+</table>
+
+<h3>task_text</h3>
+<pre class="block">{{ task.task_text or "" }}</pre>
+
+<h3>result_text</h3>
+<pre class="block">{{ task.result_text or "" }}</pre>
+
+<h3>error_message</h3>
+<pre class="block">{{ task.error_message or "" }}</pre>
+
+<h3>metadata</h3>
+<pre class="block">{{ task.metadata }}</pre>
+{% endblock %}
