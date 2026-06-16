@@ -5,7 +5,8 @@
 - 單一檔案資料庫，FastAPI（寫入 enqueue）與 worker（claim/更新）兩個程序共用。
 - 用 WAL + busy_timeout + `BEGIN IMMEDIATE` 交易，確保單一 worker 下 claim 不會重複領取。
 
-任務狀態：queued / running / completed / failed / cancelled。
+任務狀態：queued / running / completed / failed / cancelled
+          / waiting_review / rejected（v0.5.4 Approval Flow 新增）。
 """
 
 from __future__ import annotations
@@ -22,8 +23,24 @@ RUNNING = "running"
 COMPLETED = "completed"
 FAILED = "failed"
 CANCELLED = "cancelled"
+# v0.5.4 Approval Flow：
+#   waiting_review = 需人工確認，worker 絕不 claim（claim_next 只取 queued）。
+#   rejected       = 被拒絕的終止狀態，worker 絕不 claim。
+WAITING_REVIEW = "waiting_review"
+REJECTED = "rejected"
 
-VALID_STATUSES = {QUEUED, RUNNING, COMPLETED, FAILED, CANCELLED}
+# 全部合法狀態。
+VALID_STATUSES = {
+    QUEUED, RUNNING, COMPLETED, FAILED, CANCELLED, WAITING_REVIEW, REJECTED,
+}
+
+# 觀測/統計時保證有 key 的狀態順序。
+ALL_STATUSES = (
+    QUEUED, RUNNING, COMPLETED, FAILED, CANCELLED, WAITING_REVIEW, REJECTED,
+)
+
+# enqueue 時允許的初始狀態（只能是這兩種；其餘狀態必須走狀態機方法轉換）。
+VALID_INITIAL_STATUSES = {QUEUED, WAITING_REVIEW}
 
 
 def _utc_now_iso() -> str:
@@ -85,8 +102,17 @@ class QueueStore:
         payload: dict[str, Any],
         correlation_id: str | None = None,
         max_attempts: int = 3,
+        initial_status: str = QUEUED,
     ) -> dict[str, Any] | None:
-        """新增一筆 queued 任務。重複 task_id 會被忽略（INSERT OR IGNORE）。"""
+        """新增一筆任務。重複 task_id 會被忽略（INSERT OR IGNORE）。
+
+        initial_status 只能是 queued（一般任務）或 waiting_review（需人工確認，
+        v0.5.4）。預設 queued，向後相容。waiting_review 任務不會被 worker claim。
+        """
+        if initial_status not in VALID_INITIAL_STATUSES:
+            raise ValueError(
+                f"initial_status 只能是 {sorted(VALID_INITIAL_STATUSES)}，收到 {initial_status!r}"
+            )
         now = _utc_now_iso()
         conn = self._connect()
         try:
@@ -97,7 +123,7 @@ class QueueStore:
                     correlation_id, payload)
                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (
-                    task_id, now, now, QUEUED, title, task_text,
+                    task_id, now, now, initial_status, title, task_text,
                     safety_level, 0, max_attempts, None, None,
                     correlation_id, json.dumps(payload, ensure_ascii=False),
                 ),
@@ -178,6 +204,43 @@ class QueueStore:
         finally:
             conn.close()
 
+    # --- v0.5.4 Approval Flow 狀態機（只在 waiting_review 時生效）---------------
+    def approve(self, task_id: str) -> dict[str, Any] | None:
+        """批准：只有 waiting_review 可轉成 queued。
+
+        不增加 attempts、不改 task_text、不直接執行 worker（worker 之後自然 claim
+        queued）。非 waiting_review（含已 approve/已 reject）回 None。
+        """
+        conn = self._connect()
+        try:
+            cur = conn.execute(
+                "UPDATE queue SET status=?, updated_at=? WHERE task_id=? AND status=?",
+                (QUEUED, _utc_now_iso(), task_id, WAITING_REVIEW),
+            )
+            conn.commit()
+            ok = cur.rowcount > 0
+        finally:
+            conn.close()
+        return self.get(task_id) if ok else None
+
+    def reject(self, task_id: str, reason: str | None = None) -> dict[str, Any] | None:
+        """拒絕：只有 waiting_review 可轉成 rejected（終止狀態）。
+
+        可記錄 reason 到 error 欄位。rejected 任務不會被 worker claim。
+        非 waiting_review 回 None。
+        """
+        conn = self._connect()
+        try:
+            cur = conn.execute(
+                "UPDATE queue SET status=?, error=?, updated_at=? WHERE task_id=? AND status=?",
+                (REJECTED, reason, _utc_now_iso(), task_id, WAITING_REVIEW),
+            )
+            conn.commit()
+            ok = cur.rowcount > 0
+        finally:
+            conn.close()
+        return self.get(task_id) if ok else None
+
     def reset_stale_running(self) -> int:
         """worker 啟動時把卡在 running 的任務（上次 worker crash）改回 queued。
 
@@ -232,8 +295,8 @@ class QueueStore:
 
     # --- v0.5.1 觀測用唯讀方法（只 SELECT，不改任何狀態）-----------------------
     def counts_by_status(self) -> dict[str, int]:
-        """像 counts()，但保證五種狀態都有 key（沒有的補 0）。唯讀。"""
-        base = {s: 0 for s in (QUEUED, RUNNING, COMPLETED, FAILED, CANCELLED)}
+        """像 counts()，但保證全部合法狀態都有 key（沒有的補 0）。唯讀。"""
+        base = {s: 0 for s in ALL_STATUSES}
         base.update(self.counts())
         return base
 

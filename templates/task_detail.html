@@ -16,6 +16,26 @@
   </tbody>
 </table>
 
+{% if comment_error %}
+<p class="warn">操作失敗：{{ comment_error }}</p>
+{% endif %}
+
+{% if task.status == "waiting_review" %}
+<div class="approval-box">
+  <h3>⏳ Waiting Review — 需人工確認</h3>
+  <p class="meta">此任務不會被 worker 執行，直到 approve。</p>
+  <div class="approval-actions">
+    <form method="post" action="/dashboard/tasks/{{ task.task_id }}/approve">
+      <button type="submit" class="btn-approve">Approve（轉 queued）</button>
+    </form>
+    <form method="post" action="/dashboard/tasks/{{ task.task_id }}/reject" class="reject-form">
+      <input type="text" name="reason" placeholder="拒絕原因（選填）">
+      <button type="submit" class="btn-reject">Reject（轉 rejected）</button>
+    </form>
+  </div>
+</div>
+{% endif %}
+
 <h3>task_text</h3>
 <pre class="block">{{ task.task_text or "" }}</pre>
 

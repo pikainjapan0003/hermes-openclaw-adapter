@@ -17,7 +17,8 @@
   <thead>
     <tr>
       <th>queued</th><th>running</th><th>completed</th>
-      <th>failed</th><th>cancelled</th><th>total</th>
+      <th>failed</th><th>cancelled</th>
+      <th>waiting_review</th><th>rejected</th><th>total</th>
     </tr>
   </thead>
   <tbody>
@@ -27,10 +28,19 @@
       <td>{{ counts.completed }}</td>
       <td>{{ counts.failed }}</td>
       <td>{{ counts.cancelled }}</td>
+      <td class="status-waiting_review">{{ counts.waiting_review }}</td>
+      <td class="status-rejected">{{ counts.rejected }}</td>
       <td><strong>{{ total }}</strong></td>
     </tr>
   </tbody>
 </table>
 
-<p><a href="/dashboard/tasks">查看任務列表 &raquo;</a></p>
+<p>
+  <a href="/dashboard/tasks">查看任務列表 &raquo;</a>
+  {% if counts.waiting_review and counts.waiting_review > 0 %}
+  &nbsp;|&nbsp; <a href="/dashboard/reviews"><strong>{{ counts.waiting_review }} 筆待審核 &raquo;</strong></a>
+  {% else %}
+  &nbsp;|&nbsp; <a href="/dashboard/reviews">Pending Reviews &raquo;</a>
+  {% endif %}
+</p>
 {% endblock %}

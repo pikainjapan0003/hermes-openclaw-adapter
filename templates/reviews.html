@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Pending Reviews</h2>
+<p class="meta">這些任務 safety_level &ge; 3 或 requires_confirmation=true，需人工確認。
+  在 approve 之前，worker 絕不會執行它們。total: {{ total }}</p>
+
+<table class="grid">
+  <thead>
+    <tr>
+      <th>task_id</th><th>title</th><th>safety_level</th><th>requires_confirmation</th>
+      <th>created_at</th><th>updated_at</th><th>task_text</th><th>actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for t in items %}
+    <tr>
+      <td><a href="/dashboard/tasks/{{ t.task_id }}">{{ t.task_id }}</a></td>
+      <td>{{ t.title or "" }}</td>
+      <td>{{ t.safety_level }}</td>
+      <td>{{ t.requires_confirmation }}</td>
+      <td>{{ t.created_at or "" }}</td>
+      <td>{{ t.updated_at or "" }}</td>
+      <td class="comment-content">{{ t.task_text_snippet or "" }}</td>
+      <td>
+        <div class="approval-actions">
+          <form method="post" action="/dashboard/tasks/{{ t.task_id }}/approve">
+            <button type="submit" class="btn-approve">Approve</button>
+          </form>
+          <form method="post" action="/dashboard/tasks/{{ t.task_id }}/reject" class="reject-form">
+            <input type="text" name="reason" placeholder="拒絕原因（選填）">
+            <button type="submit" class="btn-reject">Reject</button>
+          </form>
+        </div>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="8" class="empty">（目前沒有待審核任務）</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

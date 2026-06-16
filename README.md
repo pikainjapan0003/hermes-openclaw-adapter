@@ -201,6 +201,39 @@ hermes-openclaw-adapter/
 
 ---
 
+## Approval Flow（v0.5.4，人工審核）
+
+把「需要人工確認」的任務真正落到 Queue 狀態機。新增兩個狀態：`waiting_review` / `rejected`
+（**沒有** `approved` 狀態——approve 是動作，approve 後任務回到 `queued`）。
+
+**派工時的審核判斷**（`app/main.py` `needs_human_review()`）：
+
+| 條件 | 結果 |
+|---|---|
+| `metadata.requires_confirmation == true` | `waiting_review` |
+| `safety_level` 可解析且 `>= 3` | `waiting_review` |
+| 其餘（含無 metadata、`safety_level` 缺失/無法解析） | 照舊 `queued`（向後相容） |
+
+**狀態流轉**（新增部分）：`waiting_review --approve--> queued`、`waiting_review --reject--> rejected`。
+`waiting_review` / `rejected` 任務**絕不會被 worker claim**（`claim_next` 只取 `queued`，worker 邏輯未改）。
+
+| 方法 | 路徑 | 說明 |
+|---|---|---|
+| GET | `/reviews/pending` | 列出所有 `waiting_review` 任務（`limit` / `offset`） |
+| POST | `/tasks/{task_id}/approve` | 批准 → `queued`（不存在 404、非 waiting_review 409） |
+| POST | `/tasks/{task_id}/reject` | 拒絕 → `rejected`，body 可帶 `{"reason": "..."}`（404 / 409 同上） |
+| GET | `/dashboard/reviews` | Pending Reviews 頁（每筆有 Approve / Reject 表單） |
+| POST | `/dashboard/tasks/{task_id}/approve` | Dashboard approve 表單（PRG，redirect 回詳情頁） |
+| POST | `/dashboard/tasks/{task_id}/reject` | Dashboard reject 表單（PRG，可帶 reason） |
+
+approve / reject 只透過 `QueueStore` 狀態機（`approve()` / `reject()`），**不直接啟動 worker、不呼叫
+OpenClaw CLI、不碰 Hermes / Discord**；並會在 blackboard 寫一則 `system` 留言作為記錄（純記錄，不反向控制 queue）。
+
+> 與 v0.4 行為差異：舊版 dispatch 對 `safety_level >= 2` 一律「直接 rejected」；v0.5.4 起改為
+> Level 0–2 自動 `queued`、Level ≥ 3 或 `requires_confirmation` 進 `waiting_review` 等待人工 approve。
+
+---
+
 ## 下一步建議
 
 1. **`v0.4.2-service-units`** —— 把 Adapter 與 Hermes Gateway 做成 systemd unit，開機自動啟動、崩潰自動重啟（解掉目前「要手動拉起」的限制）。

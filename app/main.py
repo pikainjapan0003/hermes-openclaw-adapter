@@ -25,7 +25,13 @@ from app.blackboard_store import (
     BlackboardStore,
     CommentValidationError,
 )
-from app.queue_store import QueueStore, VALID_STATUSES
+from app.queue_store import (
+    QUEUED,
+    REJECTED,
+    VALID_STATUSES,
+    WAITING_REVIEW,
+    QueueStore,
+)
 
 APP_NAME = "Hermes OpenClaw Adapter"
 APP_VERSION = "0.5.1"
@@ -215,6 +221,43 @@ def parse_safety_level(metadata: dict[str, Any]) -> tuple[int, bool]:
     if not m:
         return 99, False
     return int(m.group(1)), False
+
+
+# v0.5.4 Approval Flow：safety_level >= 此值（或 requires_confirmation=true）→ waiting_review。
+REVIEW_SAFETY_LEVEL = 3
+
+
+def _coerce_bool(raw: Any) -> bool:
+    """寬鬆地把 metadata 值轉成 bool；無法判定一律 False（向後相容）。"""
+    if isinstance(raw, bool):
+        return raw
+    if isinstance(raw, (int, float)):
+        return raw != 0
+    if isinstance(raw, str):
+        return raw.strip().lower() in ("1", "true", "yes", "on")
+    return False
+
+
+def needs_human_review(metadata: dict[str, Any]) -> tuple[bool, bool]:
+    """v0.5.4：判斷任務是否要進 waiting_review。回傳 (needs_review, requires_confirmation)。
+
+    規則：
+    - requires_confirmation == true → 需審核。
+    - safety_level 為「可解析的整數」且 >= 3 → 需審核。
+    向後相容（皆 → 不需審核 → 照舊 queued）：
+    - 沒有 metadata、requires_confirmation 缺失。
+    - safety_level 缺失或無法解析為數字（不會被誤判成高風險）。
+    """
+    requires_confirmation = _coerce_bool(metadata.get("requires_confirmation"))
+
+    high_level = False
+    raw = metadata.get("safety_level")
+    if raw is not None and not (isinstance(raw, str) and raw.strip() == ""):
+        m = re.search(r"(\d+)", str(raw))
+        if m and int(m.group(1)) >= REVIEW_SAFETY_LEVEL:
+            high_level = True
+
+    return (requires_confirmation or high_level), requires_confirmation
 
 
 def extract_result_text(stdout: str) -> str:
@@ -493,6 +536,8 @@ async def dispatch_task(
     correlation_id = str(task.metadata.get("correlation_id") or f"corr-{uuid.uuid4().hex[:12]}")
     level, assumed = parse_safety_level(task.metadata)
 
+    needs_review, requires_confirmation = needs_human_review(task.metadata)
+
     common = {
         "correlation_id": correlation_id,
         "title": task.title,
@@ -500,19 +545,48 @@ async def dispatch_task(
         "priority": task.priority,
         "safety_level": level,
         "assumed_safety_level": assumed,
+        "requires_confirmation": requires_confirmation,
         "metadata": task.metadata,
     }
 
-    # --- Safety gate: only Level 0 / 1 auto-run in v0.4 ---
-    if level > MAX_AUTO_SAFETY_LEVEL:
-        if level >= 3:
-            reason = "High risk task requires human confirmation before OpenClaw execution."
-        elif level == 2:
-            reason = "Level 2 tasks are not auto-run in v0.4 (only Level 0/1). Needs human review."
-        else:
-            reason = "Unrecognized safety_level; refusing to auto-run. Please set safety_level to 0 or 1."
-        append_task_status(task_id, "rejected", reason=reason, **common)
-        return {"status": "rejected", "task_id": task_id, "reason": reason}
+    # --- v0.5.4 Approval gate：safety_level >= 3 或 requires_confirmation → waiting_review ---
+    if needs_review:
+        if EXECUTION_MODE == "background":
+            # 背景模式沒有持久化 queue 可暫存待審任務 → 維持「高風險不自動跑」的保守行為。
+            reason = (
+                "需人工確認的任務無法在 background 執行模式排隊待審（沒有持久化 queue）。"
+                "請改用 queue 執行模式，任務會進 waiting_review 等待 approve。"
+            )
+            append_task_status(task_id, "rejected", reason=reason, **common)
+            return {"status": "rejected", "task_id": task_id, "reason": reason}
+
+        append_task_status(
+            task_id,
+            "waiting_review",
+            client_host=request.client.host if request.client else None,
+            hermes_task=task.model_dump(),
+            execution_mode=EXECUTION_MODE,
+            **common,
+        )
+        get_queue().enqueue(
+            task_id=task_id,
+            title=task.title,
+            task_text=task.task_text,
+            safety_level=level,
+            payload=task.model_dump(),
+            correlation_id=correlation_id,
+            max_attempts=QUEUE_MAX_ATTEMPTS,
+            initial_status=WAITING_REVIEW,
+        )
+        return {
+            "status": "waiting_review",
+            "task_id": task_id,
+            "correlation_id": correlation_id,
+            "safety_level": level,
+            "requires_confirmation": requires_confirmation,
+            "execution_mode": EXECUTION_MODE,
+            "message": "任務需人工確認，已進入 waiting_review。approve 後才會被 worker 執行。",
+        }
 
     # --- Accept: 寫 ledger（tasks.jsonl）→ 排程執行 ---
     append_task_status(
@@ -539,6 +613,7 @@ async def dispatch_task(
             payload=task.model_dump(),
             correlation_id=correlation_id,
             max_attempts=QUEUE_MAX_ATTEMPTS,
+            initial_status=QUEUED,
         )
 
     return {
@@ -635,7 +710,11 @@ def list_tasks(x_adapter_token: str | None = Header(default=None)) -> dict[str, 
 OBSERVABILITY_MODE = "queue-observability"
 
 # 觀測端點對外公開的狀態白名單（沿用 queue_store 的合法狀態）。
-_OBS_COUNT_KEYS = ("queued", "running", "completed", "failed", "cancelled")
+# v0.5.4：加入 waiting_review / rejected。
+_OBS_COUNT_KEYS = (
+    "queued", "running", "completed", "failed", "cancelled",
+    "waiting_review", "rejected",
+)
 
 
 def _parse_payload_metadata(payload_json: str | None) -> dict[str, Any]:
@@ -856,6 +935,126 @@ def add_task_comment(
 
 
 # =============================================================================
+# v0.5.4 — Approval Flow（人工審核狀態機）
+#
+# 原則：approve / reject 只透過 QueueStore 狀態機處理（waiting_review -> queued / rejected），
+# 不直接啟動 worker、不呼叫 OpenClaw CLI、不碰 Hermes / Discord。
+# worker 之後自然 claim queued 任務（claim_next 只取 queued，永不取 waiting_review/rejected）。
+# =============================================================================
+class RejectBody(BaseModel):
+    """reject 的 request body（reason 選填）。"""
+
+    reason: str | None = Field(default=None, description="拒絕原因（選填）")
+
+
+def _review_summary(item: dict[str, Any]) -> dict[str, Any]:
+    """pending review 列表用：在精簡樣貌上補 safety_level / requires_confirmation / 摘要。"""
+    md = _parse_payload_metadata(item.get("payload"))
+    text = item.get("task_text") or ""
+    summary = _obs_task_summary(item)
+    summary.update(
+        {
+            "safety_level": item.get("safety_level"),
+            "requires_confirmation": _coerce_bool(md.get("requires_confirmation")),
+            "task_text_snippet": text[:200],
+        }
+    )
+    return summary
+
+
+def _add_system_comment(task_id: str, content: str) -> None:
+    """approve/reject 時寫一則 system 留言（純記錄）。失敗不影響狀態機。"""
+    try:
+        get_blackboard().add_comment(
+            task_id=task_id,
+            author_type="system",
+            author_name="approval-flow",
+            content=content,
+            metadata={"via": "approval-flow"},
+        )
+    except Exception:  # noqa: BLE001 - 留言只是附帶記錄，絕不可反過來影響審核
+        pass
+
+
+@app.get("/reviews/pending")
+def reviews_pending(
+    limit: int = 20,
+    offset: int = 0,
+    x_adapter_token: str | None = Header(default=None),
+) -> dict[str, Any]:
+    """列出所有 waiting_review 任務（唯讀）。"""
+    require_token(x_adapter_token)
+    limit = max(1, min(limit, 200))
+    offset = max(0, offset)
+    if EXECUTION_MODE == "background":
+        return {"items": [], "limit": limit, "offset": offset, "total": 0}
+    items, total = get_queue().list_page(
+        status=WAITING_REVIEW, limit=limit, offset=offset
+    )
+    return {
+        "items": [_review_summary(i) for i in items],
+        "limit": limit,
+        "offset": offset,
+        "total": total,
+    }
+
+
+def _require_waiting_review(task_id: str) -> dict[str, Any]:
+    """共用前置檢查：任務不存在 -> 404；存在但非 waiting_review -> 409。回傳該 queue row。"""
+    if EXECUTION_MODE == "background":
+        raise HTTPException(status_code=404, detail="Queue not available in background mode")
+    item = get_queue().get(task_id)
+    if item is None:
+        raise HTTPException(status_code=404, detail="Task not found in queue")
+    if item.get("status") != WAITING_REVIEW:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Task is not waiting_review (current status: {item.get('status')})",
+        )
+    return item
+
+
+@app.post("/tasks/{task_id}/approve")
+def approve_task(
+    task_id: str, x_adapter_token: str | None = Header(default=None)
+) -> dict[str, Any]:
+    """批准 waiting_review 任務 -> queued。不直接啟動 worker。"""
+    require_token(x_adapter_token)
+    _require_waiting_review(task_id)
+    updated = get_queue().approve(task_id)
+    if updated is None:
+        # 競態：剛剛狀態被改掉（例如併發 approve/reject）。
+        raise HTTPException(status_code=409, detail="Task is no longer waiting_review")
+    append_task_status(task_id, "queued", via="approve")
+    _add_system_comment(
+        task_id,
+        "Task approved; status changed from waiting_review to queued.",
+    )
+    return {"status": "approved", "task_id": task_id, "task": updated}
+
+
+@app.post("/tasks/{task_id}/reject")
+def reject_task(
+    task_id: str,
+    body: RejectBody | None = None,
+    x_adapter_token: str | None = Header(default=None),
+) -> dict[str, Any]:
+    """拒絕 waiting_review 任務 -> rejected（終止狀態）。不直接啟動 worker。"""
+    require_token(x_adapter_token)
+    _require_waiting_review(task_id)
+    reason = body.reason if body else None
+    updated = get_queue().reject(task_id, reason=reason)
+    if updated is None:
+        raise HTTPException(status_code=409, detail="Task is no longer waiting_review")
+    append_task_status(task_id, "rejected", via="reject", reason=reason)
+    _add_system_comment(
+        task_id,
+        f"Task rejected. Reason: {reason}" if reason else "Task rejected.",
+    )
+    return {"status": "rejected", "task_id": task_id, "task": updated}
+
+
+# =============================================================================
 # v0.5.2 — Read-only Dashboard（本機唯讀 UI）
 #
 # 原則：Dashboard 只「讀」資料，重用上面 v0.5.1 的 observability 唯讀 helper
@@ -989,4 +1188,83 @@ def dashboard_add_comment(
         return RedirectResponse(
             url=f"{target}?error={quote(str(exc))}", status_code=303
         )
+    return RedirectResponse(url=target, status_code=303)
+
+
+@app.get("/dashboard/reviews", response_class=HTMLResponse)
+def dashboard_reviews(
+    request: Request, limit: int = 50, offset: int = 0
+) -> HTMLResponse:
+    """Pending Reviews 頁面：列出 waiting_review 任務，提供 Approve / Reject。"""
+    limit = max(1, min(limit, 200))
+    offset = max(0, offset)
+    if EXECUTION_MODE == "background":
+        items: list[dict[str, Any]] = []
+        total = 0
+    else:
+        rows, total = get_queue().list_page(
+            status=WAITING_REVIEW, limit=limit, offset=offset
+        )
+        items = [_review_summary(i) for i in rows]
+    return templates.TemplateResponse(
+        "reviews.html",
+        {
+            "request": request,
+            "title": DASHBOARD_TITLE,
+            "items": items,
+            "total": total,
+            "limit": limit,
+            "offset": offset,
+        },
+    )
+
+
+@app.post("/dashboard/tasks/{task_id}/approve")
+def dashboard_approve(task_id: str) -> RedirectResponse:
+    """Dashboard approve 表單：waiting_review -> queued，PRG redirect 回詳情頁。
+
+    只走 QueueStore 狀態機，不直接啟動 worker、不呼叫 OpenClaw CLI。
+    """
+    from urllib.parse import quote
+
+    target = f"/dashboard/tasks/{task_id}"
+    if not _task_exists(task_id):
+        raise HTTPException(status_code=404, detail="Task not found in queue")
+    updated = get_queue().approve(task_id)
+    if updated is None:
+        return RedirectResponse(
+            url=f"{target}?error={quote('只有 waiting_review 任務可以 approve')}",
+            status_code=303,
+        )
+    append_task_status(task_id, "queued", via="dashboard-approve")
+    _add_system_comment(
+        task_id, "Task approved via dashboard; status changed from waiting_review to queued."
+    )
+    return RedirectResponse(url=target, status_code=303)
+
+
+@app.post("/dashboard/tasks/{task_id}/reject")
+def dashboard_reject(
+    task_id: str, reason: str = Form("")
+) -> RedirectResponse:
+    """Dashboard reject 表單：waiting_review -> rejected，PRG redirect 回詳情頁。"""
+    from urllib.parse import quote
+
+    target = f"/dashboard/tasks/{task_id}"
+    if not _task_exists(task_id):
+        raise HTTPException(status_code=404, detail="Task not found in queue")
+    reason_clean = reason.strip() or None
+    updated = get_queue().reject(task_id, reason=reason_clean)
+    if updated is None:
+        return RedirectResponse(
+            url=f"{target}?error={quote('只有 waiting_review 任務可以 reject')}",
+            status_code=303,
+        )
+    append_task_status(task_id, "rejected", via="dashboard-reject", reason=reason_clean)
+    _add_system_comment(
+        task_id,
+        f"Task rejected via dashboard. Reason: {reason_clean}"
+        if reason_clean
+        else "Task rejected via dashboard.",
+    )
     return RedirectResponse(url=target, status_code=303)
