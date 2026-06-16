@@ -14,12 +14,17 @@ from pathlib import Path
 from typing import Any, Literal
 
 import httpx
-from fastapi import BackgroundTasks, FastAPI, Header, HTTPException, Request
-from fastapi.responses import HTMLResponse
+from fastapi import BackgroundTasks, FastAPI, Form, Header, HTTPException, Request
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 
+from app.blackboard_store import (
+    VALID_AUTHOR_TYPES,
+    BlackboardStore,
+    CommentValidationError,
+)
 from app.queue_store import QueueStore, VALID_STATUSES
 
 APP_NAME = "Hermes OpenClaw Adapter"
@@ -84,6 +89,28 @@ def get_queue() -> QueueStore:
         ensure_data_dir()
         _queue_store = QueueStore(QUEUE_DB_PATH)
     return _queue_store
+
+
+# v0.5.3：Blackboard / task comments 獨立儲存層（共用 db 檔，但只動 task_comments 表）。
+_blackboard_store: BlackboardStore | None = None
+
+
+def get_blackboard() -> BlackboardStore:
+    global _blackboard_store
+    if _blackboard_store is None:
+        ensure_data_dir()
+        _blackboard_store = BlackboardStore(QUEUE_DB_PATH)
+    return _blackboard_store
+
+
+def _task_exists(task_id: str) -> bool:
+    """任務是否存在於 queue（用於避免孤兒留言）。background 模式無 queue → False。唯讀。"""
+    if EXECUTION_MODE == "background":
+        return False
+    try:
+        return get_queue().get(task_id) is not None
+    except Exception:  # noqa: BLE001 - 查詢失敗時保守當作不存在
+        return False
 
 app = FastAPI(
     title=APP_NAME,
@@ -778,6 +805,57 @@ def queue_obs_task_detail(
 
 
 # =============================================================================
+# v0.5.3 — Blackboard / task comments（留言板）
+#
+# 原則：留言只寫入 task_comments 表（BlackboardStore），絕不改 queue 任務狀態、
+# 不觸發 worker、不呼叫 OpenClaw CLI、不碰 Hermes / Discord。
+# 任務不存在時回 404，不建立孤兒留言。
+# =============================================================================
+class CommentCreate(BaseModel):
+    """新增留言的 request body。"""
+
+    author_type: Literal["user", "hermes", "openclaw", "system"] = "user"
+    author_name: str | None = Field(default=None, description="留言者名稱（選填）")
+    content: str = Field(..., min_length=1, description="留言內容（必填、不可為空）")
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+@app.get("/tasks/{task_id}/comments")
+def get_task_comments(
+    task_id: str, x_adapter_token: str | None = Header(default=None)
+) -> dict[str, Any]:
+    """取得指定 task 的留言串（唯讀）。任務不存在回 404。"""
+    require_token(x_adapter_token)
+    if not _task_exists(task_id):
+        raise HTTPException(status_code=404, detail="Task not found in queue")
+    items = get_blackboard().list_for_task(task_id)
+    return {"task_id": task_id, "items": items}
+
+
+@app.post("/tasks/{task_id}/comments", status_code=201)
+def add_task_comment(
+    task_id: str,
+    body: CommentCreate,
+    x_adapter_token: str | None = Header(default=None),
+) -> dict[str, Any]:
+    """新增指定 task 的留言。只寫 task_comments，不改 queue 狀態、不觸發 worker。"""
+    require_token(x_adapter_token)
+    if not _task_exists(task_id):
+        raise HTTPException(status_code=404, detail="Task not found in queue")
+    try:
+        comment = get_blackboard().add_comment(
+            task_id=task_id,
+            author_type=body.author_type,
+            author_name=body.author_name,
+            content=body.content,
+            metadata=body.metadata,
+        )
+    except CommentValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return comment
+
+
+# =============================================================================
 # v0.5.2 — Read-only Dashboard（本機唯讀 UI）
 #
 # 原則：Dashboard 只「讀」資料，重用上面 v0.5.1 的 observability 唯讀 helper
@@ -858,19 +936,57 @@ def dashboard_tasks(
 
 
 @app.get("/dashboard/tasks/{task_id}", response_class=HTMLResponse)
-def dashboard_task_detail(request: Request, task_id: str) -> HTMLResponse:
-    """任務詳情（唯讀）。找不到回 404。重用 observability detail helper。"""
+def dashboard_task_detail(
+    request: Request, task_id: str, error: str | None = None
+) -> HTMLResponse:
+    """任務詳情（唯讀）+ Blackboard 留言串。找不到回 404。"""
     if EXECUTION_MODE == "background":
         raise HTTPException(status_code=404, detail="Queue not available in background mode")
     item = get_queue().get(task_id)
     if item is None:
         raise HTTPException(status_code=404, detail="Task not found in queue")
     detail = _obs_task_detail(item)
+    comments = get_blackboard().list_for_task(task_id)
     return templates.TemplateResponse(
         "task_detail.html",
         {
             "request": request,
             "title": DASHBOARD_TITLE,
             "task": detail,
+            "comments": comments,
+            "author_types": sorted(VALID_AUTHOR_TYPES),
+            "comment_error": error,
         },
     )
+
+
+@app.post("/dashboard/tasks/{task_id}/comments")
+def dashboard_add_comment(
+    task_id: str,
+    author_type: str = Form("user"),
+    author_name: str = Form("owner"),
+    content: str = Form(...),
+) -> RedirectResponse:
+    """Dashboard 留言表單處理。只寫 task_comments，寫完 redirect 回詳情頁（PRG）。
+
+    不改 queue 狀態、不觸發 worker、不呼叫 OpenClaw CLI。
+    """
+    target = f"/dashboard/tasks/{task_id}"
+    if not _task_exists(task_id):
+        raise HTTPException(status_code=404, detail="Task not found in queue")
+    try:
+        get_blackboard().add_comment(
+            task_id=task_id,
+            author_type=author_type,
+            author_name=author_name,
+            content=content,
+            metadata={"via": "dashboard"},
+        )
+    except CommentValidationError as exc:
+        # PRG：帶錯誤訊息 redirect 回詳情頁（不丟 500）。
+        from urllib.parse import quote
+
+        return RedirectResponse(
+            url=f"{target}?error={quote(str(exc))}", status_code=303
+        )
+    return RedirectResponse(url=target, status_code=303)

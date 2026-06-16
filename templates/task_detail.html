@@ -27,4 +27,51 @@
 
 <h3>metadata</h3>
 <pre class="block">{{ task.metadata }}</pre>
+
+<hr>
+
+<h2>Blackboard Comments</h2>
+<p class="meta">留言只寫入 blackboard（task_comments），不會改變 queue 任務狀態。</p>
+
+{% if comment_error %}
+<p class="warn">留言失敗：{{ comment_error }}</p>
+{% endif %}
+
+<table class="grid comments">
+  <thead>
+    <tr>
+      <th>created_at</th><th>author_type</th><th>author_name</th><th>content</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for c in comments %}
+    <tr>
+      <td>{{ c.created_at }}</td>
+      <td class="author author-{{ c.author_type }}">{{ c.author_type }}</td>
+      <td>{{ c.author_name or "" }}</td>
+      <td class="comment-content">{{ c.content }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="4" class="empty">（目前沒有留言）</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h3>新增留言</h3>
+<form class="comment-form" method="post" action="/dashboard/tasks/{{ task.task_id }}/comments">
+  <label>author_type:
+    <select name="author_type">
+      {% for a in author_types %}
+      <option value="{{ a }}" {% if a == "user" %}selected{% endif %}>{{ a }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>author_name:
+    <input type="text" name="author_name" value="owner">
+  </label>
+  <label>content:
+    <textarea name="content" rows="3" required placeholder="留言內容..."></textarea>
+  </label>
+  <button type="submit">送出留言</button>
+</form>
 {% endblock %}

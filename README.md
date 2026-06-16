@@ -181,6 +181,26 @@ hermes-openclaw-adapter/
 
 ---
 
+## Blackboard / Task Comments（v0.5.3，留言板）
+
+每個 task 可以掛上一串留言（給人/Hermes/OpenClaw/system 互相留訊息）。留言存在
+**獨立的 `task_comments` 表**（[`app/blackboard_store.py`](app/blackboard_store.py)，可與 `queue.db`
+共用檔案但不碰 `queue` 表）。**留言只會寫入 blackboard，絕不改 queue 任務狀態、不觸發 worker、
+不呼叫 OpenClaw CLI、不碰 Hermes / Discord。**
+
+`task_comments` schema：`comment_id` / `task_id` / `author_type` / `author_name` / `content` /
+`created_at` / `metadata_json`。`author_type` 白名單：`user` / `hermes` / `openclaw` / `system`。
+
+| 方法 | 路徑 | 說明 |
+|---|---|---|
+| GET | `/tasks/{task_id}/comments` | 取任務留言串（任務不存在回 404） |
+| POST | `/tasks/{task_id}/comments` | 新增留言（任務不存在回 404；空 content / 非法 author_type 回 400/422） |
+| POST | `/dashboard/tasks/{task_id}/comments` | Dashboard 留言表單（PRG，寫完 redirect 回詳情頁） |
+
+詳情頁 `GET /dashboard/tasks/{task_id}` 會顯示「Blackboard Comments」留言串與一個最簡單的新增留言表單。
+
+---
+
 ## 下一步建議
 
 1. **`v0.4.2-service-units`** —— 把 Adapter 與 Hermes Gateway 做成 systemd unit，開機自動啟動、崩潰自動重啟（解掉目前「要手動拉起」的限制）。
