@@ -29,6 +29,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from app import main as adapter  # noqa: E402
+from app import result_sink  # noqa: E402
 from app.health_store import HealthStore  # noqa: E402
 from app.queue_store import QueueStore  # noqa: E402
 
@@ -84,6 +85,7 @@ async def process_item(queue: QueueStore, item: dict) -> None:
         queue.mark_failed(task_id, error=json.dumps(error, ensure_ascii=False))
         _heartbeat(status="idle", current_task_id=None, current_task_started_at=None,
                    last_error_at=adapter.utc_now_iso(), last_error_message=error["message"])
+        result_sink.emit_result(item, result=result, error=error["message"])
         _log(f"{task_id} payload 解析失敗，已標記 failed。")
         return
 
@@ -104,6 +106,7 @@ async def process_item(queue: QueueStore, item: dict) -> None:
         queue.mark_completed(task_id, result_ref=str(adapter.RESULTS_PATH))
         _heartbeat(status="idle", current_task_id=None, current_task_started_at=None,
                    last_completed_at=adapter.utc_now_iso())
+        result_sink.emit_result(item, result=result)
         if adapter.CALLBACK_ENABLED:
             await adapter.send_callback_to_hermes(result)
         _log(f"✅ {task_id} 完成。")
@@ -134,6 +137,7 @@ async def process_item(queue: QueueStore, item: dict) -> None:
         queue.mark_failed(task_id, error=json.dumps(error, ensure_ascii=False))
         _heartbeat(status="idle", current_task_id=None, current_task_started_at=None,
                    last_error_at=adapter.utc_now_iso(), last_error_message=exc.message)
+        result_sink.emit_result(item, result=result, error=exc.message)
         if adapter.CALLBACK_ENABLED:
             try:
                 await adapter.send_callback_to_hermes(result)
@@ -153,6 +157,7 @@ async def process_item(queue: QueueStore, item: dict) -> None:
         queue.mark_failed(task_id, error=json.dumps(error, ensure_ascii=False))
         _heartbeat(status="idle", current_task_id=None, current_task_started_at=None,
                    last_error_at=adapter.utc_now_iso(), last_error_message=error["message"])
+        result_sink.emit_result(item, result=result, error=error["message"])
         _log(f"❌ {task_id} worker 內部錯誤：{error['message']}")
         return
 

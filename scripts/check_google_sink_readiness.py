@@ -50,14 +50,24 @@ def main() -> int:
     except Exception as exc:  # noqa: BLE001
         _check(False, f"import app.main 失敗：{type(exc).__name__}: {exc}")
 
-    print("[2] 敏感 / 執行期 / credential 檔案未被 git tracked")
+    print("[2] 敏感 / 執行期 / credential / mock-log 檔案未被 git tracked")
     patterns = [
         ".env", "data/", "*.db", "queue.db", "tasks.jsonl", "results.jsonl",
         "*credentials*.json", "*service*account*.json", "*service_account*.json",
         "*client_secret*.json", "*token*.json",
+        "mock_google_sheets_rows.jsonl", "*mock_google_sheets_rows.jsonl",
     ]
     for pat in patterns:
         _check(not _tracked(pat), f"{pat} 未 tracked")
+
+    print("[2b] v0.6.7 Result Sink 基礎件")
+    _check((ROOT / "app" / "result_sink.py").is_file(), "app/result_sink.py 存在")
+    envex = ROOT / ".env.example"
+    envex_text = envex.read_text(encoding="utf-8") if envex.is_file() else ""
+    for key in ("RESULT_SINK_ENABLED", "RESULT_SINK_TYPE", "RESULT_SINK_MODE",
+                "MOCK_GOOGLE_SHEETS_ROWS_PATH"):
+        _check(key in envex_text, f".env.example 含 {key}（placeholder）")
+    _check("RESULT_SINK_ENABLED=false" in envex_text, ".env.example 預設 RESULT_SINK_ENABLED=false")
 
     print("[3] 前置版本可追溯：v0.6.5B Replit manual smoke report 存在")
     _check(
