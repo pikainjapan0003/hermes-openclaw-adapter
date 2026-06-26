@@ -74,11 +74,13 @@ def main() -> int:
     src = helper.read_text(encoding="utf-8") if helper.is_file() else ""
     lower = src.lower()
 
-    print("[1] helper 預設 dry-run + 最終 kill-switch 仍 False")
+    print("[1] helper 預設 dry-run + live 改由 explicit guard 把關（非永久 kill-switch）")
     _check(helper.is_file(), "scripts/oauth_local_consent_helper.py 存在")
     _check("DEFAULT_DRY_RUN = True" in src, "helper 預設 dry-run（DEFAULT_DRY_RUN = True）")
-    _check("LIVE_CONSENT_ENABLED = False" in src,
-           "LIVE_CONSENT_ENABLED 仍為 False（本版不跑真網路 consent）")
+    # v0.6.8G-B 後：helper 不再靠永久 kill-switch，而是靠 explicit Owner flags +
+    # local-only + file validation + token display acknowledgement。
+    _check("--i-understand-local-only" in src and "--i-understand-token-will-be-visible" in src,
+           "helper 以 explicit Owner 風險旗標把關 live（取代永久 kill-switch）")
 
     print("[2] --live guard + 需要 --client-secret-file + Replit/CI 偵測")
     _check("--i-understand-local-only" in src and "_refuse_live_no_flag" in src,
@@ -88,7 +90,8 @@ def main() -> int:
            "helper 含 Replit / CI 偵測並會拒絕 live")
 
     print("[3] 無禁用旗標 / 不讀 .env / 不寫 token / 不 print token 真值")
-    for bad_arg in ("--write-token-file", "--print-secret-to-clipboard", "--show-refresh-token-once"):
+    # 註：--show-refresh-token-once 在 v0.6.8G-B 後是「受 ack 旗標守門的允許選項」，不再禁用。
+    for bad_arg in ("--write-token-file", "--print-secret-to-clipboard"):
         _check(bad_arg not in src, f"helper 無禁用旗標 {bad_arg}")
     _check("load_dotenv" not in lower, "helper 不使用 load_dotenv（不讀 .env）")
     for bad_write in ("token.json", "token.pickle", "credentials.json",

@@ -55,8 +55,10 @@ def main() -> int:
     _check("--i-understand-local-only" in text, "helper 含 --i-understand-local-only 安全旗標")
     _check("_refuse_live_no_flag" in text, "helper 無旗標時拒絕 --live")
 
-    print("[3] live 安全閘：偵測 Replit/CI，且本版停用真執行")
-    _check("LIVE_CONSENT_ENABLED = False" in text, "本版 LIVE_CONSENT_ENABLED = False（不跑真 OAuth）")
+    print("[3] live 安全閘：偵測 Replit/CI + explicit Owner 風險旗標把關")
+    # v0.6.8G-B 後：不靠永久 kill-switch，而靠 explicit Owner flags 把關。
+    _check("--i-understand-token-will-be-visible" in text,
+           "helper 以 explicit Owner 風險旗標把關 live（取代永久 kill-switch）")
     _check("REPL_ID" in text and "_detect_non_local_env" in text,
            "helper 含 Replit / CI 偵測並會拒絕")
 

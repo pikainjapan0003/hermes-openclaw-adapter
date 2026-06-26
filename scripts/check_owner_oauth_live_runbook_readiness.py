@@ -67,12 +67,15 @@ def main() -> int:
                 "GOOGLE_SHEETS_SPREADSHEET_ID"):
         _check(key in doc_text, f"文件含 {key}")
 
-    print("[6] consent helper 仍存在且 LIVE_CONSENT_ENABLED 仍為 False")
+    print("[6] consent helper 仍存在且 live 由 explicit Owner 風險旗標把關")
     helper = ROOT / "scripts" / "oauth_local_consent_helper.py"
     helper_text = helper.read_text(encoding="utf-8") if helper.is_file() else ""
     _check(helper.is_file(), "scripts/oauth_local_consent_helper.py 存在")
-    _check("LIVE_CONSENT_ENABLED = False" in helper_text,
-           "helper LIVE_CONSENT_ENABLED 仍為 False（未啟用真 OAuth）")
+    # v0.6.8G-B 後：live 不靠永久 kill-switch，而靠 explicit Owner flags + local-only +
+    # file validation + token display acknowledgement。
+    _check("--i-understand-local-only" in helper_text
+           and "--i-understand-token-will-be-visible" in helper_text,
+           "helper 以 explicit Owner 風險旗標把關 live consent（取代永久 kill-switch）")
 
     print("[7] token / credential 檔未被 git tracked")
     for pat in ("*token*.json", "*credentials*.json", "*client_secret*.json",

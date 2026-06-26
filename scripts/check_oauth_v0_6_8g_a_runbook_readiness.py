@@ -71,10 +71,11 @@ def main() -> int:
     for pre in SUSPECT_TOKEN_PREFIXES:
         _check(pre not in text, f"文件不含疑似 token 前綴（{pre}）")
 
-    print("[9] helper 仍保留 LIVE_CONSENT_ENABLED = False")
+    print("[9] helper live 由 explicit Owner 風險旗標把關（v0.6.8G-B 後不靠永久 kill-switch）")
     helper_text = HELPER.read_text(encoding="utf-8") if HELPER.is_file() else ""
-    _check("LIVE_CONSENT_ENABLED = False" in helper_text,
-           "scripts/oauth_local_consent_helper.py 仍保留 LIVE_CONSENT_ENABLED = False")
+    _check("--i-understand-local-only" in helper_text
+           and "--i-understand-token-will-be-visible" in helper_text,
+           "helper 以 explicit Owner 風險旗標把關 live consent")
 
     if FAILURES:
         print(f"\n❌ v0.6.8G-A runbook readiness 檢查失敗 {len(FAILURES)} 項：")
