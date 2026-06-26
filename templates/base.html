@@ -16,6 +16,7 @@
     <a href="/dashboard/tasks">Tasks</a>
     <a href="/dashboard/reviews">Reviews</a>
     <a href="/dashboard/system">System</a>
+    {% if dashboard_auth_enabled %}<a href="/dashboard/logout">Logout</a>{% endif %}
   </nav>
   <main class="content">
     {% block content %}{% endblock %}

@@ -15,7 +15,7 @@ from typing import Any, Literal
 
 import httpx
 from fastapi import BackgroundTasks, FastAPI, Form, Header, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
@@ -1226,6 +1226,91 @@ DASHBOARD_STATUS_FILTERS = (
     ("rejected", "Rejected"),
     ("archived", "Archived"),
 )
+
+
+# =============================================================================
+# v0.6.4 — Dashboard Auth Gate（Replit 公開前的最小認證關卡）
+#
+# 原則：只在 DASHBOARD_AUTH_ENABLED=true 時生效；本機開發預設 false → 完全不影響舊行為。
+# 開啟後，所有 /dashboard/*（頁面 + 控制表單）都要通過 token gate，未通過 GET→login、
+# POST→401。**只加閘門，不改任務狀態機 / worker / OpenClaw 邏輯。**
+# 接受的憑證來源：登入後的 httpOnly cookie、或 X-Dashboard-Token header、或 ?dashboard_token=。
+# token 來源 DASHBOARD_TOKEN（不寫死、不記 log、不放 docs 真值）。
+# =============================================================================
+DASHBOARD_AUTH_ENABLED = _env_bool("DASHBOARD_AUTH_ENABLED", False)
+DASHBOARD_TOKEN = os.getenv("DASHBOARD_TOKEN", "").strip()
+DASHBOARD_COOKIE = "dashboard_auth"
+# 登入 / 登出本身永遠豁免（否則無法登入）。
+_DASHBOARD_AUTH_EXEMPT = {"/dashboard/login", "/dashboard/logout"}
+
+# 給模板判斷是否顯示 logout 連結（純顯示，不影響保護邏輯）。
+templates.env.globals["dashboard_auth_enabled"] = DASHBOARD_AUTH_ENABLED
+
+
+def _dashboard_authed(request: Request) -> bool:
+    """是否通過 Dashboard 認證。auth 關閉時恆 True；開啟但未設 token 時 fail-closed。"""
+    if not DASHBOARD_AUTH_ENABLED:
+        return True
+    if not DASHBOARD_TOKEN:
+        # 開了 auth 卻沒設 token → 保守一律擋（避免「以為有保護其實沒設」）。
+        return False
+    supplied = (
+        request.cookies.get(DASHBOARD_COOKIE)
+        or request.headers.get("X-Dashboard-Token")
+        or request.query_params.get("dashboard_token")
+    )
+    return bool(supplied) and hmac.compare_digest(str(supplied), DASHBOARD_TOKEN)
+
+
+@app.middleware("http")
+async def _dashboard_auth_middleware(request: Request, call_next):
+    """集中保護 /dashboard/*。不碰其他路由（JSON API 仍用各自的 X-Adapter-Token）。"""
+    path = request.url.path
+    if (
+        DASHBOARD_AUTH_ENABLED
+        and path.startswith("/dashboard")
+        and path not in _DASHBOARD_AUTH_EXEMPT
+    ):
+        if not _dashboard_authed(request):
+            if request.method == "GET":
+                return RedirectResponse(url="/dashboard/login", status_code=303)
+            return JSONResponse(
+                {"detail": "Dashboard auth required"}, status_code=401
+            )
+    return await call_next(request)
+
+
+@app.get("/dashboard/login", response_class=HTMLResponse)
+def dashboard_login_form(request: Request, error: str | None = None) -> HTMLResponse:
+    """登入頁。auth 關閉時直接回 dashboard（不需登入）。"""
+    if not DASHBOARD_AUTH_ENABLED:
+        return RedirectResponse(url="/dashboard", status_code=303)
+    return templates.TemplateResponse(
+        "login.html",
+        {"request": request, "title": DASHBOARD_TITLE, "error": error},
+    )
+
+
+@app.post("/dashboard/login")
+def dashboard_login(dashboard_token: str = Form("")) -> RedirectResponse:
+    """驗證 DASHBOARD_TOKEN → 設 httpOnly cookie。token 不記 log。"""
+    if not DASHBOARD_AUTH_ENABLED:
+        return RedirectResponse(url="/dashboard", status_code=303)
+    if DASHBOARD_TOKEN and hmac.compare_digest(dashboard_token.strip(), DASHBOARD_TOKEN):
+        resp = RedirectResponse(url="/dashboard", status_code=303)
+        resp.set_cookie(
+            DASHBOARD_COOKIE, DASHBOARD_TOKEN,
+            httponly=True, samesite="lax", max_age=60 * 60 * 12,
+        )
+        return resp
+    return RedirectResponse(url="/dashboard/login?error=1", status_code=303)
+
+
+@app.get("/dashboard/logout")
+def dashboard_logout() -> RedirectResponse:
+    resp = RedirectResponse(url="/dashboard/login", status_code=303)
+    resp.delete_cookie(DASHBOARD_COOKIE)
+    return resp
 
 
 @app.get("/dashboard", response_class=HTMLResponse)

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Dashboard Login</h2>
+<p class="muted">此 Dashboard 已啟用認證關卡（DASHBOARD_AUTH_ENABLED=true）。請輸入 Dashboard token。</p>
+
+{% if error %}
+<p class="warn">token 不正確，請再試一次。</p>
+{% endif %}
+
+<form class="comment-form" method="post" action="/dashboard/login">
+  <label>Dashboard token:
+    <input type="password" name="dashboard_token" autocomplete="off" required>
+  </label>
+  <button type="submit">登入</button>
+</form>
+<p class="muted">token 由 DASHBOARD_TOKEN 設定（放 Replit Secrets，不進 git）。本機開發可關閉認證。</p>
+{% endblock %}
