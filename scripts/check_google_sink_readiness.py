@@ -61,13 +61,29 @@ def main() -> int:
         _check(not _tracked(pat), f"{pat} 未 tracked")
 
     print("[2b] v0.6.7 Result Sink 基礎件")
-    _check((ROOT / "app" / "result_sink.py").is_file(), "app/result_sink.py 存在")
+    rs = ROOT / "app" / "result_sink.py"
+    _check(rs.is_file(), "app/result_sink.py 存在")
+    # result_sink 必須維持 mock-safe：不得 import google client（字串 'google_sheets' 不算）。
+    rs_text = rs.read_text(encoding="utf-8").lower() if rs.is_file() else ""
+    _bad = ("import google", "from google", "googleapiclient", "gspread",
+            "google.oauth", "google_auth", "google.auth", "import oauthlib")
+    _check(not any(b in rs_text for b in _bad), "result_sink.py 不 import google client（mock-safe）")
     envex = ROOT / ".env.example"
     envex_text = envex.read_text(encoding="utf-8") if envex.is_file() else ""
     for key in ("RESULT_SINK_ENABLED", "RESULT_SINK_TYPE", "RESULT_SINK_MODE",
                 "MOCK_GOOGLE_SHEETS_ROWS_PATH"):
         _check(key in envex_text, f".env.example 含 {key}（placeholder）")
     _check("RESULT_SINK_ENABLED=false" in envex_text, ".env.example 預設 RESULT_SINK_ENABLED=false")
+
+    print("[2c] v0.6.8 OAuth / Secrets placeholder 與設計文件")
+    for key in ("GOOGLE_AUTH_MODE", "GOOGLE_SHEETS_SPREADSHEET_ID",
+                "GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_CLIENT_SECRET",
+                "GOOGLE_OAUTH_REFRESH_TOKEN", "GOOGLE_SERVICE_ACCOUNT_JSON"):
+        _check(key in envex_text, f".env.example 含 OAuth key {key}")
+    _check(
+        (ROOT / "docs" / "HERMES_OPENCLAW_OAUTH_SECRETS_DESIGN_V0_6_8.md").is_file(),
+        "v0.6.8 OAuth design 文件存在",
+    )
 
     print("[3] 前置版本可追溯：v0.6.5B Replit manual smoke report 存在")
     _check(
