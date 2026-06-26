@@ -1,127 +1,133 @@
 {% extends "base.html" %}
 {% block content %}
 <p><a href="/dashboard/tasks">&laquo; 回任務列表</a></p>
-<h2>Task Detail</h2>
-
-<table class="kv">
-  <tbody>
-    <tr><th>task_id</th><td>{{ task.task_id }}</td></tr>
-    <tr><th>status</th><td class="status status-{{ task.status }}">{{ task.status }}</td></tr>
-    <tr><th>title</th><td>{{ task.title or "" }}</td></tr>
-    <tr><th>attempts</th><td>{{ task.attempts }} / {{ task.max_attempts }}</td></tr>
-    <tr><th>created_at</th><td>{{ task.created_at or "" }}</td></tr>
-    <tr><th>updated_at</th><td>{{ task.updated_at or "" }}</td></tr>
-    <tr><th>started_at</th><td>{{ task.started_at or "" }}</td></tr>
-    <tr><th>finished_at</th><td>{{ task.finished_at or "" }}</td></tr>
-  </tbody>
-</table>
+<h2>Task Detail
+  <span class="{{ status_class(task.status) }}">{{ task.status }}</span>
+</h2>
 
 {% if comment_error %}
 <p class="warn">操作失敗：{{ comment_error }}</p>
 {% endif %}
 
+<section class="card">
+  <h3>Summary</h3>
+  <table class="kv">
+    <tbody>
+      <tr><th>task_id</th><td class="mono">{{ task.task_id }}</td></tr>
+      <tr><th>status</th><td><span class="{{ status_class(task.status) }}">{{ task.status }}</span></td></tr>
+      <tr><th>title</th><td>{{ format_empty(task.title) }}</td></tr>
+      <tr><th>attempts</th><td>{{ task.attempts }} / {{ task.max_attempts }}</td></tr>
+      <tr><th>created_at</th><td class="muted">{{ format_empty(task.created_at) }}</td></tr>
+      <tr><th>updated_at</th><td class="muted">{{ format_empty(task.updated_at) }}</td></tr>
+      <tr><th>started_at</th><td class="muted">{{ format_empty(task.started_at) }}</td></tr>
+      <tr><th>finished_at</th><td class="muted">{{ format_empty(task.finished_at) }}</td></tr>
+    </tbody>
+  </table>
+</section>
+
 {% if task.status == "waiting_review" %}
-<div class="approval-box">
-  <h3>⏳ Waiting Review — 需人工確認</h3>
-  <p class="meta">此任務不會被 worker 執行，直到 approve。</p>
-  <div class="approval-actions">
+<section class="card review-card">
+  <h3>Human Review</h3>
+  <p class="muted">此任務不會被 worker 執行，直到 approve。</p>
+  <div class="action-row">
     <form method="post" action="/dashboard/tasks/{{ task.task_id }}/approve">
       <button type="submit" class="btn-approve">Approve（轉 queued）</button>
     </form>
-    <form method="post" action="/dashboard/tasks/{{ task.task_id }}/reject" class="reject-form">
+    <form method="post" action="/dashboard/tasks/{{ task.task_id }}/reject" class="inline-form">
       <input type="text" name="reason" placeholder="拒絕原因（選填）">
       <button type="submit" class="btn-reject">Reject（轉 rejected）</button>
     </form>
   </div>
-</div>
+</section>
 {% endif %}
 
 {% set can_cancel = task.status in ["queued", "waiting_review"] %}
 {% set can_retry = task.status == "failed" %}
 {% set can_archive = task.status in ["completed", "failed", "cancelled", "rejected"] %}
 {% if can_cancel or can_retry or can_archive %}
-<div class="control-box">
-  <h3>Controls（有限控制）</h3>
-  <div class="approval-actions">
+<section class="card control-card">
+  <h3>Safe Controls</h3>
+  <div class="action-row">
     {% if can_cancel %}
-    <form method="post" action="/dashboard/tasks/{{ task.task_id }}/cancel" class="reject-form">
+    <form method="post" action="/dashboard/tasks/{{ task.task_id }}/cancel" class="inline-form">
       <input type="text" name="reason" placeholder="取消原因（選填）">
-      <button type="submit" class="btn-cancel">Cancel（轉 cancelled）</button>
+      <button type="submit" class="btn-cancel">Cancel</button>
     </form>
     {% endif %}
     {% if can_retry %}
-    <form method="post" action="/dashboard/tasks/{{ task.task_id }}/retry" class="reject-form">
+    <form method="post" action="/dashboard/tasks/{{ task.task_id }}/retry" class="inline-form">
       <input type="text" name="reason" placeholder="重試原因（選填）">
-      <button type="submit" class="btn-retry">Retry（轉 queued）</button>
+      <button type="submit" class="btn-retry">Retry</button>
     </form>
     {% endif %}
     {% if can_archive %}
-    <form method="post" action="/dashboard/tasks/{{ task.task_id }}/archive" class="reject-form">
+    <form method="post" action="/dashboard/tasks/{{ task.task_id }}/archive" class="inline-form">
       <input type="text" name="reason" placeholder="封存原因（選填）">
-      <button type="submit" class="btn-archive">Archive（轉 archived）</button>
+      <button type="submit" class="btn-archive">Archive</button>
     </form>
     {% endif %}
   </div>
-  <p class="meta">控制只透過 Queue 狀態機：不取消 running、retry 不直接執行、archive 不刪資料。</p>
-</div>
+  <p class="muted">只透過 Queue 狀態機：不取消 running、retry 不直接執行、archive 不刪資料。</p>
+</section>
 {% endif %}
 
-<h3>task_text</h3>
-<pre class="block">{{ task.task_text or "" }}</pre>
+<section class="card">
+  <h3>Task Text</h3>
+  {% if task.task_text %}<pre class="block">{{ task.task_text }}</pre>{% else %}<p class="muted">No task text.</p>{% endif %}
+</section>
 
-<h3>result_text</h3>
-<pre class="block">{{ task.result_text or "" }}</pre>
+<section class="card">
+  <h3>Result</h3>
+  {% if task.result_text %}<pre class="block">{{ task.result_text }}</pre>{% else %}<p class="muted">No result yet.</p>{% endif %}
+</section>
 
-<h3>error_message</h3>
-<pre class="block">{{ task.error_message or "" }}</pre>
+<section class="card">
+  <h3>Error</h3>
+  {% if task.error_message %}<pre class="block danger-block">{{ task.error_message }}</pre>{% else %}<p class="muted">No error.</p>{% endif %}
+</section>
 
-<h3>metadata</h3>
-<pre class="block">{{ task.metadata }}</pre>
+<section class="card">
+  <h3>Metadata</h3>
+  <pre class="block"><code>{{ task.metadata }}</code></pre>
+</section>
 
-<hr>
-
-<h2>Blackboard Comments</h2>
-<p class="meta">留言只寫入 blackboard（task_comments），不會改變 queue 任務狀態。</p>
-
-{% if comment_error %}
-<p class="warn">留言失敗：{{ comment_error }}</p>
-{% endif %}
-
-<table class="grid comments">
-  <thead>
-    <tr>
-      <th>created_at</th><th>author_type</th><th>author_name</th><th>content</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for c in comments %}
-    <tr>
-      <td>{{ c.created_at }}</td>
-      <td class="author author-{{ c.author_type }}">{{ c.author_type }}</td>
-      <td>{{ c.author_name or "" }}</td>
-      <td class="comment-content">{{ c.content }}</td>
-    </tr>
-    {% else %}
-    <tr><td colspan="4" class="empty">（目前沒有留言）</td></tr>
-    {% endfor %}
-  </tbody>
-</table>
-
-<h3>新增留言</h3>
-<form class="comment-form" method="post" action="/dashboard/tasks/{{ task.task_id }}/comments">
-  <label>author_type:
-    <select name="author_type">
-      {% for a in author_types %}
-      <option value="{{ a }}" {% if a == "user" %}selected{% endif %}>{{ a }}</option>
+<section class="card">
+  <h3>Blackboard Comments</h3>
+  <p class="muted">留言只寫入 blackboard，不會改變 queue 任務狀態。</p>
+  <table class="grid comments hoverable">
+    <thead>
+      <tr><th>created_at</th><th>author_type</th><th>author_name</th><th>content</th></tr>
+    </thead>
+    <tbody>
+      {% for c in comments %}
+      <tr>
+        <td class="muted nowrap">{{ c.created_at }}</td>
+        <td><span class="badge badge-author-{{ c.author_type }}">{{ c.author_type }}</span></td>
+        <td>{{ format_empty(c.author_name) }}</td>
+        <td class="comment-content">{{ c.content }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" class="empty">（目前沒有留言）</td></tr>
       {% endfor %}
-    </select>
-  </label>
-  <label>author_name:
-    <input type="text" name="author_name" value="owner">
-  </label>
-  <label>content:
-    <textarea name="content" rows="3" required placeholder="留言內容..."></textarea>
-  </label>
-  <button type="submit">送出留言</button>
-</form>
+    </tbody>
+  </table>
+
+  <h4>新增留言</h4>
+  <form class="comment-form" method="post" action="/dashboard/tasks/{{ task.task_id }}/comments">
+    <label>author_type:
+      <select name="author_type">
+        {% for a in author_types %}
+        <option value="{{ a }}" {% if a == "user" %}selected{% endif %}>{{ a }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>author_name:
+      <input type="text" name="author_name" value="owner">
+    </label>
+    <label>content:
+      <textarea name="content" rows="3" required placeholder="留言內容..."></textarea>
+    </label>
+    <button type="submit">送出留言</button>
+  </form>
+</section>
 {% endblock %}

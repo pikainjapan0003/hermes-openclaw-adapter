@@ -1,41 +1,48 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Pending Reviews</h2>
-<p class="meta">這些任務 safety_level &ge; 3 或 requires_confirmation=true，需人工確認。
-  在 approve 之前，worker 絕不會執行它們。total: {{ total }}</p>
+<h2>Pending Reviews <span class="badge badge-waiting_review">{{ total }}</span></h2>
+<p class="muted">這些任務 safety_level &ge; 3 或 requires_confirmation=true，需人工確認。
+  在 approve 之前，worker 絕不會執行它們。</p>
 
-<table class="grid">
+{% if items %}
+<table class="grid hoverable">
   <thead>
     <tr>
       <th>task_id</th><th>title</th><th>safety_level</th><th>requires_confirmation</th>
-      <th>created_at</th><th>updated_at</th><th>task_text</th><th>actions</th>
+      <th>created_at</th><th>task_text</th><th>actions</th>
     </tr>
   </thead>
   <tbody>
     {% for t in items %}
     <tr>
-      <td><a href="/dashboard/tasks/{{ t.task_id }}">{{ t.task_id }}</a></td>
-      <td>{{ t.title or "" }}</td>
-      <td>{{ t.safety_level }}</td>
-      <td>{{ t.requires_confirmation }}</td>
-      <td>{{ t.created_at or "" }}</td>
-      <td>{{ t.updated_at or "" }}</td>
-      <td class="comment-content">{{ t.task_text_snippet or "" }}</td>
+      <td><a href="/dashboard/tasks/{{ t.task_id }}" title="{{ t.task_id }}" class="mono">{{ short_task_id(t.task_id) }}</a></td>
+      <td>{{ truncate(t.title, 30) }}</td>
+      <td><span class="badge badge-level">L{{ t.safety_level if t.safety_level is not none else '?' }}</span></td>
       <td>
-        <div class="approval-actions">
+        {% if t.requires_confirmation %}<span class="badge badge-warning">yes</span>
+        {% else %}<span class="badge badge-muted">no</span>{% endif %}
+      </td>
+      <td class="muted nowrap">{{ format_empty(t.created_at) }}</td>
+      <td class="comment-content">{{ truncate(t.task_text_snippet, 80) }}</td>
+      <td>
+        <div class="action-row">
           <form method="post" action="/dashboard/tasks/{{ t.task_id }}/approve">
             <button type="submit" class="btn-approve">Approve</button>
           </form>
-          <form method="post" action="/dashboard/tasks/{{ t.task_id }}/reject" class="reject-form">
+          <form method="post" action="/dashboard/tasks/{{ t.task_id }}/reject" class="inline-form">
             <input type="text" name="reason" placeholder="拒絕原因（選填）">
             <button type="submit" class="btn-reject">Reject</button>
           </form>
         </div>
       </td>
     </tr>
-    {% else %}
-    <tr><td colspan="8" class="empty">（目前沒有待審核任務）</td></tr>
     {% endfor %}
   </tbody>
 </table>
+{% else %}
+<div class="empty-state">
+  <p>✅ 目前沒有待審核任務。</p>
+  <p class="muted">需人工確認的任務（safety_level &ge; 3 或 requires_confirmation）會出現在這裡。</p>
+</div>
+{% endif %}
 {% endblock %}

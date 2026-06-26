@@ -179,6 +179,15 @@ hermes-openclaw-adapter/
 > 純本機使用，頁面頂部標示「Hermes x OpenClaw Queue Control Board」與「Read-only Dashboard」。
 > 樣式：[`static/dashboard.css`](static/dashboard.css)；模板：[`templates/`](templates/)。
 
+**v0.5.7 Dashboard Polish / UX Cleanup**（純 UI/UX，未改任何後端行為）：
+- 首頁 `/dashboard` 整理成控制台總覽：System Health 卡（Adapter / Worker online·stale·unknown / Queue DB / OpenClaw CLI）、Queue Counts 卡、Quick Links（View Tasks / Pending Reviews / System Health / Recent Errors，純連結非控制）。
+- `/dashboard/tasks`：status badge、短版 task_id（hover 看完整）、error 截斷、All/Queued/Running/Waiting Review/Failed/Completed/Cancelled/Rejected/Archived 篩選 pill（保留 status/limit/offset query）。
+- task detail：分區成 Summary / Task Text / Result / Error / Metadata / Human Review / Safe Controls / Blackboard Comments；空值顯示 muted「No result yet.」「No error.」。
+- `/dashboard/reviews`：頂部 pending count、safety_level / requires_confirmation badge、空狀態訊息。
+- `/dashboard/system`：worker online/stale/unknown badge、current_task_id 連到詳情、OpenClaw 標示 checked without execution。
+- 全站 CSS：統一 status badge 顏色、卡片、表格 hover、muted、semantic（success/info/warning/danger）、手機基本可讀；無 React/Vite/CDN/外部字型。
+- 新增唯讀 template helper：`short_task_id` / `truncate` / `status_class` / `format_empty` / `yesno`（不寫任何資料）。
+
 ---
 
 ## Blackboard / Task Comments（v0.5.3，留言板）

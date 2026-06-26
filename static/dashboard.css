@@ -1,97 +1,148 @@
-/* v0.5.2 Read-only Dashboard — 簡單清楚即可，不追求漂亮。 */
+/* v0.5.7 Dashboard polish — 統一卡片 / badge / muted / 表格 hover。
+   不引入任何前端框架、不外連 CDN、不用外部字型。簡單清楚即可。 */
 * { box-sizing: border-box; }
 body {
-  font-family: -apple-system, "Segoe UI", "Noto Sans CJK TC", sans-serif;
+  font-family: -apple-system, "Segoe UI", "Noto Sans CJK TC", system-ui, sans-serif;
   margin: 0;
   color: #1b1b1b;
-  background: #f6f7f9;
+  background: #f2f4f7;
   line-height: 1.5;
 }
+
+/* --- top bar / nav ------------------------------------------------------- */
 .topbar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  padding: 14px 20px;
-  background: #20232a;
-  color: #fff;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 14px 20px; background: #20232a; color: #fff;
 }
 .topbar h1 { font-size: 18px; margin: 0; }
 .readonly-badge {
-  font-size: 12px;
-  font-weight: bold;
-  padding: 2px 8px;
-  border: 1px solid #6cc;
-  border-radius: 4px;
-  color: #9ee;
+  font-size: 12px; font-weight: bold; padding: 2px 8px;
+  border: 1px solid #6cc; border-radius: 4px; color: #9ee;
 }
-.nav {
-  display: flex;
-  gap: 16px;
-  padding: 8px 20px;
-  background: #2f343d;
-}
-.nav a { color: #cfe; text-decoration: none; font-size: 14px; }
-.nav a:hover { text-decoration: underline; }
-.content { padding: 20px; max-width: 1100px; }
-h2 { font-size: 16px; border-bottom: 2px solid #ddd; padding-bottom: 4px; }
-h3 { font-size: 14px; margin-bottom: 4px; }
-
-table { border-collapse: collapse; width: 100%; margin-bottom: 16px; background: #fff; }
-th, td { border: 1px solid #ddd; padding: 6px 10px; text-align: left; font-size: 13px; vertical-align: top; }
-table.kv th { width: 160px; background: #fafafa; }
-table.grid thead th { background: #eef1f4; }
-td.empty, .empty { text-align: center; color: #888; }
-
-.status { font-weight: bold; }
-.status-queued { color: #555; }
-.status-running { color: #1565c0; }
-.status-completed { color: #2e7d32; }
-.status-failed { color: #c62828; }
-.status-cancelled { color: #8a6d00; }
-.status-waiting_review { color: #b8860b; font-weight: bold; }
-.status-rejected { color: #b00020; font-weight: bold; }
-.status-archived { color: #555; }
-
-.control-box { border: 1px solid #999; background: #f4f6f8; padding: 12px 16px; margin: 16px 0; }
-.control-box h3 { margin-top: 0; }
-.btn-cancel { background: #8a6d00; color: #fff; border: none; padding: 6px 14px; cursor: pointer; }
-.btn-retry { background: #1565c0; color: #fff; border: none; padding: 6px 14px; cursor: pointer; }
-.btn-archive { background: #555; color: #fff; border: none; padding: 6px 14px; cursor: pointer; }
-
-.approval-box { border: 2px solid #b8860b; background: #fffdf5; padding: 12px 16px; margin: 16px 0; }
-.approval-box h3 { margin-top: 0; color: #8a6d00; }
-.approval-actions { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
-.approval-actions form { display: flex; gap: 6px; align-items: center; margin: 0; }
-.btn-approve { background: #2e7d32; color: #fff; border: none; padding: 6px 14px; cursor: pointer; }
-.btn-reject { background: #c62828; color: #fff; border: none; padding: 6px 14px; cursor: pointer; }
-.reject-form input { width: 180px; }
-
-.filter { margin-bottom: 12px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
-.filter input { width: 80px; }
-.meta { color: #555; font-size: 13px; }
-.warn { color: #c62828; }
-
-pre.block {
-  background: #fff;
-  border: 1px solid #ddd;
-  padding: 10px;
-  white-space: pre-wrap;
-  word-break: break-word;
-  font-size: 13px;
-}
-.pager { display: flex; gap: 16px; }
-.pager a { text-decoration: none; }
+.nav { display: flex; gap: 6px; padding: 8px 20px; background: #2f343d; flex-wrap: wrap; }
+.nav a { color: #cfe; text-decoration: none; font-size: 14px; padding: 4px 10px; border-radius: 4px; }
+.nav a:hover { background: #3c424d; text-decoration: none; }
+.content { padding: 20px; max-width: 1150px; }
 .footer { padding: 16px 20px; color: #888; font-size: 12px; }
 
-hr { border: none; border-top: 1px solid #ddd; margin: 24px 0; }
+h2 { font-size: 18px; border-bottom: 2px solid #dde1e6; padding-bottom: 6px; }
+h3 { font-size: 15px; margin-bottom: 6px; }
+h4 { font-size: 13px; margin-bottom: 4px; }
+
+/* --- cards --------------------------------------------------------------- */
+.cards { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
+.card {
+  background: #fff; border: 1px solid #e0e4e9; border-radius: 8px;
+  padding: 14px 16px; margin-bottom: 16px; flex: 1 1 320px; min-width: 280px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+.card h3 { margin-top: 0; }
+.card.review-card { border-left: 4px solid #b8860b; }
+.card.control-card { border-left: 4px solid #777; }
+
+/* --- tables -------------------------------------------------------------- */
+table { border-collapse: collapse; width: 100%; margin-bottom: 12px; background: #fff; }
+th, td { border: 1px solid #e2e6ea; padding: 6px 10px; text-align: left; font-size: 13px; vertical-align: top; }
+table.kv th { width: 150px; background: #fafbfc; font-weight: 600; }
+table.counts-kv th { width: auto; background: #fff; }
+table.grid thead th { background: #eef1f4; position: sticky; top: 0; }
+table.hoverable tbody tr:hover { background: #f5f8fb; }
+td.empty, .empty { text-align: center; color: #8a8f96; }
+.nowrap { white-space: nowrap; }
+.mono { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 12px; }
+
+/* --- text helpers -------------------------------------------------------- */
+.muted { color: #80868b; }
+.warn { color: #c62828; font-weight: 600; }
+.inline-error {
+  background: #fff5f5; border: 1px solid #f1c0c0; color: #b00020;
+  padding: 8px 10px; border-radius: 6px; font-size: 13px; word-break: break-word;
+}
+
+/* --- badges -------------------------------------------------------------- */
+.badge {
+  display: inline-block; padding: 1px 8px; border-radius: 10px;
+  font-size: 12px; font-weight: 600; line-height: 1.6;
+  border: 1px solid transparent; white-space: nowrap;
+}
+/* success / online */
+.badge-completed, .badge-online { background: #e6f4ea; color: #1e7e34; border-color: #bfe3c8; }
+/* info / running */
+.badge-running, .badge-info { background: #e7f0fb; color: #1565c0; border-color: #c2d8f3; }
+/* warning / waiting / stale */
+.badge-waiting_review, .badge-stale, .badge-warning { background: #fdf6e3; color: #8a6d00; border-color: #ecd9a3; }
+/* danger / failed / rejected */
+.badge-failed, .badge-rejected { background: #fdecec; color: #c0271f; border-color: #f1c0c0; }
+/* neutral / muted */
+.badge-queued, .badge-cancelled, .badge-archived, .badge-unknown, .badge-muted, .badge-level {
+  background: #eceef1; color: #4b5158; border-color: #d8dce1;
+}
+/* author types */
+.badge-author-user { background: #e7f0fb; color: #1565c0; }
+.badge-author-hermes { background: #f1e7fb; color: #6a1b9a; }
+.badge-author-openclaw { background: #e6f4ea; color: #1e7e34; }
+.badge-author-system { background: #eceef1; color: #4b5158; }
+
+/* --- status filter pills (tasks) ---------------------------------------- */
+.status-filters { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.filter-pill {
+  text-decoration: none; font-size: 13px; padding: 3px 12px; border-radius: 14px;
+  background: #fff; border: 1px solid #d4d9df; color: #41464c;
+}
+.filter-pill:hover { background: #eef2f6; }
+.filter-pill.active { background: #20232a; color: #fff; border-color: #20232a; }
+
+/* --- forms / filters ----------------------------------------------------- */
+.filter { margin-bottom: 12px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.filter input { width: 80px; }
+.quick-links { margin: 0; padding-left: 18px; }
+.quick-links li { margin: 4px 0; }
+
+/* --- blocks / pre -------------------------------------------------------- */
+pre.block {
+  background: #fbfbfc; border: 1px solid #e2e6ea; padding: 10px;
+  white-space: pre-wrap; word-break: break-word; font-size: 13px; border-radius: 6px;
+}
+pre.danger-block { background: #fff7f7; border-color: #f1c0c0; }
 .comment-content { white-space: pre-wrap; word-break: break-word; }
-.author { font-weight: bold; }
-.author-user { color: #1565c0; }
-.author-hermes { color: #6a1b9a; }
-.author-openclaw { color: #2e7d32; }
-.author-system { color: #555; }
-.comment-form { display: flex; flex-direction: column; gap: 8px; max-width: 600px; background: #fff; border: 1px solid #ddd; padding: 12px; }
+
+/* --- action rows (approval / control) ----------------------------------- */
+.action-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.action-row form, .inline-form { display: flex; gap: 6px; align-items: center; margin: 0; }
+.inline-form input { width: 170px; }
+button { cursor: pointer; border: none; padding: 6px 14px; border-radius: 5px; color: #fff; font-size: 13px; }
+button:hover { filter: brightness(0.94); }
+.btn-approve { background: #2e7d32; }
+.btn-reject  { background: #c62828; }
+.btn-cancel  { background: #8a6d00; }
+.btn-retry   { background: #1565c0; }
+.btn-archive { background: #555; }
+
+/* --- comment form -------------------------------------------------------- */
+.comment-form { display: flex; flex-direction: column; gap: 8px; max-width: 600px; }
 .comment-form label { display: flex; flex-direction: column; font-size: 13px; gap: 2px; }
 .comment-form textarea { font-family: inherit; }
-.comment-form button { align-self: flex-start; }
+.comment-form button { align-self: flex-start; background: #20232a; }
+
+/* --- empty state --------------------------------------------------------- */
+.empty-state {
+  background: #fff; border: 1px dashed #cfd5db; border-radius: 8px;
+  padding: 24px; text-align: center;
+}
+.empty-state p { margin: 4px 0; }
+
+.pager { display: flex; gap: 16px; }
+.pager a { text-decoration: none; }
+
+/* --- mobile -------------------------------------------------------------- */
+@media (max-width: 640px) {
+  .content { padding: 12px; }
+  .cards { flex-direction: column; }
+  .card { min-width: 0; flex-basis: auto; }
+  table, thead, tbody, th, td, tr { display: block; }
+  table.kv th { width: auto; border-bottom: none; }
+  table.grid thead { display: none; }
+  table.grid td { border-top: none; }
+  table.grid tr { border: 1px solid #e2e6ea; border-radius: 6px; margin-bottom: 8px; padding: 4px; }
+  .inline-form input { width: 100%; }
+}

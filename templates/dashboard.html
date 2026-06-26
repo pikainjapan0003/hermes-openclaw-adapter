@@ -1,47 +1,51 @@
 {% extends "base.html" %}
 {% block content %}
 <h2>Overview</h2>
+<p class="muted">控制台總覽（唯讀）。version {{ version }} · execution_mode {{ execution_mode }} · {{ generated_at }}</p>
 
-<table class="kv">
-  <tbody>
-    <tr><th>version</th><td>{{ version }}</td></tr>
-    <tr><th>execution_mode</th><td>{{ execution_mode }}</td></tr>
-    <tr><th>queue_db_exists</th><td>{{ queue_db_exists }}</td></tr>
-    <tr><th>worker status</th><td>{{ worker.status }}</td></tr>
-    <tr><th>generated_at</th><td>{{ generated_at }}</td></tr>
-  </tbody>
-</table>
+<div class="cards">
+  <section class="card">
+    <h3>System Health</h3>
+    <table class="kv">
+      <tbody>
+        <tr><th>Adapter</th><td><span class="badge badge-completed">online</span></td></tr>
+        <tr><th>Worker</th><td><span class="{{ status_class(worker.status) }}">{{ worker.status }}</span></td></tr>
+        <tr><th>Queue DB</th>
+          <td>{% if queue_db_exists %}<span class="badge badge-completed">ok</span>{% else %}<span class="badge badge-failed">missing</span>{% endif %}</td></tr>
+        <tr><th>OpenClaw CLI</th>
+          <td>{% if openclaw.cli_path_exists %}<span class="badge badge-completed">path exists</span>{% else %}<span class="badge badge-rejected">missing</span>{% endif %}</td></tr>
+        <tr><th>Worker last seen</th><td class="muted">{{ format_empty(worker.last_seen_at) }}</td></tr>
+      </tbody>
+    </table>
+    <p><a href="/dashboard/system">System details &raquo;</a></p>
+  </section>
 
-<h2>Counts</h2>
-<table class="grid">
-  <thead>
-    <tr>
-      <th>queued</th><th>running</th><th>completed</th>
-      <th>failed</th><th>cancelled</th>
-      <th>waiting_review</th><th>rejected</th><th>archived</th><th>total</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>{{ counts.queued }}</td>
-      <td>{{ counts.running }}</td>
-      <td>{{ counts.completed }}</td>
-      <td>{{ counts.failed }}</td>
-      <td>{{ counts.cancelled }}</td>
-      <td class="status-waiting_review">{{ counts.waiting_review }}</td>
-      <td class="status-rejected">{{ counts.rejected }}</td>
-      <td class="status-archived">{{ counts.archived }}</td>
-      <td><strong>{{ total }}</strong></td>
-    </tr>
-  </tbody>
-</table>
+  <section class="card">
+    <h3>Queue Counts</h3>
+    <table class="kv counts-kv">
+      <tbody>
+        <tr><th><span class="badge badge-queued">queued</span></th><td>{{ counts.queued }}</td></tr>
+        <tr><th><span class="badge badge-running">running</span></th><td>{{ counts.running }}</td></tr>
+        <tr><th><span class="badge badge-waiting_review">waiting_review</span></th><td>{{ counts.waiting_review }}</td></tr>
+        <tr><th><span class="badge badge-failed">failed</span></th><td>{{ counts.failed }}</td></tr>
+        <tr><th><span class="badge badge-completed">completed</span></th><td>{{ counts.completed }}</td></tr>
+        <tr><th><span class="badge badge-cancelled">cancelled</span></th><td>{{ counts.cancelled }}</td></tr>
+        <tr><th><span class="badge badge-rejected">rejected</span></th><td>{{ counts.rejected }}</td></tr>
+        <tr><th><span class="badge badge-archived">archived</span></th><td>{{ counts.archived }}</td></tr>
+        <tr><th>total</th><td><strong>{{ total }}</strong></td></tr>
+      </tbody>
+    </table>
+  </section>
 
-<p>
-  <a href="/dashboard/tasks">查看任務列表 &raquo;</a>
-  {% if counts.waiting_review and counts.waiting_review > 0 %}
-  &nbsp;|&nbsp; <a href="/dashboard/reviews"><strong>{{ counts.waiting_review }} 筆待審核 &raquo;</strong></a>
-  {% else %}
-  &nbsp;|&nbsp; <a href="/dashboard/reviews">Pending Reviews &raquo;</a>
-  {% endif %}
-</p>
+  <section class="card">
+    <h3>Quick Links</h3>
+    <p class="muted">只是連結，不是控制按鈕。</p>
+    <ul class="quick-links">
+      <li><a href="/dashboard/tasks">View Tasks</a></li>
+      <li><a href="/dashboard/reviews">Pending Reviews{% if counts.waiting_review %} ({{ counts.waiting_review }}){% endif %}</a></li>
+      <li><a href="/dashboard/system">System Health</a></li>
+      <li><a href="/dashboard/tasks?status=failed">Recent Errors{% if counts.failed %} ({{ counts.failed }}){% endif %}</a></li>
+    </ul>
+  </section>
+</div>
 {% endblock %}

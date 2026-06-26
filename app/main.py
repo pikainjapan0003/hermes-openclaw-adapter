@@ -1172,11 +1172,66 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 DASHBOARD_TITLE = "Hermes x OpenClaw Queue Control Board"
 
 
+# --- v0.5.7 Dashboard polish：純唯讀的 template helper（不寫任何資料）---------
+def short_task_id(task_id: Any, head: int = 10, tail: int = 4) -> str:
+    """顯示用的短 task_id（中間省略）。完整值請放在 title 屬性。"""
+    s = "" if task_id is None else str(task_id)
+    if len(s) <= head + tail + 1:
+        return s
+    return f"{s[:head]}…{s[-tail:]}"
+
+
+def truncate(text: Any, max_len: int = 80) -> str:
+    """過長文字截斷加省略號。唯讀。"""
+    s = "" if text is None else str(text)
+    s = s.replace("\n", " ").strip()
+    return s if len(s) <= max_len else s[: max_len - 1].rstrip() + "…"
+
+
+def status_class(status: Any) -> str:
+    """回傳 status badge 的 CSS class（badge badge-<status>）。"""
+    s = (str(status) if status else "unknown").strip() or "unknown"
+    return f"badge badge-{s}"
+
+
+def format_empty(value: Any, fallback: str = "—") -> str:
+    """空值顯示為 muted fallback。唯讀。"""
+    if value is None:
+        return fallback
+    s = str(value).strip()
+    return s if s else fallback
+
+
+def yesno(value: Any) -> str:
+    return "yes" if value else "no"
+
+
+templates.env.globals.update(
+    short_task_id=short_task_id,
+    truncate=truncate,
+    status_class=status_class,
+    format_empty=format_empty,
+    yesno=yesno,
+)
+
+# 首頁 / 任務列表用的狀態篩選連結（順序固定，方便閱讀）。
+DASHBOARD_STATUS_FILTERS = (
+    ("", "All"),
+    ("queued", "Queued"),
+    ("running", "Running"),
+    ("waiting_review", "Waiting Review"),
+    ("failed", "Failed"),
+    ("completed", "Completed"),
+    ("cancelled", "Cancelled"),
+    ("rejected", "Rejected"),
+    ("archived", "Archived"),
+)
+
+
 @app.get("/dashboard", response_class=HTMLResponse)
 def dashboard_home(request: Request) -> HTMLResponse:
-    """Dashboard 首頁 / Overview（唯讀）。"""
+    """Dashboard 首頁 / 控制台總覽（唯讀）。"""
     counts, total = _obs_counts_total()
-    worker = _obs_worker_status(counts)
     queue_db_exists = (
         False if EXECUTION_MODE == "background" else Path(QUEUE_DB_PATH).exists()
     )
@@ -1190,7 +1245,8 @@ def dashboard_home(request: Request) -> HTMLResponse:
             "counts": counts,
             "total": total,
             "queue_db_exists": queue_db_exists,
-            "worker": worker,
+            "worker": _worker_snapshot(),  # 真實心跳推導的 online/stale/unknown
+            "openclaw": _openclaw_cli_status(),  # 只檢查路徑、不執行
             "generated_at": utc_now_iso(),
         },
     )
@@ -1225,6 +1281,7 @@ def dashboard_tasks(
             "offset": offset,
             "invalid_status": invalid_status,
             "valid_statuses": sorted(VALID_STATUSES),
+            "status_filters": DASHBOARD_STATUS_FILTERS,
             "has_prev": offset > 0,
             "has_next": offset + limit < total,
             "prev_offset": max(0, offset - limit),
