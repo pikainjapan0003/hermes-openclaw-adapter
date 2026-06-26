@@ -234,6 +234,46 @@ OpenClaw CLI、不碰 Hermes / Discord**；並會在 blackboard 寫一則 `syste
 
 ---
 
+## Limited Control Actions（v0.5.5，安全控制）
+
+只做**安全**的 Cancel / Retry / Archive，**不做** kill worker、force run、不碰 `running` 任務。
+新增一個收納狀態 `archived`（只收納、不刪資料）。所有控制都透過 `QueueStore` 條件式狀態機
+（狀態不允許 → 回 409），不直接啟動 worker、不呼叫 OpenClaw CLI。
+
+| 動作 | 允許的來源狀態 | 結果 |
+|---|---|---|
+| **Cancel** | `queued` / `waiting_review` | `cancelled`（不取消 running） |
+| **Retry** | `failed` | `queued`（不歸零 attempts；清空 error） |
+| **Archive** | `completed` / `failed` / `cancelled` / `rejected` | `archived`（保留原 error，不刪資料） |
+
+`waiting_review` / `rejected` / `cancelled` / `archived` 皆不會被 worker claim（`claim_next` 只取 `queued`）。
+
+| 方法 | 路徑 | 說明 |
+|---|---|---|
+| POST | `/tasks/{task_id}/cancel` | 取消 queued/waiting_review（body 可帶 `{"reason": "..."}`） |
+| POST | `/tasks/{task_id}/retry` | 重試 failed（不直接執行；worker 之後自然 claim） |
+| POST | `/tasks/{task_id}/archive` | 封存終止狀態任務 |
+| POST | `/dashboard/tasks/{task_id}/cancel` | Dashboard cancel 表單（PRG） |
+| POST | `/dashboard/tasks/{task_id}/retry` | Dashboard retry 表單（PRG） |
+| POST | `/dashboard/tasks/{task_id}/archive` | Dashboard archive 表單（PRG） |
+
+共同規則：不存在 404、狀態不允許 409、成功回 task detail。三個動作成功時都會在 blackboard
+寫一則 `system` 留言作為記錄（純記錄，不反向控制 queue）。
+
+**Retry 的 attempts 取捨**：保守起見 **不歸零 attempts**（避免無限重試）；`error` 在 retry 時清空，
+retry 原因改記到 `tasks.jsonl` ledger 與 blackboard system 留言。由於 worker claim 後一定會把該筆
+執行一次，manual retry 等同「再跑一次」；若該次再失敗且 `attempts` 已達 `max_attempts`，worker 不會
+再自動 requeue（不會無限迴圈）。
+
+> 與 v0.4 cancel 差異：舊版 `/tasks/{id}/cancel` 只取消 `queued` 且非法狀態仍回 200+message；
+> v0.5.5 起改用更嚴格的 `cancel_control`（也支援取消 `waiting_review`，非法狀態回 409）。
+> 既有 `QueueStore.cancel_if_queued()` 方法保留不動。
+
+詳情頁 `GET /dashboard/tasks/{task_id}` 會依當前狀態顯示對應的 Cancel / Retry / Archive 表單
+（`running` / `archived` 不顯示任何控制）；Overview 計數與任務列表都已支援 `archived`。
+
+---
+
 ## 下一步建議
 
 1. **`v0.4.2-service-units`** —— 把 Adapter 與 Hermes Gateway 做成 systemd unit，開機自動啟動、崩潰自動重啟（解掉目前「要手動拉起」的限制）。

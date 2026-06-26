@@ -51,6 +51,13 @@ td.empty, .empty { text-align: center; color: #888; }
 .status-cancelled { color: #8a6d00; }
 .status-waiting_review { color: #b8860b; font-weight: bold; }
 .status-rejected { color: #b00020; font-weight: bold; }
+.status-archived { color: #555; }
+
+.control-box { border: 1px solid #999; background: #f4f6f8; padding: 12px 16px; margin: 16px 0; }
+.control-box h3 { margin-top: 0; }
+.btn-cancel { background: #8a6d00; color: #fff; border: none; padding: 6px 14px; cursor: pointer; }
+.btn-retry { background: #1565c0; color: #fff; border: none; padding: 6px 14px; cursor: pointer; }
+.btn-archive { background: #555; color: #fff; border: none; padding: 6px 14px; cursor: pointer; }
 
 .approval-box { border: 2px solid #b8860b; background: #fffdf5; padding: 12px 16px; margin: 16px 0; }
 .approval-box h3 { margin-top: 0; color: #8a6d00; }

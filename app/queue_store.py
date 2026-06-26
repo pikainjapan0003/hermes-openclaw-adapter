@@ -28,19 +28,27 @@ CANCELLED = "cancelled"
 #   rejected       = 被拒絕的終止狀態，worker 絕不 claim。
 WAITING_REVIEW = "waiting_review"
 REJECTED = "rejected"
+# v0.5.5 Limited Control Actions：
+#   archived = 收納（終止）狀態，只收納不刪資料，worker 絕不 claim。
+ARCHIVED = "archived"
 
 # 全部合法狀態。
 VALID_STATUSES = {
-    QUEUED, RUNNING, COMPLETED, FAILED, CANCELLED, WAITING_REVIEW, REJECTED,
+    QUEUED, RUNNING, COMPLETED, FAILED, CANCELLED, WAITING_REVIEW, REJECTED, ARCHIVED,
 }
 
 # 觀測/統計時保證有 key 的狀態順序。
 ALL_STATUSES = (
-    QUEUED, RUNNING, COMPLETED, FAILED, CANCELLED, WAITING_REVIEW, REJECTED,
+    QUEUED, RUNNING, COMPLETED, FAILED, CANCELLED, WAITING_REVIEW, REJECTED, ARCHIVED,
 )
 
 # enqueue 時允許的初始狀態（只能是這兩種；其餘狀態必須走狀態機方法轉換）。
 VALID_INITIAL_STATUSES = {QUEUED, WAITING_REVIEW}
+
+# v0.5.5 控制動作允許的「來源狀態」白名單。
+CANCEL_CONTROL_FROM = (QUEUED, WAITING_REVIEW)
+RETRY_FROM = (FAILED,)
+ARCHIVE_FROM = (COMPLETED, FAILED, CANCELLED, REJECTED)
 
 
 def _utc_now_iso() -> str:
@@ -240,6 +248,84 @@ class QueueStore:
         finally:
             conn.close()
         return self.get(task_id) if ok else None
+
+    # --- v0.5.5 Limited Control Actions（安全控制：cancel / retry / archive）------
+    # 全部用「條件式 UPDATE（WHERE status IN 白名單）」做原子狀態轉換：
+    # 狀態不允許時 rowcount=0 → 回 None（API 層轉 409）。絕不啟動 worker、不呼叫
+    # OpenClaw CLI、不碰 running 任務、不刪除資料。
+    def _transition(
+        self,
+        task_id: str,
+        *,
+        new_status: str,
+        allowed_from: tuple[str, ...],
+        set_error: bool = False,
+        error_value: str | None = None,
+    ) -> dict[str, Any] | None:
+        placeholders = ",".join("?" for _ in allowed_from)
+        if set_error:
+            sql = (
+                f"UPDATE queue SET status=?, error=?, updated_at=? "
+                f"WHERE task_id=? AND status IN ({placeholders})"
+            )
+            params = [new_status, error_value, _utc_now_iso(), task_id, *allowed_from]
+        else:
+            sql = (
+                f"UPDATE queue SET status=?, updated_at=? "
+                f"WHERE task_id=? AND status IN ({placeholders})"
+            )
+            params = [new_status, _utc_now_iso(), task_id, *allowed_from]
+        conn = self._connect()
+        try:
+            cur = conn.execute(sql, params)
+            conn.commit()
+            ok = cur.rowcount > 0
+        finally:
+            conn.close()
+        return self.get(task_id) if ok else None
+
+    def cancel_control(self, task_id: str, reason: str | None = None) -> dict[str, Any] | None:
+        """嚴格取消：只允許 queued / waiting_review -> cancelled。
+
+        不取消 running（不做 kill worker）。reason 記到 error 欄位。
+        非允許狀態回 None（API 轉 409）。
+        """
+        return self._transition(
+            task_id,
+            new_status=CANCELLED,
+            allowed_from=CANCEL_CONTROL_FROM,
+            set_error=True,
+            error_value=reason,
+        )
+
+    def retry_failed(self, task_id: str, reason: str | None = None) -> dict[str, Any] | None:
+        """重試：只允許 failed -> queued。不直接啟動 worker（worker 之後自然 claim）。
+
+        保守處理：**不歸零 attempts**（避免無限重試）；清空 error 讓任務重新開始
+        （retry 原因改記到 system blackboard comment 與 tasks.jsonl ledger）。
+        由於 worker claim 後一定會把該筆執行一次，manual retry 等同「再跑一次」；
+        若該次再失敗且 attempts 已達 max_attempts，worker 不會再自動 requeue。
+        """
+        return self._transition(
+            task_id,
+            new_status=QUEUED,
+            allowed_from=RETRY_FROM,
+            set_error=True,
+            error_value=None,  # 清空 error
+        )
+
+    def archive(self, task_id: str, reason: str | None = None) -> dict[str, Any] | None:
+        """封存：只允許 completed / failed / cancelled / rejected -> archived。
+
+        只收納、不刪資料；保留原本的 error（不覆寫，避免遺失失敗原因）。
+        非允許狀態回 None（API 轉 409）。
+        """
+        return self._transition(
+            task_id,
+            new_status=ARCHIVED,
+            allowed_from=ARCHIVE_FROM,
+            set_error=False,
+        )
 
     def reset_stale_running(self) -> int:
         """worker 啟動時把卡在 running 的任務（上次 worker crash）改回 queued。

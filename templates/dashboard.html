@@ -18,7 +18,7 @@
     <tr>
       <th>queued</th><th>running</th><th>completed</th>
       <th>failed</th><th>cancelled</th>
-      <th>waiting_review</th><th>rejected</th><th>total</th>
+      <th>waiting_review</th><th>rejected</th><th>archived</th><th>total</th>
     </tr>
   </thead>
   <tbody>
@@ -30,6 +30,7 @@
       <td>{{ counts.cancelled }}</td>
       <td class="status-waiting_review">{{ counts.waiting_review }}</td>
       <td class="status-rejected">{{ counts.rejected }}</td>
+      <td class="status-archived">{{ counts.archived }}</td>
       <td><strong>{{ total }}</strong></td>
     </tr>
   </tbody>

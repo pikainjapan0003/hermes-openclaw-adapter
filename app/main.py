@@ -26,6 +26,7 @@ from app.blackboard_store import (
     CommentValidationError,
 )
 from app.queue_store import (
+    ARCHIVED,
     QUEUED,
     REJECTED,
     VALID_STATUSES,
@@ -665,23 +666,63 @@ def get_task(task_id: str, x_adapter_token: str | None = Header(default=None)) -
     }
 
 
+class ControlBody(BaseModel):
+    """v0.5.5 cancel / retry / archive 的 request body（reason 選填）。"""
+
+    reason: str | None = Field(default=None, description="動作原因（選填）")
+
+
 @app.post("/tasks/{task_id}/cancel")
-def cancel_task(task_id: str, x_adapter_token: str | None = Header(default=None)) -> dict[str, Any]:
-    """只能取消仍在 queued 的任務（running/completed/failed 無法取消）。"""
+def cancel_task(
+    task_id: str,
+    body: ControlBody | None = None,
+    x_adapter_token: str | None = Header(default=None),
+) -> dict[str, Any]:
+    """v0.5.5：取消 queued / waiting_review 任務 -> cancelled。
+
+    不取消 running（不做 kill worker）。狀態不允許回 409、不存在回 404。
+    （沿用既有 QueueStore.cancel_if_queued 方法保留不動，這裡改用更嚴格的
+     cancel_control，額外支援 waiting_review 並對非法狀態回 409。）
+    """
     require_token(x_adapter_token)
-    if EXECUTION_MODE == "background":
-        raise HTTPException(status_code=400, detail="Cancel only supported in queue execution mode.")
-    item = get_queue().get(task_id)
-    if item is None:
-        raise HTTPException(status_code=404, detail="Task not found in queue")
-    if get_queue().cancel_if_queued(task_id):
-        append_task_status(task_id, "cancelled")
-        return {"task_id": task_id, "status": "cancelled"}
-    return {
-        "task_id": task_id,
-        "status": item["status"],
-        "message": "Only queued tasks can be cancelled.",
-    }
+    reason = body.reason if body else None
+    return _run_control(
+        task_id, action="cancel",
+        method=lambda q: q.cancel_control(task_id, reason=reason),
+        reason=reason,
+    )
+
+
+@app.post("/tasks/{task_id}/retry")
+def retry_task(
+    task_id: str,
+    body: ControlBody | None = None,
+    x_adapter_token: str | None = Header(default=None),
+) -> dict[str, Any]:
+    """v0.5.5：重試 failed 任務 -> queued。不直接啟動 worker。狀態不允許回 409。"""
+    require_token(x_adapter_token)
+    reason = body.reason if body else None
+    return _run_control(
+        task_id, action="retry",
+        method=lambda q: q.retry_failed(task_id, reason=reason),
+        reason=reason,
+    )
+
+
+@app.post("/tasks/{task_id}/archive")
+def archive_task(
+    task_id: str,
+    body: ControlBody | None = None,
+    x_adapter_token: str | None = Header(default=None),
+) -> dict[str, Any]:
+    """v0.5.5：封存 completed/failed/cancelled/rejected 任務 -> archived（只收納不刪資料）。"""
+    require_token(x_adapter_token)
+    reason = body.reason if body else None
+    return _run_control(
+        task_id, action="archive",
+        method=lambda q: q.archive(task_id, reason=reason),
+        reason=reason,
+    )
 
 
 @app.get("/queue")
@@ -713,7 +754,7 @@ OBSERVABILITY_MODE = "queue-observability"
 # v0.5.4：加入 waiting_review / rejected。
 _OBS_COUNT_KEYS = (
     "queued", "running", "completed", "failed", "cancelled",
-    "waiting_review", "rejected",
+    "waiting_review", "rejected", "archived",
 )
 
 
@@ -945,6 +986,46 @@ class RejectBody(BaseModel):
     """reject 的 request body（reason 選填）。"""
 
     reason: str | None = Field(default=None, description="拒絕原因（選填）")
+
+
+# v0.5.5 控制動作成功時的 system 留言模板。
+_CONTROL_COMMENT = {
+    "cancel": "Task cancelled by owner.",
+    "retry": "Task retry requested by owner.",
+    "archive": "Task archived by owner.",
+}
+
+
+def _run_control(
+    task_id: str,
+    *,
+    action: str,
+    method: "Any",
+    reason: str | None,
+) -> dict[str, Any]:
+    """共用控制流程：404（不存在）/ 409（狀態不允許）；成功寫 ledger + system 留言。
+
+    所有狀態轉換都委派給 QueueStore 狀態機（method）；本函式不啟動 worker、
+    不呼叫 OpenClaw CLI。
+    """
+    if EXECUTION_MODE == "background":
+        raise HTTPException(status_code=404, detail="Queue not available in background mode")
+    if get_queue().get(task_id) is None:
+        raise HTTPException(status_code=404, detail="Task not found in queue")
+    updated = method(get_queue())
+    if updated is None:
+        current = (get_queue().get(task_id) or {}).get("status")
+        raise HTTPException(
+            status_code=409,
+            detail=f"Action '{action}' not allowed from status '{current}'",
+        )
+    new_status = updated.get("status")
+    append_task_status(task_id, new_status, via=action, reason=reason)
+    base = _CONTROL_COMMENT.get(action, f"Task {action} by owner.")
+    _add_system_comment(
+        task_id, f"{base} Reason: {reason}" if reason else base
+    )
+    return {"status": new_status, "action": action, "task_id": task_id, "task": updated}
 
 
 def _review_summary(item: dict[str, Any]) -> dict[str, Any]:
@@ -1268,3 +1349,60 @@ def dashboard_reject(
         else "Task rejected via dashboard.",
     )
     return RedirectResponse(url=target, status_code=303)
+
+
+# --- v0.5.5 Dashboard 控制表單（cancel / retry / archive，PRG）-------------------
+def _dashboard_control(task_id: str, action: str, method, reason: str | None) -> RedirectResponse:
+    """共用 Dashboard 控制表單處理：成功 redirect 回詳情頁；狀態不允許帶 error redirect。"""
+    from urllib.parse import quote
+
+    target = f"/dashboard/tasks/{task_id}"
+    if not _task_exists(task_id):
+        raise HTTPException(status_code=404, detail="Task not found in queue")
+    updated = method(get_queue())
+    if updated is None:
+        current = (get_queue().get(task_id) or {}).get("status")
+        return RedirectResponse(
+            url=f"{target}?error={quote(f'{action} 不允許（目前狀態 {current}）')}",
+            status_code=303,
+        )
+    new_status = updated.get("status")
+    append_task_status(task_id, new_status, via=f"dashboard-{action}", reason=reason)
+    base = _CONTROL_COMMENT.get(action, f"Task {action} by owner.")
+    _add_system_comment(
+        task_id, f"{base} (via dashboard) Reason: {reason}" if reason else f"{base} (via dashboard)"
+    )
+    return RedirectResponse(url=target, status_code=303)
+
+
+@app.post("/dashboard/tasks/{task_id}/cancel")
+def dashboard_cancel(task_id: str, reason: str = Form("")) -> RedirectResponse:
+    """Dashboard cancel 表單：queued / waiting_review -> cancelled。"""
+    reason_clean = reason.strip() or None
+    return _dashboard_control(
+        task_id, "cancel",
+        lambda q: q.cancel_control(task_id, reason=reason_clean),
+        reason_clean,
+    )
+
+
+@app.post("/dashboard/tasks/{task_id}/retry")
+def dashboard_retry(task_id: str, reason: str = Form("")) -> RedirectResponse:
+    """Dashboard retry 表單：failed -> queued（不直接啟動 worker）。"""
+    reason_clean = reason.strip() or None
+    return _dashboard_control(
+        task_id, "retry",
+        lambda q: q.retry_failed(task_id, reason=reason_clean),
+        reason_clean,
+    )
+
+
+@app.post("/dashboard/tasks/{task_id}/archive")
+def dashboard_archive(task_id: str, reason: str = Form("")) -> RedirectResponse:
+    """Dashboard archive 表單：completed/failed/cancelled/rejected -> archived。"""
+    reason_clean = reason.strip() or None
+    return _dashboard_control(
+        task_id, "archive",
+        lambda q: q.archive(task_id, reason=reason_clean),
+        reason_clean,
+    )

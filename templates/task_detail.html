@@ -36,6 +36,36 @@
 </div>
 {% endif %}
 
+{% set can_cancel = task.status in ["queued", "waiting_review"] %}
+{% set can_retry = task.status == "failed" %}
+{% set can_archive = task.status in ["completed", "failed", "cancelled", "rejected"] %}
+{% if can_cancel or can_retry or can_archive %}
+<div class="control-box">
+  <h3>Controls（有限控制）</h3>
+  <div class="approval-actions">
+    {% if can_cancel %}
+    <form method="post" action="/dashboard/tasks/{{ task.task_id }}/cancel" class="reject-form">
+      <input type="text" name="reason" placeholder="取消原因（選填）">
+      <button type="submit" class="btn-cancel">Cancel（轉 cancelled）</button>
+    </form>
+    {% endif %}
+    {% if can_retry %}
+    <form method="post" action="/dashboard/tasks/{{ task.task_id }}/retry" class="reject-form">
+      <input type="text" name="reason" placeholder="重試原因（選填）">
+      <button type="submit" class="btn-retry">Retry（轉 queued）</button>
+    </form>
+    {% endif %}
+    {% if can_archive %}
+    <form method="post" action="/dashboard/tasks/{{ task.task_id }}/archive" class="reject-form">
+      <input type="text" name="reason" placeholder="封存原因（選填）">
+      <button type="submit" class="btn-archive">Archive（轉 archived）</button>
+    </form>
+    {% endif %}
+  </div>
+  <p class="meta">控制只透過 Queue 狀態機：不取消 running、retry 不直接執行、archive 不刪資料。</p>
+</div>
+{% endif %}
+
 <h3>task_text</h3>
 <pre class="block">{{ task.task_text or "" }}</pre>
 
