@@ -23,6 +23,12 @@ data/results.jsonl  ──(GET /tasks/{id}/result)──────────
 
 ---
 
+## Backup / Push Plan
+
+備份與 GitHub push 計畫請看 [`docs/BACKUP_PUSH_PLAN.md`](docs/BACKUP_PUSH_PLAN.md)。
+
+---
+
 ## 目前版本
 
 **`v0.4.1-discord-e2e-verified`**（async background + callback，已完成 Discord 端到端驗證）

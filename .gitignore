@@ -12,6 +12,15 @@ __pycache__/
 # 任務紀錄資料（執行期產生）
 data/
 
+# 執行期資料庫 / ledger（即使被移出 data/ 也絕不 commit）
+*.db
+queue.db
+results.jsonl
+tasks.jsonl
+
+# Node 依賴（若未來加入前端工具鏈時的保險）
+node_modules/
+
 # Log
 *.log
 
