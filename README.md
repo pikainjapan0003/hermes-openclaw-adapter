@@ -17,6 +17,12 @@ data/results.jsonl  ──(GET /tasks/{id}/result)──────────
 
 ---
 
+## Operator Guide
+
+新手操作手冊請看 [`docs/OPERATOR_GUIDE.md`](docs/OPERATOR_GUIDE.md)。
+
+---
+
 ## 目前版本
 
 **`v0.4.1-discord-e2e-verified`**（async background + callback，已完成 Discord 端到端驗證）
