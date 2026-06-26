@@ -29,6 +29,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from app import main as adapter  # noqa: E402
+from app.health_store import HealthStore  # noqa: E402
 from app.queue_store import QueueStore  # noqa: E402
 
 POLL_INTERVAL = float(os.getenv("WORKER_POLL_INTERVAL_SECONDS", "2"))
@@ -36,6 +37,20 @@ RETRY_BACKOFF = float(os.getenv("WORKER_RETRY_BACKOFF_SECONDS", "5"))
 QUEUE_DB_PATH = os.getenv("QUEUE_DB_PATH", str(adapter.DATA_DIR / "queue.db"))
 
 _stop = False
+
+# v0.5.6：worker heartbeat（純觀測）。心跳寫入只記錄，不改任務執行邏輯、
+# 不改 queue 狀態機、不呼叫 OpenClaw CLI；寫入失敗也絕不讓 worker 崩潰。
+_health: HealthStore | None = None
+
+
+def _heartbeat(**fields) -> None:
+    """安全寫入一筆 worker 心跳。任何例外都吞掉（worker 不可因心跳故障崩潰）。"""
+    if _health is None:
+        return
+    try:
+        _health.record(adapter.WORKER_ID, **fields)
+    except Exception as exc:  # noqa: BLE001 - 心跳純觀測，失敗不可影響任務執行
+        _log(f"(heartbeat 寫入失敗，已忽略：{type(exc).__name__})")
 
 
 def _handle_signal(signum, _frame) -> None:
@@ -67,6 +82,8 @@ async def process_item(queue: QueueStore, item: dict) -> None:
         adapter.append_jsonl(adapter.RESULTS_PATH, result)
         adapter.append_task_status(task_id, "failed", correlation_id=correlation_id)
         queue.mark_failed(task_id, error=json.dumps(error, ensure_ascii=False))
+        _heartbeat(status="idle", current_task_id=None, current_task_started_at=None,
+                   last_error_at=adapter.utc_now_iso(), last_error_message=error["message"])
         _log(f"{task_id} payload 解析失敗，已標記 failed。")
         return
 
@@ -85,6 +102,8 @@ async def process_item(queue: QueueStore, item: dict) -> None:
         adapter.append_jsonl(adapter.RESULTS_PATH, result)
         adapter.append_task_status(task_id, "completed", correlation_id=correlation_id)
         queue.mark_completed(task_id, result_ref=str(adapter.RESULTS_PATH))
+        _heartbeat(status="idle", current_task_id=None, current_task_started_at=None,
+                   last_completed_at=adapter.utc_now_iso())
         if adapter.CALLBACK_ENABLED:
             await adapter.send_callback_to_hermes(result)
         _log(f"✅ {task_id} 完成。")
@@ -98,6 +117,9 @@ async def process_item(queue: QueueStore, item: dict) -> None:
                 task_id, "queued", correlation_id=correlation_id,
                 retry=True, attempt=attempts, error=exc.code,
             )
+            _heartbeat(status="idle", current_task_id=None, current_task_started_at=None,
+                       last_error_at=adapter.utc_now_iso(),
+                       last_error_message=f"{exc.code}: {exc.message}")
             _log(f"♻️ {task_id} 失敗（{exc.code}），改回 queued 重試。{RETRY_BACKOFF}s 後繼續。")
             await asyncio.sleep(RETRY_BACKOFF)
             return
@@ -110,6 +132,8 @@ async def process_item(queue: QueueStore, item: dict) -> None:
         adapter.append_jsonl(adapter.RESULTS_PATH, result)
         adapter.append_task_status(task_id, "failed", correlation_id=correlation_id)
         queue.mark_failed(task_id, error=json.dumps(error, ensure_ascii=False))
+        _heartbeat(status="idle", current_task_id=None, current_task_started_at=None,
+                   last_error_at=adapter.utc_now_iso(), last_error_message=exc.message)
         if adapter.CALLBACK_ENABLED:
             try:
                 await adapter.send_callback_to_hermes(result)
@@ -127,26 +151,55 @@ async def process_item(queue: QueueStore, item: dict) -> None:
         adapter.append_jsonl(adapter.RESULTS_PATH, result)
         adapter.append_task_status(task_id, "failed", correlation_id=correlation_id)
         queue.mark_failed(task_id, error=json.dumps(error, ensure_ascii=False))
+        _heartbeat(status="idle", current_task_id=None, current_task_started_at=None,
+                   last_error_at=adapter.utc_now_iso(), last_error_message=error["message"])
         _log(f"❌ {task_id} worker 內部錯誤：{error['message']}")
         return
 
 
 async def main_loop() -> None:
+    global _health
+    import socket  # noqa: PLC0415
+
     adapter.ensure_data_dir()
     queue = QueueStore(QUEUE_DB_PATH)
+    _health = HealthStore(QUEUE_DB_PATH)
+    _heartbeat(
+        status="starting",
+        pid=os.getpid(),
+        hostname=socket.gethostname(),
+        started_at=adapter.utc_now_iso(),
+        current_task_id=None,
+        current_task_started_at=None,
+        last_error_at=None,
+        last_error_message=None,
+    )
+
     reset = queue.reset_stale_running()
     _log(f"啟動。queue db = {QUEUE_DB_PATH}；poll={POLL_INTERVAL}s；openclaw_bin={adapter.OPENCLAW_CLI_BIN}")
     if reset:
         _log(f"崩潰復原：{reset} 筆卡在 running 的任務已改回 queued。")
     _log(f"目前 queue 狀態：{queue.counts()}")
+    _heartbeat(status="idle")
 
     while not _stop:
         item = queue.claim_next()
         if item is None:
+            _heartbeat(status="idle")  # 定期 idle 心跳
             await asyncio.sleep(POLL_INTERVAL)
             continue
+        now = adapter.utc_now_iso()
+        _heartbeat(
+            status="running",
+            current_task_id=item["task_id"],
+            current_task_started_at=now,
+            last_claimed_at=now,
+        )
         await process_item(queue, item)
+        # process_item 內已依結果寫過 completed/error 心跳；這裡確保回到 idle 並清掉 current_task。
+        _heartbeat(status="idle", current_task_id=None, current_task_started_at=None)
 
+    _heartbeat(status="stopping")
     _log("已停止。")
 
 

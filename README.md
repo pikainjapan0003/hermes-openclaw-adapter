@@ -274,6 +274,37 @@ retry 原因改記到 `tasks.jsonl` ledger 與 blackboard system 留言。由於
 
 ---
 
+## System Health / Worker Heartbeat（v0.5.6，純觀測）
+
+讓 Dashboard 看得到 adapter / queue / worker 是否健康。Worker 會把心跳寫進**獨立的
+`worker_heartbeats` 表**（[`app/health_store.py`](app/health_store.py)，可與 `queue.db` 共用檔案
+但不碰 `queue` 表）。**心跳只記錄、不反向控制 worker；寫入失敗也絕不讓 worker 崩潰。**
+
+`worker_heartbeats` 欄位：`worker_id`(PK) / `status` / `pid` / `hostname` / `started_at` /
+`last_seen_at` / `current_task_id` / `current_task_started_at` / `last_claimed_at` /
+`last_completed_at` / `last_error_at` / `last_error_message` / `metadata_json`。
+
+**raw_status**：`starting` / `idle` / `running` / `stopping` / `error`。
+**推導的 online 狀態**（由 `last_seen_at` 推算，門檻常數 `WORKER_HEARTBEAT_STALE_SECONDS=30`）：
+`last_seen_at` 距現在 ≤ 30 秒 → `online`；> 30 秒 → `stale`；沒有心跳 → `unknown`。
+
+worker 何時寫心跳：啟動 `starting` → 進輪詢 `idle` → claim 到任務 `running`(+`current_task_id`/
+`last_claimed_at`) → 完成 `idle`(清 `current_task_id`、更新 `last_completed_at`) → 失敗時記
+`last_error_at`/`last_error_message` 後照既有邏輯處理 retry/failed → 收到停止訊號 `stopping`。
+（只加心跳記錄，**未改 worker 任務執行邏輯、未改 queue 狀態機**。）
+
+| 方法 | 路徑 | 說明 |
+|---|---|---|
+| GET | `/system/health` | adapter / queue counts / worker / OpenClaw CLI 路徑（**只檢查路徑、不執行**） |
+| GET | `/system/worker` | worker heartbeat 詳情（含推導的 online/stale/unknown） |
+| GET | `/dashboard/system` | Dashboard 系統健康頁（導覽列 System） |
+
+> **OpenClaw CLI 檢查**：只用 `shutil.which()` / `os.path` 檢查路徑是否存在/可執行，
+> **絕不執行 OpenClaw CLI、不跑 `--version`、不觸發任何任務**；回傳一律帶
+> `cli_checked_without_execution: true`。
+
+---
+
 ## 下一步建議
 
 1. **`v0.4.2-service-units`** —— 把 Adapter 與 Hermes Gateway 做成 systemd unit，開機自動啟動、崩潰自動重啟（解掉目前「要手動拉起」的限制）。

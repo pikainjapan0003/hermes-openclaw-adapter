@@ -25,6 +25,11 @@ from app.blackboard_store import (
     BlackboardStore,
     CommentValidationError,
 )
+from app.health_store import (
+    DEFAULT_WORKER_ID,
+    WORKER_HEARTBEAT_STALE_SECONDS,
+    HealthStore,
+)
 from app.queue_store import (
     ARCHIVED,
     QUEUED,
@@ -35,7 +40,7 @@ from app.queue_store import (
 )
 
 APP_NAME = "Hermes OpenClaw Adapter"
-APP_VERSION = "0.5.1"
+APP_VERSION = "0.5.6"
 
 # --- Paths -------------------------------------------------------------------
 DATA_DIR = Path(os.getenv("DATA_DIR", "data"))
@@ -108,6 +113,19 @@ def get_blackboard() -> BlackboardStore:
         ensure_data_dir()
         _blackboard_store = BlackboardStore(QUEUE_DB_PATH)
     return _blackboard_store
+
+
+# v0.5.6：System Health / Worker Heartbeat 獨立儲存層（共用 db 檔，只動 worker_heartbeats 表）。
+WORKER_ID = os.getenv("WORKER_ID", DEFAULT_WORKER_ID).strip() or DEFAULT_WORKER_ID
+_health_store: HealthStore | None = None
+
+
+def get_health() -> HealthStore:
+    global _health_store
+    if _health_store is None:
+        ensure_data_dir()
+        _health_store = HealthStore(QUEUE_DB_PATH)
+    return _health_store
 
 
 def _task_exists(task_id: str) -> bool:
@@ -1405,4 +1423,98 @@ def dashboard_archive(task_id: str, reason: str = Form("")) -> RedirectResponse:
         task_id, "archive",
         lambda q: q.archive(task_id, reason=reason_clean),
         reason_clean,
+    )
+
+
+# =============================================================================
+# v0.5.6 — System Health / Worker Heartbeat（純觀測）
+#
+# 原則：只「讀」queue counts + worker_heartbeats，並對 OpenClaw CLI「只檢查路徑、
+# 絕不執行」。不改 queue 狀態機、不觸發 worker、不呼叫 OpenClaw CLI。
+# =============================================================================
+def _openclaw_cli_status() -> dict[str, Any]:
+    """只檢查 OpenClaw CLI 路徑是否存在 / 可執行——**絕不執行它**（不跑 --version）。"""
+    import shutil  # noqa: PLC0415
+
+    raw = OPENCLAW_CLI_BIN
+    resolved: str | None
+    exists: bool
+    if os.sep in raw or (os.altsep and os.altsep in raw):
+        # 看起來是路徑：直接檢查檔案是否存在且可執行。
+        resolved = raw
+        exists = os.path.isfile(raw) and os.access(raw, os.X_OK)
+    else:
+        # 看起來是 PATH 上的指令名：用 which 解析（不執行）。
+        found = shutil.which(raw)
+        resolved = found
+        exists = found is not None
+    return {
+        "cli_bin": raw,
+        "cli_path": resolved,
+        "cli_path_exists": exists,
+        "cli_checked_without_execution": True,
+    }
+
+
+def _worker_snapshot() -> dict[str, Any]:
+    """讀 worker heartbeat（background 模式無 queue db 也安全）。唯讀。"""
+    try:
+        return get_health().snapshot(WORKER_ID, WORKER_HEARTBEAT_STALE_SECONDS)
+    except Exception:  # noqa: BLE001 - 觀測端點不該因 health store 故障而 500
+        return {"worker_id": WORKER_ID, "status": "unknown", "raw_status": None,
+                "last_seen_at": None, "current_task_id": None}
+
+
+@app.get("/system/health")
+def system_health(x_adapter_token: str | None = Header(default=None)) -> dict[str, Any]:
+    """整體系統健康（adapter / queue / worker / openclaw cli path）。唯讀、不執行 CLI。"""
+    require_token(x_adapter_token)
+    counts, _total = _obs_counts_total()
+    db_exists = (
+        False if EXECUTION_MODE == "background" else Path(QUEUE_DB_PATH).exists()
+    )
+    worker = _worker_snapshot()
+    return {
+        "ok": True,
+        "version": APP_VERSION,
+        "adapter": {"status": "online"},
+        "queue": {"db_exists": db_exists, "counts": counts},
+        "worker": {
+            "status": worker.get("status"),
+            "raw_status": worker.get("raw_status"),
+            "last_seen_at": worker.get("last_seen_at"),
+            "current_task_id": worker.get("current_task_id"),
+        },
+        "openclaw": _openclaw_cli_status(),
+        "generated_at": utc_now_iso(),
+    }
+
+
+@app.get("/system/worker")
+def system_worker(x_adapter_token: str | None = Header(default=None)) -> dict[str, Any]:
+    """worker heartbeat 詳情（含推導的 online/stale/unknown）。唯讀。"""
+    require_token(x_adapter_token)
+    return _worker_snapshot()
+
+
+@app.get("/dashboard/system", response_class=HTMLResponse)
+def dashboard_system(request: Request) -> HTMLResponse:
+    """Dashboard 系統健康頁。"""
+    counts, _total = _obs_counts_total()
+    db_exists = (
+        False if EXECUTION_MODE == "background" else Path(QUEUE_DB_PATH).exists()
+    )
+    return templates.TemplateResponse(
+        "system.html",
+        {
+            "request": request,
+            "title": DASHBOARD_TITLE,
+            "version": APP_VERSION,
+            "adapter_status": "online",
+            "db_exists": db_exists,
+            "counts": counts,
+            "worker": _worker_snapshot(),
+            "openclaw": _openclaw_cli_status(),
+            "generated_at": utc_now_iso(),
+        },
     )

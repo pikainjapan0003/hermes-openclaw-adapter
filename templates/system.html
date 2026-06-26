@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>System Health</h2>
+<p class="meta">純觀測頁：只讀 queue 統計與 worker 心跳，並檢查 OpenClaw CLI 路徑（不執行）。
+  generated_at: {{ generated_at }}</p>
+
+<h3>Adapter</h3>
+<table class="kv">
+  <tbody>
+    <tr><th>version</th><td>{{ version }}</td></tr>
+    <tr><th>adapter status</th><td class="status-completed">{{ adapter_status }}</td></tr>
+    <tr><th>queue db exists</th><td>{{ db_exists }}</td></tr>
+  </tbody>
+</table>
+
+<h3>Worker Heartbeat</h3>
+<table class="kv">
+  <tbody>
+    <tr><th>worker status</th>
+      <td class="{% if worker.status == 'online' %}status-completed{% elif worker.status == 'stale' %}status-failed{% else %}status-cancelled{% endif %}">
+        {{ worker.status }}</td></tr>
+    <tr><th>raw_status</th><td>{{ worker.raw_status or "" }}</td></tr>
+    <tr><th>pid</th><td>{{ worker.pid if worker.pid is not none else "" }}</td></tr>
+    <tr><th>hostname</th><td>{{ worker.hostname or "" }}</td></tr>
+    <tr><th>started_at</th><td>{{ worker.started_at or "" }}</td></tr>
+    <tr><th>last_seen_at</th><td>{{ worker.last_seen_at or "" }}</td></tr>
+    <tr><th>current_task_id</th>
+      <td>{% if worker.current_task_id %}<a href="/dashboard/tasks/{{ worker.current_task_id }}">{{ worker.current_task_id }}</a>{% endif %}</td></tr>
+    <tr><th>last_claimed_at</th><td>{{ worker.last_claimed_at or "" }}</td></tr>
+    <tr><th>last_completed_at</th><td>{{ worker.last_completed_at or "" }}</td></tr>
+    <tr><th>last_error_at</th><td>{{ worker.last_error_at or "" }}</td></tr>
+    <tr><th>last_error_message</th><td class="comment-content">{{ worker.last_error_message or "" }}</td></tr>
+  </tbody>
+</table>
+
+<h3>Queue Counts</h3>
+<table class="grid">
+  <thead>
+    <tr>
+      <th>queued</th><th>running</th><th>completed</th><th>failed</th>
+      <th>cancelled</th><th>waiting_review</th><th>rejected</th><th>archived</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>{{ counts.queued }}</td>
+      <td>{{ counts.running }}</td>
+      <td>{{ counts.completed }}</td>
+      <td>{{ counts.failed }}</td>
+      <td>{{ counts.cancelled }}</td>
+      <td>{{ counts.waiting_review }}</td>
+      <td>{{ counts.rejected }}</td>
+      <td>{{ counts.archived }}</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>OpenClaw CLI（只檢查路徑，不執行）</h3>
+<table class="kv">
+  <tbody>
+    <tr><th>cli_bin</th><td>{{ openclaw.cli_bin }}</td></tr>
+    <tr><th>cli_path</th><td>{{ openclaw.cli_path or "(not found)" }}</td></tr>
+    <tr><th>cli_path_exists</th>
+      <td class="{% if openclaw.cli_path_exists %}status-completed{% else %}status-failed{% endif %}">
+        {{ openclaw.cli_path_exists }}</td></tr>
+    <tr><th>checked_without_execution</th><td>{{ openclaw.cli_checked_without_execution }}</td></tr>
+  </tbody>
+</table>
+{% endblock %}
