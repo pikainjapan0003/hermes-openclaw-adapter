@@ -9,3 +9,7 @@ python-multipart==0.0.32
 # 僅供 Owner 本機 OAuth live consent helper（scripts/oauth_local_consent_helper.py）使用。
 # dry-run 不 import；app/result_sink.py 不 import google；Replit / CI 不跑 live。
 google-auth-oauthlib==1.2.1
+
+# 僅供 v0.6.9 guarded Google Sheets writer（app/google_sheets_oauth_writer.py）live build 使用。
+# 預設關閉（GOOGLE_SHEETS_ENABLED=false）；import 時不連 Google，只在真 live append 時延遲 import。
+google-api-python-client==2.149.0
