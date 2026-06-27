@@ -38,6 +38,9 @@ from app.queue_store import (
     WAITING_REVIEW,
     QueueStore,
 )
+# v0.7.1-C3：唯讀顯示推導（純函式）。只在 dashboard 觀測 helper 套用，產生 read-only badges；
+# 不改 Queue 狀態、不啟動 worker、不呼叫 OpenClaw / Result Sink / Google Sheets。
+from app.dashboard_intake_view_v0_7 import derive_intake_status_view
 
 APP_NAME = "Hermes OpenClaw Adapter"
 APP_VERSION = "0.5.6"
@@ -805,6 +808,8 @@ def _obs_task_summary(item: dict[str, Any]) -> dict[str, Any]:
         "attempts": item.get("attempts"),
         "max_attempts": item.get("max_attempts"),
         "error_message": item.get("error"),
+        # v0.7.1-C3：唯讀顯示推導（read-only badges），不改任何狀態。
+        "intake_status": derive_intake_status_view(item),
     }
 
 
@@ -831,6 +836,8 @@ def _obs_task_detail(item: dict[str, Any]) -> dict[str, Any]:
         "result_text": (result or {}).get("result_text"),
         "error_message": item.get("error"),
         "metadata": _parse_payload_metadata(item.get("payload")),
+        # v0.7.1-C3：唯讀顯示推導（read-only badges），不改任何狀態。
+        "intake_status": derive_intake_status_view(item),
     }
 
 

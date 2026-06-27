@@ -146,3 +146,15 @@ button:hover { filter: brightness(0.94); }
   table.grid tr { border: 1px solid #e2e6ea; border-radius: 6px; margin-bottom: 8px; padding: 4px; }
   .inline-form input { width: 100%; }
 }
+
+/* --- v0.7.1-C3 read-only intake status badges ---------------------------- */
+/* 純顯示用；不附帶任何動作。local-only 與 not-executable 醒目，unknown 中性。 */
+.intake-badges { white-space: normal; }
+.badge-intake {
+  display: inline-block; margin: 1px 2px; padding: 1px 7px;
+  border-radius: 10px; font-size: 12px; line-height: 1.6; font-weight: 600;
+}
+.badge-source { background: #e7eefc; color: #28406b; border: 1px solid #c5d6f6; }
+.badge-local-only { background: #fff4d6; color: #7a5600; border: 1px solid #f0d488; }
+.badge-executable-false { background: #fde2e1; color: #8a1c14; border: 1px solid #f3b6b1; }
+.badge-unknown { background: #ececf0; color: #555; border: 1px solid #d4d4dc; }

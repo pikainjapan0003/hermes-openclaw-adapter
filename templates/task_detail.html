@@ -25,6 +25,25 @@
   </table>
 </section>
 
+<section class="card">
+  <h3>Intake Status <span class="muted">(read-only)</span></h3>
+  <p class="muted">以下為唯讀顯示推導，不改變任務狀態、不觸發 worker。</p>
+  <table class="kv">
+    <tbody>
+      <tr><th>source_mode</th><td>
+        <span class="badge {% if task.intake_status.source_mode == 'local-only' %}badge-local-only{% elif task.intake_status.source_mode == 'unknown' %}badge-unknown{% else %}badge-source{% endif %}">{{ task.intake_status.source_mode }}</span></td></tr>
+      <tr><th>intake_mode</th><td>
+        <span class="badge {% if task.intake_status.intake_mode == 'local-only' %}badge-local-only{% elif task.intake_status.intake_mode == 'unknown' %}badge-unknown{% else %}badge-source{% endif %}">{{ task.intake_status.intake_mode }}</span></td></tr>
+      <tr><th>executable_by_worker</th><td>
+        <span class="badge {% if task.intake_status.executable_by_worker == 'false' %}badge-executable-false{% elif task.intake_status.executable_by_worker == 'unknown' %}badge-unknown{% else %}badge-source{% endif %}">{{ task.intake_status.executable_by_worker }}</span></td></tr>
+      <tr><th>approval_status</th><td>
+        <span class="badge {% if task.intake_status.approval_status == 'unknown' %}badge-unknown{% else %}badge-source{% endif %}">{{ task.intake_status.approval_status }}</span></td></tr>
+      <tr><th>risk_level</th><td>{{ format_empty(task.intake_status.risk_level) }}</td></tr>
+      <tr><th>safety_level</th><td>{{ format_empty(task.intake_status.safety_level) }}</td></tr>
+    </tbody>
+  </table>
+</section>
+
 {% if task.status == "waiting_review" %}
 <section class="card review-card">
   <h3>Human Review</h3>
