@@ -31,6 +31,9 @@ from typing import Any, Dict, Optional
 
 from app.contracts_v0_7 import validate_task_envelope
 from app.queue_store import WAITING_REVIEW, QueueStore
+# v0.7.1-E：local-only tool-level security gate（純函式）。只在 INTAKE_SECURITY_GATES_ENABLED=true
+# 時啟用；reject 一律不寫 DB。build_audit_event 為 observation-only，本版不落地寫 audit 檔。
+from app.security_gates_v0_7 import build_audit_event, evaluate_security_gates
 
 # 預設 local-only intake DB（與 production queue.db 分離）。
 DEFAULT_INTAKE_DB_PATH = "data/intake_local_v0_7_1_b.db"
@@ -80,8 +83,10 @@ def _result(
     task_id: Optional[str],
     db_path: Optional[str],
     initial_status: Optional[str],
+    security_gate: Optional[Dict[str, Any]] = None,
+    audit_event: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    return {
+    out: Dict[str, Any] = {
         "accepted": accepted,
         "written": written,
         "reason": reason,
@@ -90,6 +95,23 @@ def _result(
         "initial_status": initial_status,
         "executable_by_worker": False,
     }
+    if security_gate is not None:
+        out["security_gate"] = security_gate
+    if audit_event is not None:
+        # observation-only：附在回傳供觀測，本版不寫 audit 檔、不改 queue 狀態。
+        out["audit_event"] = audit_event
+    return out
+
+
+def _extract_requested_tools(task_envelope: Dict[str, Any]) -> Any:
+    """requested tools 來源固定為 metadata.requested_tools（Owner v0.7.1-E 裁定）。
+
+    回傳原始值（可能為 None / 非 list）；由 evaluate_security_gates 做型別 / 空值判斷與 fail-closed。
+    """
+    metadata = task_envelope.get("metadata")
+    if not isinstance(metadata, dict):
+        return None
+    return metadata.get("requested_tools")
 
 
 def intake_task_envelope_local_only(
@@ -106,34 +128,64 @@ def intake_task_envelope_local_only(
 
     task_id = task_envelope.get("task_id")
 
-    # 1) kill switch 優先（fail-closed）。
+    # 1) global kill switch 最優先（fail-closed）。
+    if _env_bool("GLOBAL_KILL_SWITCH", False):
+        return _result(accepted=False, written=False, reason="global_kill_switch_active",
+                       task_id=task_id, db_path=None, initial_status=None)
+
+    # 2) layer kill switch（fail-closed）。
     if _env_bool("INTAKE_KILL_SWITCH", False):
         return _result(accepted=False, written=False, reason="kill_switch_active",
                        task_id=task_id, db_path=None, initial_status=None)
 
-    # 2) 預設 disabled（fail-closed）。
+    # 3) 預設 disabled（fail-closed）。
     if not _env_bool("QUEUE_INTAKE_ENABLED", False):
         return _result(accepted=False, written=False, reason="intake_disabled",
                        task_id=task_id, db_path=None, initial_status=None)
 
-    # 3) 格式驗證（v0.7.0-B validator）。
+    # 4) 格式驗證（v0.7.0-B validator）。
     validate_task_envelope(task_envelope)
     task_id = task_envelope["task_id"]
     task_type = task_envelope.get("task_type")
 
-    # 4) allowlist（預設空集合 → 拒絕）。
+    # 5) task_type allowlist（預設空集合 → 拒絕）。
     allowed = _allowed_task_types()
     if not task_type or task_type not in allowed:
         return _result(accepted=False, written=False, reason="task_type_not_allowlisted",
                        task_id=task_id, db_path=None, initial_status=None)
 
-    # 5) 解析 intake DB 路徑，並拒絕撞到 production queue DB。
+    # 6) tool-level security gate（僅在 INTAKE_SECURITY_GATES_ENABLED=true 時啟用；reject 不寫 DB）。
+    #    requested tools 固定來源 = metadata.requested_tools；缺失/空/非 list[str] → fail-closed reject。
+    if _env_bool("INTAKE_SECURITY_GATES_ENABLED", False):
+        gate = evaluate_security_gates(
+            requested_tools=_extract_requested_tools(task_envelope),
+            allowed_tools=task_envelope.get("allowed_tools"),
+            denied_tools=task_envelope.get("denied_tools"),
+            # kill switch 已在步驟 1/2 處理；此處只做 tool denylist/allowlist 層。
+            global_kill_switch=False,
+            layer_kill_switch=False,
+        )
+        if not gate["allowed"]:
+            audit = build_audit_event(
+                action="intake.security_gate",
+                task_id=task_id,
+                decision="reject",
+                reason=gate["reason"],
+                source_mode="local-only",
+                intake_mode="local-only",
+                metadata=task_envelope.get("metadata"),
+            )
+            return _result(accepted=False, written=False, reason="security_gate_rejected",
+                           task_id=task_id, db_path=None, initial_status=None,
+                           security_gate=gate, audit_event=audit)
+
+    # 7) 解析 intake DB 路徑，並拒絕撞到 production queue DB。
     intake_db_path = _resolve_intake_db_path(db_path)
     if _is_production_db(intake_db_path):
         return _result(accepted=False, written=False, reason="refuse_production_db",
                        task_id=task_id, db_path=None, initial_status=None)
 
-    # 6) 準備 payload：標示 local_only / mock source / 不可執行；status 強制非 queued。
+    # 8) 準備 payload：標示 local_only / mock source / 不可執行；status 強制非 queued。
     payload = dict(task_envelope)
     metadata = dict(payload.get("metadata") or {})
     metadata.update({
@@ -148,7 +200,7 @@ def intake_task_envelope_local_only(
     payload["approval_status"] = "pending"
     validate_task_envelope(payload)
 
-    # 7) 寫入獨立 intake DB，initial_status 一律 waiting_review（worker 不會 claim）。
+    # 9) 寫入獨立 intake DB，initial_status 一律 waiting_review（worker 不會 claim）。
     store = QueueStore(intake_db_path)
     title = (task_envelope.get("intent") or task_envelope.get("goal") or "local-intake")
     task_text = (task_envelope.get("input_summary") or task_envelope.get("goal") or "")
