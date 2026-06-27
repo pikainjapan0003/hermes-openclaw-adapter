@@ -1,0 +1,93 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://hermes-openclaw-adapter/schemas/callback_event_v0_7.schema.json",
+  "title": "CallbackEvent v0.7",
+  "description": "OpenClaw 執行端回報、Adapter 驗證後據以更新 Queue 的 CallbackEvent 契約（v0.7.0-B，純 mock，不含任何 secret）。",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "event_id",
+    "task_id",
+    "source",
+    "created_at",
+    "event_type",
+    "status",
+    "summary",
+    "retryable",
+    "metadata"
+  ],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "description": "事件唯一 id。"
+    },
+    "task_id": {
+      "type": "string",
+      "description": "對應的 TaskEnvelope id。"
+    },
+    "flow_id": {
+      "type": ["string", "null"],
+      "description": "執行流程 id（可選）。"
+    },
+    "source": {
+      "type": "string",
+      "description": "openclaw-worker / gateway ...。"
+    },
+    "created_at": {
+      "type": "string",
+      "description": "ISO8601 UTC 時間戳。"
+    },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "accepted",
+        "started",
+        "progress",
+        "completed",
+        "failed",
+        "cancelled",
+        "artifact_ready",
+        "approval_required"
+      ],
+      "description": "事件類型。"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["ok", "running", "completed", "failed", "cancelled", "rejected"],
+      "description": "對應結果狀態。"
+    },
+    "summary": {
+      "type": "string",
+      "description": "人類可讀摘要（不含 secret）。"
+    },
+    "result_ref": {
+      "type": ["string", "null"],
+      "description": "結果參考（不內嵌 secret）。"
+    },
+    "error_code": {
+      "type": ["string", "null"],
+      "description": "失敗代碼。"
+    },
+    "error_message": {
+      "type": ["string", "null"],
+      "description": "失敗訊息（不含 secret）。"
+    },
+    "retryable": {
+      "type": "boolean",
+      "description": "是否可重試。"
+    },
+    "duration_ms": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "description": "執行耗時（毫秒，非負）。"
+    },
+    "artifacts": {
+      "type": "array",
+      "description": "產出參考清單（非 secret）。"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "其他非敏感中繼資料。"
+    }
+  }
+}
