@@ -21,6 +21,10 @@ os.environ["QUEUE_DB_PATH"] = str(Path(_TMP) / "queue.db")
 os.environ["HERMES_ADAPTER_TOKEN"] = ""
 os.environ["CALLBACK_ENABLED"] = "false"
 os.environ["OPENCLAW_CLI_BIN"] = "/nonexistent/openclaw-should-never-be-called"
+# v0.7.2-UI-E-B-R：開啟 dashboard auth gate（未登入 redirect，登入才看 markers）。
+_DASH_TOKEN = "ui-e-b-r-test-token"
+os.environ["DASHBOARD_AUTH_ENABLED"] = "true"
+os.environ["DASHBOARD_TOKEN"] = _DASH_TOKEN
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -42,25 +46,37 @@ def _check(cond: bool, label: str) -> None:
 def main_test() -> int:
     q = main.get_queue()
     # 只放非 waiting_review 任務，讓 reviews 頁呈現空狀態。
+    # 另外放一筆 failed，讓 overview 的「Owner 待處理」焦點面板呈現群組（非空態）。
     q.enqueue(task_id="p_queued", title="待跑任務", task_text="do something useful",
               safety_level=0, payload={"metadata": {}}, initial_status="queued")
     q.enqueue(task_id="p_done", title="完成任務", task_text="x", safety_level=0,
               payload={"metadata": {}}, initial_status="queued")
+    q.enqueue(task_id="p_failed", title="失敗任務", task_text="x", safety_level=0,
+              payload={"metadata": {}}, initial_status="queued")
     q.claim_next()  # 把最舊的 p_queued 變 running？ 不一定——改用直接 setup
-    # 為了穩定，直接把 p_done 設成 completed（測試夾具，不是被測邏輯）
+    # 為了穩定，直接設定固定狀態（測試夾具，不是被測邏輯）
     conn = q._connect()
     try:
         conn.execute("UPDATE queue SET status='completed' WHERE task_id='p_done'")
         conn.execute("UPDATE queue SET status='queued' WHERE task_id='p_queued'")
+        conn.execute("UPDATE queue SET status='failed' WHERE task_id='p_failed'")
         conn.commit()
     finally:
         conn.close()
 
     counts_before = q.counts_by_status()
 
-    client = TestClient(main.app)
+    print("[0] auth gate：未登入 /dashboard 應 redirect 到 login")
+    unauth = TestClient(main.app)
+    r = unauth.get("/dashboard", follow_redirects=False)
+    _check(r.status_code in (303, 307), f"未登入 /dashboard redirect（status={r.status_code}）")
+    _check("/dashboard/login" in r.headers.get("location", ""), "redirect 指向 /dashboard/login")
 
-    print("[1-3] /dashboard 控制台總覽")
+    # 已登入 client：帶 X-Dashboard-Token 才能讀 dashboard markers。
+    client = TestClient(main.app)
+    client.headers.update({"X-Dashboard-Token": _DASH_TOKEN})
+
+    print("[1-3] /dashboard 控制台總覽（已登入）")
     r = client.get("/dashboard")
     _check(r.status_code == 200, "/dashboard 200")
     body = r.text
@@ -70,6 +86,9 @@ def main_test() -> int:
     _check("快速連結" in body, "首頁含 快速連結（Quick Links）")
     _check("查看任務" in body and "待審核項目" in body
            and "最近錯誤" in body, "快速連結 含 查看任務 / 待審核項目 / 最近錯誤")
+    # UI-E-B：Owner 待處理 焦點面板與群組。
+    for marker in ("Owner 待處理", "待審核任務", "最近錯誤", "需要人工確認", "下一步建議"):
+        _check(marker in body, f"首頁 Owner 待處理 含 {marker}")
 
     print("[4-5] /dashboard/tasks 狀態篩選")
     r = client.get("/dashboard/tasks")
@@ -90,6 +109,9 @@ def main_test() -> int:
         _check(section in body, f"detail 含分區 {section}")
     _check("No result yet." in body, "result 為空顯示 muted 'No result yet.'")
     _check("No error." in body, "error 為空顯示 muted 'No error.'")
+    # UI-E-B：任務詳情 Owner 審核面板。
+    for marker in ("Owner 審核面板", "是否可核准", "安全邊界"):
+        _check(marker in body, f"task detail 含 Owner 審核面板 marker {marker}")
 
     print("[8-9] /dashboard/reviews 空狀態")
     r = client.get("/dashboard/reviews")
@@ -97,6 +119,9 @@ def main_test() -> int:
     body = r.text
     _check("Pending Reviews" in body, "reviews 頁含標題與 count")
     _check("目前沒有待審核任務" in body or "empty-state" in body, "reviews 空狀態訊息")
+    # UI-E-B：Owner 審核佇列 面板與安全提醒（空狀態也會顯示）。
+    for marker in ("Owner 審核佇列", "核准前請確認風險", "拒絕會保留任務記錄"):
+        _check(marker in body, f"reviews 含 Owner 審核佇列 marker {marker}")
 
     print("[10-11] /dashboard/system")
     r = client.get("/dashboard/system")

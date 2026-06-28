@@ -32,6 +32,11 @@ os.environ["HERMES_ADAPTER_TOKEN"] = ""  # 測試不要求 token
 os.environ["CALLBACK_ENABLED"] = "false"
 # 確保不會誤指向真實 OpenClaw CLI（dashboard 本來就不該呼叫，這是雙保險）。
 os.environ["OPENCLAW_CLI_BIN"] = "/nonexistent/openclaw-should-never-be-called"
+# v0.7.2-UI-E-B-R：開啟 dashboard auth gate，驗證「未登入看不到內容、登入才看得到 markers」。
+# 不降低安全性：未登入 GET /dashboard 仍會 303 redirect 到 login。
+_DASH_TOKEN = "ui-e-b-r-test-token"
+os.environ["DASHBOARD_AUTH_ENABLED"] = "true"
+os.environ["DASHBOARD_TOKEN"] = _DASH_TOKEN
 
 # 讓 `python scripts/test_dashboard_readonly.py` 也能 import app 套件。
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -85,9 +90,18 @@ def main_test() -> int:
     counts_before = q.counts_by_status()
     total_before = q.total()
 
-    client = TestClient(main.app)
+    print("[0] auth gate：未登入 /dashboard 應 redirect 到 login（不可洩漏內容）")
+    unauth = TestClient(main.app)
+    r = unauth.get("/dashboard", follow_redirects=False)
+    _check(r.status_code in (303, 307), f"未登入 /dashboard redirect（status={r.status_code}）")
+    _check("/dashboard/login" in r.headers.get("location", ""), "redirect 指向 /dashboard/login")
+    _check("Owner 待處理" not in r.text, "未登入不應看到 Owner 待處理 markers")
 
-    print("[1] GET /dashboard — Overview 200")
+    # 已登入 client：帶 X-Dashboard-Token，才可讀 dashboard 內容 markers。
+    client = TestClient(main.app)
+    client.headers.update({"X-Dashboard-Token": _DASH_TOKEN})
+
+    print("[1] GET /dashboard — Overview 200（已登入）")
     r = client.get("/dashboard")
     _check(r.status_code == 200, "/dashboard 200")
     _check("text/html" in r.headers.get("content-type", ""), "/dashboard 回 HTML")
@@ -96,6 +110,8 @@ def main_test() -> int:
     _check("唯讀監控台" in body, "首頁標示 唯讀監控台（Read-only Dashboard）")
     _check(main.APP_VERSION in body, f"首頁顯示 version={main.APP_VERSION}")
     _check("queue" in body, "首頁顯示 execution_mode")
+    # UI-E-B：Owner 待處理 焦點面板（唯讀導航，不是執行按鈕）。
+    _check("Owner 待處理" in body, "首頁含 Owner 待處理 焦點面板")
 
     print("[1b] GET /static/dashboard.css — 靜態檔可讀")
     r = client.get("/static/dashboard.css")
