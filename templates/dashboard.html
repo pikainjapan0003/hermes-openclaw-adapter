@@ -39,6 +39,51 @@
   </div>
 </section>
 
+<!-- Owner 待處理 / Owner Pending Actions — 唯讀焦點面板；以下皆為導航連結（查看），不執行任何動作。 -->
+<section class="owner-review-panel hud-panel" aria-label="Owner pending actions">
+  <h2 class="owner-review-title"><span class="zh-main">Owner 待處理</span> <span class="en-sub">Owner Pending Actions</span></h2>
+  <p class="muted">彙整目前需要你注意的項目。以下皆為「查看」導航連結，不是執行按鈕。</p>
+  {% if counts.waiting_review or counts.failed %}
+  <div class="owner-review-grid">
+    <article class="owner-action-card state-warn">
+      <h3 class="zh-main">待審核任務 <span class="en-sub">Pending Reviews</span></h3>
+      <p class="owner-action-count">{{ counts.waiting_review }}</p>
+      <p class="owner-risk-note">下一步建議：開啟任務後核准或拒絕。</p>
+      <ul class="owner-action-list">
+        <li><a href="/dashboard/reviews">查看待審核項目 <span class="en-sub">View</span></a></li>
+      </ul>
+    </article>
+    <article class="owner-action-card state-danger">
+      <h3 class="zh-main">最近錯誤 <span class="en-sub">Recent Errors</span></h3>
+      <p class="owner-action-count">{{ counts.failed }}</p>
+      <p class="owner-risk-note">下一步建議：檢視錯誤後重試或封存。</p>
+      <ul class="owner-action-list">
+        <li><a href="/dashboard/tasks?status=failed">查看錯誤任務 <span class="en-sub">View</span></a></li>
+      </ul>
+    </article>
+    <article class="owner-action-card">
+      <h3 class="zh-main">需要人工確認 <span class="en-sub">Manual Confirmation</span></h3>
+      <p class="owner-action-count">{{ counts.waiting_review }}</p>
+      <p class="owner-risk-note">下一步建議：需人工確認的任務會列在待審核項目。</p>
+      <ul class="owner-action-list">
+        <li><a href="/dashboard/tasks">查看任務列表 <span class="en-sub">View</span></a></li>
+        <li><a href="/dashboard/system">查看系統狀態 <span class="en-sub">View</span></a></li>
+      </ul>
+    </article>
+  </div>
+  {% else %}
+  <div class="owner-empty-state">
+    <p>✅ 目前沒有待處理項目。</p>
+    <p class="muted">下一步建議：保持唯讀監控即可。</p>
+    <ul class="owner-action-list">
+      <li><a href="/dashboard/reviews">查看待審核項目 <span class="en-sub">View</span></a></li>
+      <li><a href="/dashboard/tasks">查看任務列表 <span class="en-sub">View</span></a></li>
+      <li><a href="/dashboard/system">查看系統狀態 <span class="en-sub">View</span></a></li>
+    </ul>
+  </div>
+  {% endif %}
+</section>
+
 <div class="cards">
   <section class="card">
     <h3>系統健康</h3>

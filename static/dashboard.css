@@ -103,6 +103,37 @@ h2 .zh-main { font-size: 1em; }
   display: block; font-size: 0.72em; color: var(--muted);
   font-family: ui-monospace, "Cascadia Code", Consolas, monospace; letter-spacing: 0.2px;
 }
+
+/* --- v0.7.2-UI-E-B Owner Review Panel / Pending Actions --------------------
+   中文優先焦點面板；沿用 Jarvis glass/HUD 風格，不引入任何外部依賴。 */
+.owner-review-panel { padding: 16px 18px; margin: 4px 0 20px; }
+.owner-review-title { margin: 0 0 4px; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+.owner-review-grid {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px; margin: 10px 0;
+}
+.owner-action-card {
+  background: var(--glass); border: 1px solid var(--line); border-radius: 10px;
+  padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; min-width: 0;
+}
+.owner-action-card.state-warn { border-left: 3px solid var(--warn); }
+.owner-action-card.state-danger { border-left: 3px solid var(--danger); }
+.owner-action-count { font-size: 1.6em; font-weight: 800; color: var(--neon); margin: 2px 0; }
+.owner-action-list { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.owner-action-list a { font-size: 0.92em; }
+.owner-risk-note { font-size: 0.86em; color: var(--warn); margin: 4px 0; }
+.owner-safety-boundary {
+  font-size: 0.82em; color: var(--muted); margin: 4px 0;
+  border-left: 2px solid var(--glass-border); padding-left: 8px;
+}
+.owner-decision-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.owner-action-button-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.owner-empty-state {
+  background: var(--glass); border: 1px dashed var(--glass-border); border-radius: 10px;
+  padding: 16px 18px; color: var(--muted);
+}
+.owner-empty-state .owner-action-list { margin-top: 8px; }
+@media (max-width: 900px) { .owner-review-grid { grid-template-columns: 1fr; } }
 .page-title { font-size: 13px; margin: 4px 0 0; font-weight: 600; color: var(--neon); letter-spacing: 0.5px; }
 .topbar-chips { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .chip {

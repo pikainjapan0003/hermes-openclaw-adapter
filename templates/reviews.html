@@ -4,14 +4,22 @@
 <p class="muted">這些任務 safety_level &ge; 3 或 requires_confirmation=true，需人工確認。
   在 approve 之前，worker 絕不會執行它們。</p>
 
+<section class="owner-review-panel hud-panel" aria-label="Owner review queue">
+  <h3 class="zh-main">Owner 審核佇列 <span class="en-sub">Owner Review Queue</span></h3>
+  <p class="muted">需要你確認的任務。請逐筆查看詳情後再決定。</p>
+  <p class="owner-risk-note">核准前請確認風險、內容與下一步動作。</p>
+  <p class="owner-safety-boundary">拒絕會保留任務記錄，不會啟動 Worker。安全邊界：Worker 關閉、OpenClaw 未接線、Hermes 未接線、Google Sheets 已停用。</p>
+</section>
+
 {% if items %}
 <table class="grid hoverable">
   <thead>
     <tr>
       <th>任務 ID <span class="en-sub">(task id)</span></th>
       <th>標題 <span class="en-sub">(title)</span></th>
-      <th>安全等級 <span class="en-sub">(safety_level)</span></th>
-      <th>需要確認 <span class="en-sub">(requires_confirmation)</span></th>
+      <th>風險等級 <span class="en-sub">(risk / safety_level)</span></th>
+      <th>請求動作 <span class="en-sub">(requested action)</span></th>
+      <th>目前狀態 <span class="en-sub">(current status)</span></th>
       <th>建立時間 <span class="en-sub">(created at)</span></th>
       <th>任務內容 <span class="en-sub">(task_text)</span></th>
       <th>動作 <span class="en-sub">(actions)</span></th>
@@ -22,15 +30,18 @@
     <tr>
       <td><a href="/dashboard/tasks/{{ t.task_id }}" title="{{ t.task_id }}" class="mono">{{ short_task_id(t.task_id) }}</a></td>
       <td>{{ truncate(t.title, 30) }}</td>
-      <td><span class="badge badge-level">L{{ t.safety_level if t.safety_level is not none else '?' }}</span></td>
       <td>
-        {% if t.requires_confirmation %}<span class="badge badge-warning">是 <span class="en-sub">yes</span></span>
-        {% else %}<span class="badge badge-muted">否 <span class="en-sub">no</span></span>{% endif %}
+        <span class="badge badge-level">L{{ t.safety_level if t.safety_level is not none else '?' }}</span>
+        {% if t.requires_confirmation %}<span class="badge badge-warning">需要確認 <span class="en-sub">yes</span></span>
+        {% else %}<span class="badge badge-muted">免確認 <span class="en-sub">no</span></span>{% endif %}
       </td>
+      <td>需要 Owner 核准 / 拒絕 <span class="en-sub">approve / reject</span></td>
+      <td><span class="badge badge-waiting_review">等待審核</span><span class="status-code">waiting_review</span></td>
       <td class="muted nowrap">{{ format_empty(t.created_at) }}</td>
       <td class="comment-content">{{ truncate(t.task_text_snippet, 80) }}</td>
       <td>
-        <div class="action-row">
+        <div class="owner-action-button-row action-row">
+          <a class="filter-pill" href="/dashboard/tasks/{{ t.task_id }}">查看詳情 <span class="en-sub">View</span></a>
           <form method="post" action="/dashboard/tasks/{{ t.task_id }}/approve">
             <button type="submit" class="btn-approve">核准 <span class="en-sub">Approve</span></button>
           </form>

@@ -10,6 +10,27 @@
 <p class="warn">操作失敗：{{ comment_error }}</p>
 {% endif %}
 
+<section class="owner-review-panel hud-panel" aria-label="Owner review panel">
+  <h3 class="zh-main">Owner 審核面板 <span class="en-sub">Owner Review Panel</span></h3>
+  <div class="owner-review-grid">
+    <div class="owner-action-card">
+      <p class="field-label">目前任務狀態 <span class="en-sub">current status</span></p>
+      <p><span class="{{ status_class(task.status) }}">{{ zh_status.get(task.status, task.status) }}</span><span class="status-code">{{ task.status }}</span></p>
+    </div>
+    <div class="owner-action-card">
+      <p class="field-label">是否可核准 <span class="en-sub">can approve</span></p>
+      <p>{% if task.status == "waiting_review" %}是，等待你的人工審核 <span class="en-sub">yes</span>{% else %}否，目前狀態無需 Owner 核准 <span class="en-sub">no</span>{% endif %}</p>
+    </div>
+    <div class="owner-action-card">
+      <p class="field-label">這個任務為什麼需要你確認 <span class="en-sub">why owner is required</span></p>
+      <p class="owner-risk-note">{% if task.status == "waiting_review" %}safety_level &ge; 3 或 requires_confirmation；在你核准前 Worker 不會執行。{% else %}此任務目前不在待審核狀態，僅供查看。{% endif %}</p>
+    </div>
+  </div>
+  <p class="owner-risk-note">風險提示：核准前請確認任務內容、風險等級與下一步動作。</p>
+  <p class="owner-safety-boundary">安全邊界：Dashboard 唯讀；Worker 關閉；OpenClaw 未接線；Hermes 未接線；Google Sheets 已停用。</p>
+  <p class="muted">說明：人工審核 = Owner approval decision；安全控制 = cancel / retry / archive；工單入口 = read-only intake snapshot。</p>
+</section>
+
 <section class="card">
   <h3>摘要 <span class="en-sub">Summary</span></h3>
   <table class="kv">
