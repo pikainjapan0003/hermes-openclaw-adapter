@@ -1646,6 +1646,11 @@ def system_worker(x_adapter_token: str | None = Header(default=None)) -> dict[st
     return _worker_snapshot()
 
 
+@app.get("/")
+def root() -> RedirectResponse:
+    return RedirectResponse(url="/dashboard", status_code=303)
+
+
 @app.get("/dashboard/system", response_class=HTMLResponse)
 def dashboard_system(request: Request) -> HTMLResponse:
     """Dashboard 系統健康頁。"""
