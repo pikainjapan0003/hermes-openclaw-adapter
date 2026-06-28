@@ -24,6 +24,7 @@ EXPECTED_STALE_READINESS = {
     "v0.7.1-C": "superseded by v0.7.1-C3 dashboard wiring",
     "v0.7.1-C2": "superseded by v0.7.1-C3 dashboard badge wiring",
     "v0.7.1-D": "superseded by v0.7.1-D2 and v0.7.1-F security gate modules",
+    "v0.7.2-A": "superseded by v0.7.2-B auto_approval_policy_v0_7.py pure helper",
 }
 
 # ---- 目前應 green 的 readiness（hard gate，subprocess EXIT=0）----
@@ -34,6 +35,8 @@ GREEN_READINESS = (
     ("E", "scripts/check_hermes_openclaw_local_only_intake_security_gates_v0_7_1_e_readiness.py"),
     ("F", "scripts/check_hermes_openclaw_approval_to_queued_security_gate_v0_7_1_f_readiness.py"),
     ("F2", "scripts/check_hermes_openclaw_approve_route_wiring_plan_v0_7_1_f2.py"),
+    ("B-helper", "scripts/check_hermes_openclaw_auto_approval_policy_helper_v0_7_2_b.py"),
+    ("B-test", "scripts/test_auto_approval_policy_v0_7_2_b.py"),
 )
 
 # ---- artifacts：docs + 已落地模組 ----
@@ -54,6 +57,7 @@ REQUIRED_MODULES = (
     "app/dashboard_intake_view_v0_7.py",
     "app/security_gates_v0_7.py",
     "app/approval_security_gate_v0_7.py",
+    "app/auto_approval_policy_v0_7.py",
 )
 
 MAIN = ROOT / "app" / "main.py"
@@ -69,6 +73,11 @@ RESULT_SINK = ROOT / "app" / "result_sink.py"
 APPROVAL_MODULE_NAME = "approval_security_gate" + "_v0_7"
 APPROVAL_FUNC_NAME = "evaluate_approval" + "_to_queued"
 
+# v0.7.2-B auto-approval pure helper（current green gate；boundary：尚未接入 main/queue_store/worker）。
+AUTO_APPROVAL_MODULE_NAME = "auto_approval_policy_v0_7"
+AUTO_APPROVAL_FUNC_NAME = "evaluate_auto_approval"
+AUTO_APPROVAL_HELPER = ROOT / "app" / "auto_approval_policy_v0_7.py"
+
 RE_SPREADSHEET_URL = re.compile(r"spreadsheets/d/[A-Za-z0-9_-]{20,}")
 RE_SPREADSHEET_ASSIGN = re.compile(r"SPREADSHEET_ID\s*[:=]\s*[\"'][A-Za-z0-9_-]{20,}[\"']")
 RE_TOKEN_PREFIX = re.compile(r"(ya29\.[A-Za-z0-9_-]{10,}|1//[A-Za-z0-9_-]{10,}|" + "goc" + r"spx-[A-Za-z0-9_-]{10,})")
@@ -80,6 +89,7 @@ SAFETY_SCAN_FILES = (
     MAIN, INTAKE_BRIDGE, SECURITY_GATES, APPROVAL_GATE,
     QUEUE_STORE, WORKER, RESULT_SINK,
     ROOT / "app" / "dashboard_intake_view_v0_7.py",
+    ROOT / "app" / "auto_approval_policy_v0_7.py",
 )
 
 FAILURES: list[str] = []
@@ -149,6 +159,27 @@ def main() -> int:
     # F2-A / F2-B route wiring 痕跡：approve route 不得呼叫 approval gate（以上 import/call 已涵蓋）。
     _check(APPROVAL_MODULE_NAME not in main_txt, "main.py 無 F2-A/F2-B approve route wiring 痕跡")
 
+    print("[4b] auto-approval pure helper（v0.7.2-B）current-state truths / boundary")
+    helper_txt = _read(AUTO_APPROVAL_HELPER)
+    _check(AUTO_APPROVAL_HELPER.is_file(), "app/auto_approval_policy_v0_7.py 存在")
+    _check(f"def {AUTO_APPROVAL_FUNC_NAME}" in helper_txt, f"helper 含 {AUTO_APPROVAL_FUNC_NAME}")
+    for tok in ('"can_execute": False', '"queue_transition_allowed": False', '"observation_only": True'):
+        _check(tok in helper_txt, f"helper 含固定安全欄位「{tok}」")
+    for mod in ("app\\.main", "app\\.queue_store", "app\\.worker", "app\\.result_sink"):
+        imp = re.compile(rf"^\s*(?:import|from)\s+\S*{mod}\b", re.MULTILINE)
+        _check(not imp.search(helper_txt), f"helper 未 import {mod.replace(chr(92), '')}")
+    for bad in ("@app.", "@router.", "add_api_route", "QueueStore", "get_queue",
+                "run_openclaw_cli(", "import sqlite3", "import requests", "import subprocess"):
+        _check(bad not in helper_txt, f"helper 無痕跡「{bad}」")
+    helper_google = re.compile(r"^\s*(?:import|from)\s+\S*(?:google|googleapiclient|gspread|oauthlib)",
+                               re.MULTILINE | re.IGNORECASE)
+    _check(not helper_google.search(helper_txt), "helper 未 import google / gspread / oauth")
+    # boundary：auto-approval helper 尚未被 main/queue_store/worker/result_sink 接入。
+    aa_imp = re.compile(rf"^\s*(?:import|from)\s+\S*{re.escape(AUTO_APPROVAL_MODULE_NAME)}\b", re.MULTILINE)
+    for path, name in ((MAIN, "main.py"), (QUEUE_STORE, "queue_store.py"),
+                       (WORKER, "worker.py"), (RESULT_SINK, "result_sink.py")):
+        _check(not aa_imp.search(_read(path)), f"{name} 未 import {AUTO_APPROVAL_MODULE_NAME}")
+
     print("[5] safety：無 Sheets live / 無真 secret / 無新 run_openclaw_cli 呼叫")
     for path in SAFETY_SCAN_FILES:
         txt = _read(path)
@@ -172,7 +203,7 @@ def main() -> int:
             print(f"   - {f}")
         return 1
     print("\nOK v0.7.1 current-state regression 全數通過"
-          "（current master = v0.7.1-F2 boundary；stale A/C/C2/D 為 expected，未當 hard gate）。")
+          "（current master = v0.7.2-B helper landed；stale A/C/C2/D/v0.7.2-A 為 expected，未當 hard gate）。")
     return 0
 
 
