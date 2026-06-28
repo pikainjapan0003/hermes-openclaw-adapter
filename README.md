@@ -17,6 +17,86 @@ data/results.jsonl  ──(GET /tasks/{id}/result)──────────
 
 ---
 
+## Project Status (v0.7.2 line)
+
+Hermes × OpenClaw Adapter is a **safety-focused intermediary layer (adapter)** between the
+Hermes "brain" and an OpenClaw execution backend. The current development focus is a
+**controlled queue, a human approval gate, local-only security gates, a safe auto-approval
+policy, and a local-only simulation** — it is **not** a production autonomous worker.
+
+This adapter is **not** production-ready for autonomous execution. It does **not** auto-start
+a Worker, does **not** call a real OpenClaw or Hermes backend, and does **not** perform
+Google Sheets live writes. The v0.7.2 auto-approval work is currently **policy / helper /
+simulation / current-state verification only — it does not execute anything**.
+
+### Architecture
+
+The full intended dataflow is shown in the diagram at the top (Hermes → MCP → Adapter →
+queue/worker → OpenClaw CLI → results). On top of that base, the v0.7.x line adds the
+following as **observation-only** layers (decision / preview only, no execution):
+
+- a controlled queue intake bridge and a read-only dashboard;
+- local-only, pure-function security gates and an approval-to-queued gate;
+- a safe auto-approval **policy** (`app/auto_approval_policy_v0_7.py` → `evaluate_auto_approval`);
+- a local-only **simulator** that previews policy decisions for built-in sample tasks.
+
+### Safety Boundaries
+
+These must always hold for the v0.7.2 auto-approval / simulation work:
+
+- Auto-approval does not mean auto-execution.
+- Simulation does not mean execution.
+- auto_approved does not mean queued.
+- can_execute is false.
+- queue_transition_allowed is false.
+- observation_only is true.
+
+And the following must never be auto-approved or silently enabled:
+
+- No dangerous skip-permissions mode is approved.
+- No --dangerously-skip-permissions equivalent is approved.
+- Push, tag, secrets, production DB writes, Worker start, OpenClaw calls, Hermes calls, and Google Sheets live writes must not be auto-approved.
+
+### Current v0.7.2 Line — Implemented / pushed
+
+- v0.7.1 controlled queue / dashboard / local-only security gates
+- v0.7.2-A auto-approval policy plan
+- v0.7.2-B pure auto-approval helper (observation-only)
+- v0.7.2-B2 expected-stale current-state update
+- v0.7.2-C local-only simulation CLI
+- v0.7.2-C2 simulation current-state update
+
+### What Works Now
+
+- Controlled task queue with explicit states; human approval flow (approve / reject) and
+  limited safe controls (cancel / retry / archive).
+- Read-only dashboard and read-only queue / system observation APIs.
+- Local-only, pure-function security gates and an approval-to-queued gate (decision-only).
+- A safe auto-approval **policy** as a pure function, plus a **local-only simulator**
+  (`scripts/simulate_auto_approval_policy_v0_7_2_c.py --sample all` / `--json`) that previews
+  decisions for built-in sample tasks. Every decision is observation-only.
+
+### What Is Not Connected Yet
+
+- no Worker execution
+- no real OpenClaw calls
+- no real Hermes live client
+- no approve-route auto-wiring
+- no production Queue mutation from auto-approval
+- no Google Sheets live write
+- no webhook
+- no v0.7 tag
+
+### Roadmap (not started)
+
+- v0.7.2-D — intake annotation (observation-only; no state change)
+- F2-A — approve-route wiring (gated; requires explicit owner approval)
+
+> Principle: control first, then automate; mock first, then real; queue first, then worker;
+> owner approval before any external side effect.
+
+---
+
 ## Operator Guide
 
 新手操作手冊請看 [`docs/OPERATOR_GUIDE.md`](docs/OPERATOR_GUIDE.md)。
@@ -29,7 +109,11 @@ data/results.jsonl  ──(GET /tasks/{id}/result)──────────
 
 ---
 
-## 目前版本
+## v0.4 Milestone (historical)
+
+> For current status see **Project Status (v0.7.2 line)** above. This section documents the
+> earlier v0.4 milestone and the detailed component reference below (v0.5.x) for historical
+> and operational reference; it does not describe the current development focus.
 
 **`v0.4.1-discord-e2e-verified`**（async background + callback，已完成 Discord 端到端驗證）
 
@@ -326,9 +410,14 @@ worker 何時寫心跳：啟動 `starting` → 進輪詢 `idle` → claim 到任
 
 ---
 
-## 下一步建議
+## Historical Next-step Notes (v0.4 era)
 
-1. **`v0.4.2-service-units`** —— 把 Adapter 與 Hermes Gateway 做成 systemd unit，開機自動啟動、崩潰自動重啟（解掉目前「要手動拉起」的限制）。
-2. **`v0.5-queue-worker`** —— 之後才導入 Queue / Worker（以及 DLQ、重試編排），提升吞吐與失敗韌性。
+> Kept for history. The current roadmap is in **Project Status (v0.7.2 line) → Roadmap**
+> above. The queue / worker infrastructure below already landed in the v0.5–v0.6 line; the
+> v0.7.x line then layered controlled intake / approval / security / auto-approval-policy /
+> simulation on top (observation-only).
 
-> 維持原則：先穩定運維（service units），再擴充架構（queue）。
+1. **`v0.4.2-service-units`** —— 把 Adapter 與 Hermes Gateway 做成 systemd unit（運維強化）。
+2. **`v0.5-queue-worker`** —— Queue / Worker（以及 DLQ、重試編排）—— 已於 v0.5–v0.6 落地。
+
+> 維持原則：先穩定運維，再擴充架構；先控管，再自動化。
