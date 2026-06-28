@@ -330,3 +330,26 @@ button:hover { filter: brightness(1.08); }
 .badge-local-only { background: rgba(255,207,92,0.14); color: #ffd97a; border: 1px solid rgba(255,207,92,0.4); }
 .badge-executable-false { background: rgba(255,107,107,0.14); color: #ff9d9d; border: 1px solid rgba(255,107,107,0.4); }
 .badge-unknown { background: rgba(150,180,200,0.12); color: #b7c9d6; border: 1px solid var(--line); }
+
+/* --- v0.7.2-F-C annotation / approval readiness (display-only) ----------- */
+/* 純視覺呈現；不附帶任何動作。blocked / prohibited 用紅色醒目，safe 觀察用中性。 */
+.badge-blocked {
+  background: rgba(255,107,107,0.16); color: #ff9d9d;
+  border: 1px solid rgba(255,107,107,0.5); font-weight: 700;
+}
+.annotation-panel { margin: 4px 0 20px; }
+.annotation-summary { margin: 6px 0 12px; }
+.annotation-human-summary {
+  font-size: 1.05em; line-height: 1.6; color: var(--ink, #dce8f0);
+  border-left: 3px solid var(--neon); padding-left: 10px; margin: 4px 0;
+}
+.annotation-permission-row {
+  display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+  margin: 12px 0; padding: 8px 0; border-top: 1px solid var(--line);
+}
+.annotation-safety-reminder {
+  margin-top: 10px; padding: 10px 12px;
+  border: 1px solid rgba(255,207,92,0.35); border-radius: 8px;
+  background: rgba(255,207,92,0.06);
+}
+.annotation-safety-reminder p { margin: 2px 0; font-size: 0.9em; }

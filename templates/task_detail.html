@@ -31,6 +31,63 @@
   <p class="muted">說明：人工審核 = Owner approval decision；安全控制 = cancel / retry / archive；工單入口 = read-only intake snapshot。</p>
 </section>
 
+{# v0.7.2-F-C：唯讀 annotation 顯示（display-only）。資料來自 derive_queue_task_annotation，
+   不改任何狀態、不接 approval wiring。execution_permission / dispatch_allowed 恆為 False。 #}
+{% if task.annotation %}
+{% set ann = task.annotation %}
+{% set zh_readiness = {
+  'not_ready': '資訊不足（不可核准）',
+  'owner_review_required': '需要 Owner 審核',
+  'ready_for_owner_decision': '資訊足夠，可由 Owner 決定',
+  'blocked_by_policy': '被安全政策擋住',
+  'prohibited': '禁止執行'
+} %}
+{% set readiness_badge = {
+  'not_ready': 'badge-unknown',
+  'owner_review_required': 'badge-warning',
+  'ready_for_owner_decision': 'badge-source',
+  'blocked_by_policy': 'badge-blocked',
+  'prohibited': 'badge-blocked'
+} %}
+<section class="card annotation-panel hud-panel" aria-label="Annotation / approval readiness">
+  <h3 class="zh-main">審核準備狀態 <span class="en-sub">Annotation / Approval Readiness</span></h3>
+  <p class="muted">以下為唯讀顯示推導，不改變任務狀態、不觸發 worker、不接 approval wiring。</p>
+
+  <div class="annotation-summary">
+    <p class="field-label">任務摘要 <span class="en-sub">human_readable_summary</span></p>
+    <p class="annotation-human-summary">{{ ann.human_readable_summary }}</p>
+  </div>
+
+  <table class="kv">
+    <tbody>
+      <tr><th><span class="field-label">審核準備狀態</span><span class="field-code">approval_readiness</span></th><td>
+        <span class="badge {{ readiness_badge.get(ann.approval_readiness, 'badge-unknown') }}">{{ zh_readiness.get(ann.approval_readiness, ann.approval_readiness) }}</span><span class="status-code">{{ ann.approval_readiness }}</span></td></tr>
+      <tr><th><span class="field-label">需要 Owner 的原因</span><span class="field-code">owner_reason</span></th><td>{{ ann.owner_reason }}</td></tr>
+      <tr><th><span class="field-label">風險摘要</span><span class="field-code">risk_summary</span></th><td class="owner-risk-note">{{ ann.risk_summary }}</td></tr>
+      <tr><th><span class="field-label">外部影響</span><span class="field-code">side_effect_summary</span></th><td>{{ ann.side_effect_summary }}</td></tr>
+      <tr><th><span class="field-label">核准後下一步</span><span class="field-code">next_step_if_approved</span></th><td>{{ ann.next_step_if_approved }}</td></tr>
+      <tr><th><span class="field-label">執行模式</span><span class="field-code">execution_mode</span></th><td><span class="badge badge-source">{{ ann.execution_mode }}</span></td></tr>
+      <tr><th><span class="field-label">可否 dry-run</span><span class="field-code">dry_run_available</span></th><td>{{ '是' if ann.dry_run_available else '否' }}<span class="status-code">{{ ann.dry_run_available }}</span></td></tr>
+      <tr><th><span class="field-label">可否 mock</span><span class="field-code">mock_available</span></th><td>{{ '是' if ann.mock_available else '否' }}<span class="status-code">{{ ann.mock_available }}</span></td></tr>
+      <tr><th><span class="field-label">外部接觸點</span><span class="field-code">external_touchpoints</span></th><td>
+        {% if ann.external_touchpoints %}{% for tp in ann.external_touchpoints %}<span class="badge badge-source">{{ tp }}</span> {% endfor %}{% else %}<span class="muted">（無）<span class="en-sub">none</span></span>{% endif %}</td></tr>
+      <tr><th><span class="field-label">Rollback 說明</span><span class="field-code">rollback_note</span></th><td>{{ ann.rollback_note }}</td></tr>
+    </tbody>
+  </table>
+
+  <div class="annotation-permission-row">
+    <span class="badge badge-blocked">執行權限：未授權 <span class="en-sub">execution_permission = False</span></span>
+    <span class="badge badge-blocked">派工允許：未允許 <span class="en-sub">dispatch_allowed = False</span></span>
+  </div>
+
+  <div class="annotation-safety-reminder owner-safety-boundary">
+    <p>審核準備狀態不是執行權限。<span class="en-sub">Approval readiness is not execution permission.</span></p>
+    <p>Owner 核准不等於 Worker 執行。<span class="en-sub">Owner approval does not imply Worker execution.</span></p>
+    <p>Decision 與 dispatch 仍然分離。<span class="en-sub">Decision and dispatch remain separate.</span></p>
+  </div>
+</section>
+{% endif %}
+
 <section class="card">
   <h3>摘要 <span class="en-sub">Summary</span></h3>
   <table class="kv">

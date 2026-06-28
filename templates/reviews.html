@@ -9,6 +9,13 @@
   <p class="muted">需要你確認的任務。請逐筆查看詳情後再決定。</p>
   <p class="owner-risk-note">核准前請確認風險、內容與下一步動作。</p>
   <p class="owner-safety-boundary">拒絕會保留任務記錄，不會啟動 Worker。安全邊界：Worker 關閉、OpenClaw 未接線、Hermes 未接線、Google Sheets 已停用。</p>
+  {# v0.7.2-F-C：決策／執行分離安全提醒（display-only）。 #}
+  <div class="annotation-safety-reminder owner-safety-boundary">
+    <p>審核準備狀態不是執行權限。<span class="en-sub">Approval readiness is not execution permission.</span></p>
+    <p>Owner 核准不等於 Worker 執行。<span class="en-sub">Owner approval does not imply Worker execution.</span></p>
+    <p>Decision 與 dispatch 仍然分離。<span class="en-sub">Decision and dispatch remain separate.</span></p>
+    <p class="muted">執行權限：未授權 <span class="en-sub">execution_permission = False</span> ／ 派工允許：未允許 <span class="en-sub">dispatch_allowed = False</span></p>
+  </div>
 </section>
 
 {% if items %}
@@ -18,6 +25,7 @@
       <th>任務 ID <span class="en-sub">(task id)</span></th>
       <th>標題 <span class="en-sub">(title)</span></th>
       <th>風險等級 <span class="en-sub">(risk / safety_level)</span></th>
+      <th>審核準備狀態 <span class="en-sub">(approval_readiness)</span></th>
       <th>請求動作 <span class="en-sub">(requested action)</span></th>
       <th>目前狀態 <span class="en-sub">(current status)</span></th>
       <th>建立時間 <span class="en-sub">(created at)</span></th>
@@ -34,6 +42,12 @@
         <span class="badge badge-level">L{{ t.safety_level if t.safety_level is not none else '?' }}</span>
         {% if t.requires_confirmation %}<span class="badge badge-warning">需要確認 <span class="en-sub">yes</span></span>
         {% else %}<span class="badge badge-muted">免確認 <span class="en-sub">no</span></span>{% endif %}
+      </td>
+      <td>
+        {% set zh_readiness = {'not_ready': '資訊不足', 'owner_review_required': '需要 Owner 審核', 'ready_for_owner_decision': '可由 Owner 決定', 'blocked_by_policy': '被政策擋住', 'prohibited': '禁止執行'} %}
+        {% set rb = {'not_ready': 'badge-unknown', 'owner_review_required': 'badge-warning', 'ready_for_owner_decision': 'badge-source', 'blocked_by_policy': 'badge-blocked', 'prohibited': 'badge-blocked'} %}
+        {% set ar = (t.annotation.approval_readiness if t.annotation else 'not_ready') %}
+        <span class="badge {{ rb.get(ar, 'badge-unknown') }}">{{ zh_readiness.get(ar, ar) }}</span><span class="status-code">{{ ar }}</span>
       </td>
       <td>需要 Owner 核准 / 拒絕 <span class="en-sub">approve / reject</span></td>
       <td><span class="badge badge-waiting_review">等待審核</span><span class="status-code">waiting_review</span></td>
