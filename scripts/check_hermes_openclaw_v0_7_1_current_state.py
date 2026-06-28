@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 import subprocess
 import sys
@@ -37,6 +38,11 @@ GREEN_READINESS = (
     ("F2", "scripts/check_hermes_openclaw_approve_route_wiring_plan_v0_7_1_f2.py"),
     ("B-helper", "scripts/check_hermes_openclaw_auto_approval_policy_helper_v0_7_2_b.py"),
     ("B-test", "scripts/test_auto_approval_policy_v0_7_2_b.py"),
+    # v0.7.2-C local-only simulation TEST（current green gate；additive，不取代 B/B2）。
+    # 註：C readiness 刻意不在此以 subprocess 重跑——C readiness 本身會回呼 current-state，
+    #     兩者互呼會形成循環依賴。C readiness 改列為 required artifact（見 REQUIRED_C_SIM_ARTIFACTS）
+    #     與 standalone readiness；simulation 健康改由此 C test gate + 下方 [4c] inline 正向斷言驗證。
+    ("C-sim-test", "scripts/test_auto_approval_local_only_simulation_v0_7_2_c.py"),
 )
 
 # ---- artifacts：docs + 已落地模組 ----
@@ -60,6 +66,14 @@ REQUIRED_MODULES = (
     "app/auto_approval_policy_v0_7.py",
 )
 
+# v0.7.2-C local-only simulation artifacts（current green；additive，不取代 B/B2）。
+REQUIRED_C_SIM_ARTIFACTS = (
+    "docs/HERMES_OPENCLAW_AUTO_APPROVAL_LOCAL_ONLY_SIMULATION_V0_7_2_C.md",
+    "scripts/simulate_auto_approval_policy_v0_7_2_c.py",
+    "scripts/test_auto_approval_local_only_simulation_v0_7_2_c.py",
+    "scripts/check_hermes_openclaw_auto_approval_local_only_simulation_v0_7_2_c.py",
+)
+
 MAIN = ROOT / "app" / "main.py"
 TASK_DETAIL = ROOT / "templates" / "task_detail.html"
 INTAKE_BRIDGE = ROOT / "app" / "queue_intake_bridge_v0_7.py"
@@ -77,6 +91,10 @@ APPROVAL_FUNC_NAME = "evaluate_approval" + "_to_queued"
 AUTO_APPROVAL_MODULE_NAME = "auto_approval_policy_v0_7"
 AUTO_APPROVAL_FUNC_NAME = "evaluate_auto_approval"
 AUTO_APPROVAL_HELPER = ROOT / "app" / "auto_approval_policy_v0_7.py"
+
+# v0.7.2-C local-only simulation（current green gate；boundary：尚未被 main/queue_store/worker 接入）。
+SIMULATE_C = ROOT / "scripts" / "simulate_auto_approval_policy_v0_7_2_c.py"
+SIMULATE_C_MODULE_NAME = "simulate_auto_approval_policy_v0_7_2_c"
 
 RE_SPREADSHEET_URL = re.compile(r"spreadsheets/d/[A-Za-z0-9_-]{20,}")
 RE_SPREADSHEET_ASSIGN = re.compile(r"SPREADSHEET_ID\s*[:=]\s*[\"'][A-Za-z0-9_-]{20,}[\"']")
@@ -115,11 +133,14 @@ def main() -> int:
     for ver, why in EXPECTED_STALE_READINESS.items():
         print(f"  -- {ver}: {why}")
 
-    print("[1] artifacts 存在（docs + 已落地模組）")
-    for rel in REQUIRED_DOCS + REQUIRED_MODULES:
+    print("[1] artifacts 存在（docs + 已落地模組 + v0.7.2-C simulation）")
+    for rel in REQUIRED_DOCS + REQUIRED_MODULES + REQUIRED_C_SIM_ARTIFACTS:
         _check((ROOT / rel).is_file(), f"{rel} 存在")
 
-    print("[2] green readiness（B/C3/D2/E/F/F2）subprocess EXIT=0")
+    # 註：本 aggregator 不以 subprocess 重跑 C readiness（C readiness 會回呼 current-state，
+    #     會形成循環依賴）。C 的 simulation 健康改由 C test gate（在 GREEN_READINESS 內）
+    #     與下方 [4c] inline 正向斷言驗證；因此不需要任何 re-entrancy guard。
+    print("[2] green readiness（B/C3/D2/E/F/F2/B-helper/B-test/C-sim-test）subprocess EXIT=0")
     for tag, rel in GREEN_READINESS:
         path = ROOT / rel
         if not path.is_file():
@@ -179,6 +200,54 @@ def main() -> int:
     for path, name in ((MAIN, "main.py"), (QUEUE_STORE, "queue_store.py"),
                        (WORKER, "worker.py"), (RESULT_SINK, "result_sink.py")):
         _check(not aa_imp.search(_read(path)), f"{name} 未 import {AUTO_APPROVAL_MODULE_NAME}")
+
+    print("[4c] auto-approval local-only simulation (v0.7.2-C) current-state truths / boundary")
+    sim_txt = _read(SIMULATE_C)
+    _check(SIMULATE_C.is_file(), "scripts/simulate_auto_approval_policy_v0_7_2_c.py 存在")
+    _check("evaluate_auto_approval" in sim_txt and re.search(
+        r"^\s*from\s+app\.auto_approval_policy_v0_7\s+import\s+.*evaluate_auto_approval",
+        sim_txt, re.MULTILINE) is not None, "simulation imports evaluate_auto_approval")
+    _check("--sample" in sim_txt, "simulation supports --sample")
+    _check("--json" in sim_txt, "simulation supports --json")
+    _check("SAFE_AUTOPILOT_PROFILE" in sim_txt, "simulation has safe profile")
+    _check("DEFAULT_OFF_PROFILE" in sim_txt, "simulation has default-off profile")
+    for lvl in ("level0_", "level1_", "level2_", "level3_"):
+        _check(lvl in sim_txt, f"simulation includes {lvl} samples")
+    _check('"edge"' in sim_txt, "simulation includes edge samples")
+    for mod in ("app\\.main", "app\\.queue_store", "app\\.worker", "app\\.result_sink"):
+        imp = re.compile(rf"^\s*(?:import|from)\s+\S*{mod}\b", re.MULTILINE)
+        _check(not imp.search(sim_txt), f"simulation 未 import {mod.replace(chr(92), '')}")
+    for mod in ("sqlite3", "requests", "subprocess", "google", "gspread", "oauth"):
+        imp = re.compile(rf"^\s*(?:import|from)\s+\S*{mod}\b", re.MULTILINE | re.IGNORECASE)
+        _check(not imp.search(sim_txt), f"simulation 未 import {mod}")
+    for bad in ("QueueStore", ".approve(", ".reject(", "claim_next", "run_openclaw_cli(",
+                "@app.", "@router.", "add_api_route", "APIRouter", "FastAPI("):
+        _check(bad not in sim_txt, f"simulation 無接線痕跡「{bad}」")
+    # functional：跑 simulation --json，驗證固定安全旗標恆定 + 決策涵蓋各層級。
+    proc = subprocess.run([sys.executable, str(SIMULATE_C), "--json"], cwd=str(ROOT),
+                          capture_output=True, text=True, check=False)
+    sim_ok = proc.returncode == 0
+    _check(sim_ok, "simulation --json EXIT=0")
+    try:
+        sim_data = json.loads(proc.stdout) if sim_ok else {}
+    except json.JSONDecodeError:
+        sim_data = {}
+    sim_samples = sim_data.get("samples", []) if isinstance(sim_data, dict) else []
+    _check(bool(sim_samples), "simulation --json 產生 samples")
+    _check(all(s.get("can_execute") is False for s in sim_samples),
+           "simulation returns can_execute false")
+    _check(all(s.get("queue_transition_allowed") is False for s in sim_samples),
+           "simulation returns queue_transition_allowed false")
+    _check(all(s.get("observation_only") is True for s in sim_samples),
+           "simulation returns observation_only true")
+    sim_decisions = {s.get("policy_decision") for s in sim_samples}
+    for dec in ("auto_approved", "needs_owner_approval", "prohibited", "rejected"):
+        _check(dec in sim_decisions, f"simulation 決策涵蓋 {dec}")
+    # boundary：simulation 尚未被 main/queue_store/worker/result_sink 接入。
+    sim_imp = re.compile(rf"^\s*(?:import|from)\s+\S*{re.escape(SIMULATE_C_MODULE_NAME)}\b", re.MULTILINE)
+    for path, name in ((MAIN, "main.py"), (QUEUE_STORE, "queue_store.py"),
+                       (WORKER, "worker.py"), (RESULT_SINK, "result_sink.py")):
+        _check(not sim_imp.search(_read(path)), f"{name} 未 import {SIMULATE_C_MODULE_NAME}")
 
     print("[5] safety：無 Sheets live / 無真 secret / 無新 run_openclaw_cli 呼叫")
     for path in SAFETY_SCAN_FILES:
