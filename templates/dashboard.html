@@ -3,6 +3,42 @@
 <h2>Overview</h2>
 <p class="muted">控制台總覽（唯讀）。version {{ version }} · execution_mode {{ execution_mode }} · {{ generated_at }}</p>
 
+<!-- Jarvis HUD top status ribbon — display-only safe-posture indicators. -->
+<section class="status-ribbon" aria-label="System status">
+  <div class="status-card hud-panel state-ok">
+    <span class="status-label">System Mode</span>
+    <span class="status-state">Read-only / Safe</span>
+  </div>
+  <div class="status-card hud-panel state-ok">
+    <span class="status-label">Queue Intake</span>
+    <span class="status-state">Local-only</span>
+  </div>
+  <div class="status-card hud-panel state-ok">
+    <span class="status-label">Approval Gate</span>
+    <span class="status-state">Owner Required</span>
+  </div>
+  <div class="status-card hud-panel state-neutral">
+    <span class="status-label">Worker</span>
+    <span class="status-state">OFF</span>
+  </div>
+  <div class="status-card hud-panel state-neutral">
+    <span class="status-label">OpenClaw</span>
+    <span class="status-state">Not Connected</span>
+  </div>
+  <div class="status-card hud-panel state-neutral">
+    <span class="status-label">Hermes</span>
+    <span class="status-state">Not Connected</span>
+  </div>
+  <div class="status-card hud-panel state-neutral">
+    <span class="status-label">Google Sheets</span>
+    <span class="status-state">Disabled</span>
+  </div>
+  <div class="status-card hud-panel state-killswitch">
+    <span class="status-label">Kill Switch</span>
+    <span class="status-state">Visible</span>
+  </div>
+</section>
+
 <div class="cards">
   <section class="card">
     <h3>System Health</h3>

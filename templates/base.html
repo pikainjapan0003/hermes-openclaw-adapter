@@ -6,11 +6,23 @@
   <title>{{ title }}</title>
   <link rel="stylesheet" href="/static/dashboard.css">
 </head>
-<body>
-  <header class="topbar">
-    <h1>{{ title }}</h1>
-    <span class="readonly-badge">Read-only Dashboard</span>
+<body class="jarvis">
+  <div class="hud-grid" aria-hidden="true"></div>
+  <div class="hud-radar" aria-hidden="true"></div>
+
+  <header class="topbar hud-panel">
+    <div class="brand">
+      <span class="brand-title">Hermes x OpenClaw Owner Control Room</span>
+      <span class="brand-sub">Read-only command deck for queue, approvals, and system safety.</span>
+      <h1 class="page-title">{{ title }}</h1>
+    </div>
+    <div class="topbar-chips">
+      <span class="chip chip-readonly">Read-only</span>
+      <span class="chip chip-safe">Safe</span>
+      <span class="readonly-badge">Read-only Dashboard</span>
+    </div>
   </header>
+
   <nav class="nav">
     <a href="/dashboard">Overview</a>
     <a href="/dashboard/tasks">Tasks</a>
@@ -18,9 +30,11 @@
     <a href="/dashboard/system">System</a>
     {% if dashboard_auth_enabled %}<a href="/dashboard/logout">Logout</a>{% endif %}
   </nav>
+
   <main class="content">
     {% block content %}{% endblock %}
   </main>
+
   <footer class="footer">
     <p>本頁僅讀取 /queue/* observability 資料，不會修改任何 queue 狀態。</p>
   </footer>
