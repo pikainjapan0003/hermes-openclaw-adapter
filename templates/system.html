@@ -1,64 +1,70 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>System Health</h2>
+<h2><span class="zh-main">系統健康</span> <span class="en-sub">System Health</span></h2>
 <p class="muted">純觀測頁：只讀 queue 統計與 worker 心跳，並檢查 OpenClaw CLI 路徑（不執行）。
   generated_at: {{ generated_at }}</p>
 
 <div class="cards">
   <section class="card">
-    <h3>Adapter</h3>
+    <h3>轉接器 <span class="en-sub">Adapter</span></h3>
     <table class="kv">
       <tbody>
-        <tr><th>version</th><td>{{ version }}</td></tr>
-        <tr><th>adapter status</th><td><span class="badge badge-completed">{{ adapter_status }}</span></td></tr>
-        <tr><th>queue db</th>
+        <tr><th><span class="field-label">版本</span><span class="field-code">version</span></th><td>{{ version }}</td></tr>
+        <tr><th><span class="field-label">轉接器狀態</span><span class="field-code">adapter status</span></th><td><span class="badge badge-completed">{{ adapter_status }}</span></td></tr>
+        <tr><th><span class="field-label">工單資料庫</span><span class="field-code">queue db</span></th>
           <td>{% if db_exists %}<span class="badge badge-completed">ok</span>{% else %}<span class="badge badge-failed">missing</span>{% endif %}</td></tr>
       </tbody>
     </table>
   </section>
 
   <section class="card">
-    <h3>Worker Heartbeat</h3>
+    <h3>執行器心跳 <span class="en-sub">Worker Heartbeat</span></h3>
     <table class="kv">
       <tbody>
-        <tr><th>worker status</th><td><span class="{{ status_class(worker.status) }}">{{ worker.status }}</span></td></tr>
-        <tr><th>raw_status</th><td>{{ format_empty(worker.raw_status) }}</td></tr>
-        <tr><th>pid</th><td>{{ format_empty(worker.pid) }}</td></tr>
-        <tr><th>hostname</th><td>{{ format_empty(worker.hostname) }}</td></tr>
-        <tr><th>started_at</th><td class="muted">{{ format_empty(worker.started_at) }}</td></tr>
-        <tr><th>last_seen_at</th><td class="muted">{{ format_empty(worker.last_seen_at) }}</td></tr>
-        <tr><th>current_task_id</th>
+        <tr><th><span class="field-label">執行器狀態</span><span class="field-code">worker status</span></th><td><span class="{{ status_class(worker.status) }}">{{ worker.status }}</span></td></tr>
+        <tr><th><span class="field-label">原始狀態</span><span class="field-code">raw_status</span></th><td>{{ format_empty(worker.raw_status) }}</td></tr>
+        <tr><th><span class="field-label">Process ID</span><span class="field-code">pid</span></th><td>{{ format_empty(worker.pid) }}</td></tr>
+        <tr><th><span class="field-label">主機名稱</span><span class="field-code">hostname</span></th><td>{{ format_empty(worker.hostname) }}</td></tr>
+        <tr><th><span class="field-label">啟動時間</span><span class="field-code">started_at</span></th><td class="muted">{{ format_empty(worker.started_at) }}</td></tr>
+        <tr><th><span class="field-label">最後看見時間</span><span class="field-code">last_seen_at</span></th><td class="muted">{{ format_empty(worker.last_seen_at) }}</td></tr>
+        <tr><th><span class="field-label">目前任務 ID</span><span class="field-code">current_task_id</span></th>
           <td>{% if worker.current_task_id %}<a class="mono" href="/dashboard/tasks/{{ worker.current_task_id }}">{{ short_task_id(worker.current_task_id) }}</a>{% else %}<span class="muted">—</span>{% endif %}</td></tr>
-        <tr><th>last_claimed_at</th><td class="muted">{{ format_empty(worker.last_claimed_at) }}</td></tr>
-        <tr><th>last_completed_at</th><td class="muted">{{ format_empty(worker.last_completed_at) }}</td></tr>
-        <tr><th>last_error_at</th><td class="muted">{{ format_empty(worker.last_error_at) }}</td></tr>
+        <tr><th><span class="field-label">上次領取時間</span><span class="field-code">last_claimed_at</span></th><td class="muted">{{ format_empty(worker.last_claimed_at) }}</td></tr>
+        <tr><th><span class="field-label">上次完成時間</span><span class="field-code">last_completed_at</span></th><td class="muted">{{ format_empty(worker.last_completed_at) }}</td></tr>
+        <tr><th><span class="field-label">上次錯誤時間</span><span class="field-code">last_error_at</span></th><td class="muted">{{ format_empty(worker.last_error_at) }}</td></tr>
       </tbody>
     </table>
     {% if worker.last_error_message %}
-    <p class="inline-error"><strong>last error:</strong> {{ worker.last_error_message }}</p>
+    <p class="inline-error"><strong>上次錯誤 <span class="en-sub">last error</span>：</strong> {{ worker.last_error_message }}</p>
     {% endif %}
   </section>
 
   <section class="card">
-    <h3>OpenClaw CLI</h3>
+    <h3>OpenClaw 指令工具 <span class="en-sub">OpenClaw CLI</span></h3>
     <table class="kv">
       <tbody>
-        <tr><th>cli_bin</th><td class="mono">{{ openclaw.cli_bin }}</td></tr>
-        <tr><th>cli_path</th><td class="mono">{{ format_empty(openclaw.cli_path, "(not found)") }}</td></tr>
-        <tr><th>cli_path_exists</th>
-          <td>{% if openclaw.cli_path_exists %}<span class="badge badge-completed">yes</span>{% else %}<span class="badge badge-rejected">no</span>{% endif %}</td></tr>
-        <tr><th>checked</th><td><span class="badge badge-info">checked without execution</span></td></tr>
+        <tr><th><span class="field-label">CLI 執行檔</span><span class="field-code">cli_bin</span></th><td class="mono">{{ openclaw.cli_bin }}</td></tr>
+        <tr><th><span class="field-label">CLI 路徑</span><span class="field-code">cli_path</span></th><td class="mono">{{ format_empty(openclaw.cli_path, "(not found)") }}</td></tr>
+        <tr><th><span class="field-label">CLI 路徑存在</span><span class="field-code">cli_path_exists</span></th>
+          <td>{% if openclaw.cli_path_exists %}<span class="badge badge-completed">是 <span class="en-sub">yes</span></span>{% else %}<span class="badge badge-rejected">否 <span class="en-sub">no</span></span>{% endif %}</td></tr>
+        <tr><th><span class="field-label">檢查狀態</span><span class="field-code">checked</span></th><td><span class="badge badge-info">已檢查，未執行 <span class="en-sub">checked without execution</span></span></td></tr>
       </tbody>
     </table>
   </section>
 </div>
 
-<h3>Queue Counts</h3>
+<h3>工單統計 <span class="en-sub">Queue Counts</span></h3>
 <table class="grid hoverable">
   <thead>
     <tr>
-      <th>queued</th><th>running</th><th>completed</th><th>failed</th>
-      <th>cancelled</th><th>waiting_review</th><th>rejected</th><th>archived</th>
+      <th>排隊中 <span class="en-sub">queued</span></th>
+      <th>執行中 <span class="en-sub">running</span></th>
+      <th>已完成 <span class="en-sub">completed</span></th>
+      <th>失敗 <span class="en-sub">failed</span></th>
+      <th>已取消 <span class="en-sub">cancelled</span></th>
+      <th>等待審核 <span class="en-sub">waiting_review</span></th>
+      <th>已拒絕 <span class="en-sub">rejected</span></th>
+      <th>已封存 <span class="en-sub">archived</span></th>
     </tr>
   </thead>
   <tbody>

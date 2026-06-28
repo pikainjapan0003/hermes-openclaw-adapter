@@ -84,6 +84,25 @@ body {
 .brand-sub { font-size: 12px; color: var(--muted); letter-spacing: 0.3px; }
 /* 小字英文：中文優先，技術詞以小字保留英文對照。 */
 .en { font-size: 0.78em; color: var(--muted); font-weight: 500; letter-spacing: 0.3px; }
+
+/* --- v0.7.2-UI-D-C 中文優先 / 英文輔助 ----------------------------------- */
+/* .zh-main 中文主字較大較亮較粗；.en-sub 英文輔助小字較淡；
+   .status-label/.status-code 與 .field-label/.field-code 同理：中文主、英文小。 */
+.zh-main { font-size: 1.05em; font-weight: 700; color: #eaf7fc; }
+.en-sub { font-size: 0.76em; font-weight: 500; color: var(--muted); letter-spacing: 0.3px; }
+h2 .zh-main { font-size: 1em; }
+.status-label { font-weight: 700; color: var(--text); }
+.status-code {
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 0.72em; color: var(--muted);
+  padding: 0 5px; margin-left: 4px;
+  border: 1px solid var(--line); border-radius: 4px;
+}
+.field-label { font-weight: 700; color: #cfe7ef; }
+.field-code {
+  display: block; font-size: 0.72em; color: var(--muted);
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace; letter-spacing: 0.2px;
+}
 .page-title { font-size: 13px; margin: 4px 0 0; font-weight: 600; color: var(--neon); letter-spacing: 0.5px; }
 .topbar-chips { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .chip {

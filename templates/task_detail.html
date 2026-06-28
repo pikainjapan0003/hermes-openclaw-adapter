@@ -1,8 +1,9 @@
 {% extends "base.html" %}
 {% block content %}
-<p><a href="/dashboard/tasks">&laquo; 回任務列表</a></p>
-<h2>Task Detail
-  <span class="{{ status_class(task.status) }}">{{ task.status }}</span>
+{% set zh_status = {'queued': '排隊中', 'running': '執行中', 'waiting_review': '等待審核', 'failed': '失敗', 'completed': '已完成', 'cancelled': '已取消', 'rejected': '已拒絕', 'archived': '已封存'} %}
+<p><a href="/dashboard/tasks">&laquo; 回任務列表 <span class="en-sub">Back to tasks</span></a></p>
+<h2><span class="zh-main">任務詳情</span> <span class="en-sub">Task Detail</span>
+  <span class="{{ status_class(task.status) }}">{{ zh_status.get(task.status, task.status) }}</span><span class="status-code">{{ task.status }}</span>
 </h2>
 
 {% if comment_error %}
@@ -10,51 +11,51 @@
 {% endif %}
 
 <section class="card">
-  <h3>Summary</h3>
+  <h3>摘要 <span class="en-sub">Summary</span></h3>
   <table class="kv">
     <tbody>
-      <tr><th>task_id</th><td class="mono">{{ task.task_id }}</td></tr>
-      <tr><th>status</th><td><span class="{{ status_class(task.status) }}">{{ task.status }}</span></td></tr>
-      <tr><th>title</th><td>{{ format_empty(task.title) }}</td></tr>
-      <tr><th>attempts</th><td>{{ task.attempts }} / {{ task.max_attempts }}</td></tr>
-      <tr><th>created_at</th><td class="muted">{{ format_empty(task.created_at) }}</td></tr>
-      <tr><th>updated_at</th><td class="muted">{{ format_empty(task.updated_at) }}</td></tr>
-      <tr><th>started_at</th><td class="muted">{{ format_empty(task.started_at) }}</td></tr>
-      <tr><th>finished_at</th><td class="muted">{{ format_empty(task.finished_at) }}</td></tr>
+      <tr><th><span class="field-label">任務 ID</span><span class="field-code">task_id</span></th><td class="mono">{{ task.task_id }}</td></tr>
+      <tr><th><span class="field-label">狀態</span><span class="field-code">status</span></th><td><span class="{{ status_class(task.status) }}">{{ zh_status.get(task.status, task.status) }}</span><span class="status-code">{{ task.status }}</span></td></tr>
+      <tr><th><span class="field-label">標題</span><span class="field-code">title</span></th><td>{{ format_empty(task.title) }}</td></tr>
+      <tr><th><span class="field-label">嘗試次數</span><span class="field-code">attempts</span></th><td>{{ task.attempts }} / {{ task.max_attempts }}</td></tr>
+      <tr><th><span class="field-label">建立時間</span><span class="field-code">created_at</span></th><td class="muted">{{ format_empty(task.created_at) }}</td></tr>
+      <tr><th><span class="field-label">更新時間</span><span class="field-code">updated_at</span></th><td class="muted">{{ format_empty(task.updated_at) }}</td></tr>
+      <tr><th><span class="field-label">啟動時間</span><span class="field-code">started_at</span></th><td class="muted">{{ format_empty(task.started_at) }}</td></tr>
+      <tr><th><span class="field-label">完成時間</span><span class="field-code">finished_at</span></th><td class="muted">{{ format_empty(task.finished_at) }}</td></tr>
     </tbody>
   </table>
 </section>
 
 <section class="card">
-  <h3>Intake Status <span class="muted">(read-only)</span></h3>
+  <h3>工單入口（唯讀）<span class="en-sub">Intake Status (read-only)</span></h3>
   <p class="muted">以下為唯讀顯示推導，不改變任務狀態、不觸發 worker。</p>
   <table class="kv">
     <tbody>
-      <tr><th>source_mode</th><td>
+      <tr><th><span class="field-label">來源模式</span><span class="field-code">source_mode</span></th><td>
         <span class="badge {% if task.intake_status.source_mode == 'local-only' %}badge-local-only{% elif task.intake_status.source_mode == 'unknown' %}badge-unknown{% else %}badge-source{% endif %}">{{ task.intake_status.source_mode }}</span></td></tr>
-      <tr><th>intake_mode</th><td>
+      <tr><th><span class="field-label">入口模式</span><span class="field-code">intake_mode</span></th><td>
         <span class="badge {% if task.intake_status.intake_mode == 'local-only' %}badge-local-only{% elif task.intake_status.intake_mode == 'unknown' %}badge-unknown{% else %}badge-source{% endif %}">{{ task.intake_status.intake_mode }}</span></td></tr>
-      <tr><th>executable_by_worker</th><td>
+      <tr><th><span class="field-label">可被執行器執行</span><span class="field-code">executable_by_worker</span></th><td>
         <span class="badge {% if task.intake_status.executable_by_worker == 'false' %}badge-executable-false{% elif task.intake_status.executable_by_worker == 'unknown' %}badge-unknown{% else %}badge-source{% endif %}">{{ task.intake_status.executable_by_worker }}</span></td></tr>
-      <tr><th>approval_status</th><td>
+      <tr><th><span class="field-label">審核狀態</span><span class="field-code">approval_status</span></th><td>
         <span class="badge {% if task.intake_status.approval_status == 'unknown' %}badge-unknown{% else %}badge-source{% endif %}">{{ task.intake_status.approval_status }}</span></td></tr>
-      <tr><th>risk_level</th><td>{{ format_empty(task.intake_status.risk_level) }}</td></tr>
-      <tr><th>safety_level</th><td>{{ format_empty(task.intake_status.safety_level) }}</td></tr>
+      <tr><th><span class="field-label">風險等級</span><span class="field-code">risk_level</span></th><td>{{ format_empty(task.intake_status.risk_level) }}</td></tr>
+      <tr><th><span class="field-label">安全等級</span><span class="field-code">safety_level</span></th><td>{{ format_empty(task.intake_status.safety_level) }}</td></tr>
     </tbody>
   </table>
 </section>
 
 {% if task.status == "waiting_review" %}
 <section class="card review-card">
-  <h3>Human Review</h3>
+  <h3>人工審核 <span class="en-sub">Human Review</span></h3>
   <p class="muted">此任務不會被 worker 執行，直到 approve。</p>
   <div class="action-row">
     <form method="post" action="/dashboard/tasks/{{ task.task_id }}/approve">
-      <button type="submit" class="btn-approve">Approve（轉 queued）</button>
+      <button type="submit" class="btn-approve">核准 <span class="en-sub">Approve（轉 queued）</span></button>
     </form>
     <form method="post" action="/dashboard/tasks/{{ task.task_id }}/reject" class="inline-form">
       <input type="text" name="reason" placeholder="拒絕原因（選填）">
-      <button type="submit" class="btn-reject">Reject（轉 rejected）</button>
+      <button type="submit" class="btn-reject">拒絕 <span class="en-sub">Reject（轉 rejected）</span></button>
     </form>
   </div>
 </section>
@@ -65,24 +66,24 @@
 {% set can_archive = task.status in ["completed", "failed", "cancelled", "rejected"] %}
 {% if can_cancel or can_retry or can_archive %}
 <section class="card control-card">
-  <h3>Safe Controls</h3>
+  <h3>安全控制 <span class="en-sub">Safe Controls</span></h3>
   <div class="action-row">
     {% if can_cancel %}
     <form method="post" action="/dashboard/tasks/{{ task.task_id }}/cancel" class="inline-form">
       <input type="text" name="reason" placeholder="取消原因（選填）">
-      <button type="submit" class="btn-cancel">Cancel</button>
+      <button type="submit" class="btn-cancel">取消 <span class="en-sub">Cancel</span></button>
     </form>
     {% endif %}
     {% if can_retry %}
     <form method="post" action="/dashboard/tasks/{{ task.task_id }}/retry" class="inline-form">
       <input type="text" name="reason" placeholder="重試原因（選填）">
-      <button type="submit" class="btn-retry">Retry</button>
+      <button type="submit" class="btn-retry">重試 <span class="en-sub">Retry</span></button>
     </form>
     {% endif %}
     {% if can_archive %}
     <form method="post" action="/dashboard/tasks/{{ task.task_id }}/archive" class="inline-form">
       <input type="text" name="reason" placeholder="封存原因（選填）">
-      <button type="submit" class="btn-archive">Archive</button>
+      <button type="submit" class="btn-archive">封存 <span class="en-sub">Archive</span></button>
     </form>
     {% endif %}
   </div>
@@ -91,31 +92,36 @@
 {% endif %}
 
 <section class="card">
-  <h3>Task Text</h3>
-  {% if task.task_text %}<pre class="block">{{ task.task_text }}</pre>{% else %}<p class="muted">No task text.</p>{% endif %}
+  <h3>任務內容 <span class="en-sub">Task Text</span></h3>
+  {% if task.task_text %}<pre class="block">{{ task.task_text }}</pre>{% else %}<p class="muted">尚無任務內容 <span class="en-sub">No task text.</span></p>{% endif %}
 </section>
 
 <section class="card">
-  <h3>Result</h3>
-  {% if task.result_text %}<pre class="block">{{ task.result_text }}</pre>{% else %}<p class="muted">No result yet.</p>{% endif %}
+  <h3>結果 <span class="en-sub">Result</span></h3>
+  {% if task.result_text %}<pre class="block">{{ task.result_text }}</pre>{% else %}<p class="muted">尚無結果 <span class="en-sub">No result yet.</span></p>{% endif %}
 </section>
 
 <section class="card">
-  <h3>Error</h3>
-  {% if task.error_message %}<pre class="block danger-block">{{ task.error_message }}</pre>{% else %}<p class="muted">No error.</p>{% endif %}
+  <h3>錯誤 <span class="en-sub">Error</span></h3>
+  {% if task.error_message %}<pre class="block danger-block">{{ task.error_message }}</pre>{% else %}<p class="muted">沒有錯誤 <span class="en-sub">No error.</span></p>{% endif %}
 </section>
 
 <section class="card">
-  <h3>Metadata</h3>
+  <h3>中繼資料 <span class="en-sub">Metadata</span></h3>
   <pre class="block"><code>{{ task.metadata }}</code></pre>
 </section>
 
 <section class="card">
-  <h3>Blackboard Comments</h3>
+  <h3>留言板 <span class="en-sub">Blackboard Comments</span></h3>
   <p class="muted">留言只寫入 blackboard，不會改變 queue 任務狀態。</p>
   <table class="grid comments hoverable">
     <thead>
-      <tr><th>created_at</th><th>author_type</th><th>author_name</th><th>content</th></tr>
+      <tr>
+        <th>建立時間 <span class="en-sub">(created_at)</span></th>
+        <th>作者類型 <span class="en-sub">(author_type)</span></th>
+        <th>作者名稱 <span class="en-sub">(author_name)</span></th>
+        <th>內容 <span class="en-sub">(content)</span></th>
+      </tr>
     </thead>
     <tbody>
       {% for c in comments %}
@@ -131,22 +137,22 @@
     </tbody>
   </table>
 
-  <h4>新增留言</h4>
+  <h4>新增留言 <span class="en-sub">Add comment</span></h4>
   <form class="comment-form" method="post" action="/dashboard/tasks/{{ task.task_id }}/comments">
-    <label>author_type:
+    <label>作者類型 <span class="en-sub">(author_type)</span>:
       <select name="author_type">
         {% for a in author_types %}
         <option value="{{ a }}" {% if a == "user" %}selected{% endif %}>{{ a }}</option>
         {% endfor %}
       </select>
     </label>
-    <label>author_name:
+    <label>作者名稱 <span class="en-sub">(author_name)</span>:
       <input type="text" name="author_name" value="owner">
     </label>
-    <label>content:
+    <label>內容 <span class="en-sub">(content)</span>:
       <textarea name="content" rows="3" required placeholder="留言內容..."></textarea>
     </label>
-    <button type="submit">送出留言</button>
+    <button type="submit">送出留言 <span class="en-sub">Submit</span></button>
   </form>
 </section>
 {% endblock %}

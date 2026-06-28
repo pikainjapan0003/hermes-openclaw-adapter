@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Pending Reviews <span class="badge badge-waiting_review">{{ total }}</span></h2>
+<h2><span class="zh-main">待審核項目</span> <span class="en-sub">Pending Reviews</span> <span class="badge badge-waiting_review">{{ total }}</span></h2>
 <p class="muted">這些任務 safety_level &ge; 3 或 requires_confirmation=true，需人工確認。
   在 approve 之前，worker 絕不會執行它們。</p>
 
@@ -8,8 +8,13 @@
 <table class="grid hoverable">
   <thead>
     <tr>
-      <th>task_id</th><th>title</th><th>safety_level</th><th>requires_confirmation</th>
-      <th>created_at</th><th>task_text</th><th>actions</th>
+      <th>任務 ID <span class="en-sub">(task id)</span></th>
+      <th>標題 <span class="en-sub">(title)</span></th>
+      <th>安全等級 <span class="en-sub">(safety_level)</span></th>
+      <th>需要確認 <span class="en-sub">(requires_confirmation)</span></th>
+      <th>建立時間 <span class="en-sub">(created at)</span></th>
+      <th>任務內容 <span class="en-sub">(task_text)</span></th>
+      <th>動作 <span class="en-sub">(actions)</span></th>
     </tr>
   </thead>
   <tbody>
@@ -19,19 +24,19 @@
       <td>{{ truncate(t.title, 30) }}</td>
       <td><span class="badge badge-level">L{{ t.safety_level if t.safety_level is not none else '?' }}</span></td>
       <td>
-        {% if t.requires_confirmation %}<span class="badge badge-warning">yes</span>
-        {% else %}<span class="badge badge-muted">no</span>{% endif %}
+        {% if t.requires_confirmation %}<span class="badge badge-warning">是 <span class="en-sub">yes</span></span>
+        {% else %}<span class="badge badge-muted">否 <span class="en-sub">no</span></span>{% endif %}
       </td>
       <td class="muted nowrap">{{ format_empty(t.created_at) }}</td>
       <td class="comment-content">{{ truncate(t.task_text_snippet, 80) }}</td>
       <td>
         <div class="action-row">
           <form method="post" action="/dashboard/tasks/{{ t.task_id }}/approve">
-            <button type="submit" class="btn-approve">Approve</button>
+            <button type="submit" class="btn-approve">核准 <span class="en-sub">Approve</span></button>
           </form>
           <form method="post" action="/dashboard/tasks/{{ t.task_id }}/reject" class="inline-form">
             <input type="text" name="reason" placeholder="拒絕原因（選填）">
-            <button type="submit" class="btn-reject">Reject</button>
+            <button type="submit" class="btn-reject">拒絕 <span class="en-sub">Reject</span></button>
           </form>
         </div>
       </td>

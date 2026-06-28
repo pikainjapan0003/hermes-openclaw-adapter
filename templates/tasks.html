@@ -1,39 +1,49 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Tasks</h2>
+{% set zh_status = {'': '全部', 'queued': '排隊中', 'running': '執行中', 'waiting_review': '等待審核', 'failed': '失敗', 'completed': '已完成', 'cancelled': '已取消', 'rejected': '已拒絕', 'archived': '已封存'} %}
+<h2><span class="zh-main">任務</span> <span class="en-sub">Tasks</span></h2>
 
 <div class="status-filters">
   {% for value, label in status_filters %}
   <a class="filter-pill {% if status == value or (not status and value == '') %}active{% endif %}"
-     href="/dashboard/tasks?status={{ value }}&amp;limit={{ limit }}">{{ label }}</a>
+     href="/dashboard/tasks?status={{ value }}&amp;limit={{ limit }}">
+    <span class="zh-main">{{ zh_status.get(value, label) }}</span>
+    <span class="en-sub">{{ label }}</span>
+  </a>
   {% endfor %}
 </div>
 
 <form class="filter" method="get" action="/dashboard/tasks">
-  <label>status:
+  <label>狀態 <span class="en-sub">(status)</span>：
     <select name="status">
-      <option value="" {% if not status %}selected{% endif %}>(all)</option>
+      <option value="" {% if not status %}selected{% endif %}>全部（all）</option>
       {% for s in valid_statuses %}
-      <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s }}</option>
+      <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ zh_status.get(s, s) }}（{{ s }}）</option>
       {% endfor %}
     </select>
   </label>
-  <label>limit: <input type="number" name="limit" value="{{ limit }}" min="1" max="200"></label>
-  <label>offset: <input type="number" name="offset" value="{{ offset }}" min="0"></label>
-  <button type="submit">Filter</button>
+  <label>顯示筆數 <span class="en-sub">(limit)</span>: <input type="number" name="limit" value="{{ limit }}" min="1" max="200"></label>
+  <label>起始位置 <span class="en-sub">(offset)</span>: <input type="number" name="offset" value="{{ offset }}" min="0"></label>
+  <button type="submit">篩選 <span class="en-sub">Filter</span></button>
 </form>
 
 {% if invalid_status %}
 <p class="warn">未知的 status「{{ status }}」，顯示空列表。</p>
 {% endif %}
 
-<p class="muted">total: {{ total }} · limit: {{ limit }} · offset: {{ offset }}</p>
+<p class="muted">總數 <span class="en-sub">total</span>: {{ total }} · 顯示筆數 <span class="en-sub">limit</span>: {{ limit }} · 起始位置 <span class="en-sub">offset</span>: {{ offset }}</p>
 
 <table class="grid hoverable">
   <thead>
     <tr>
-      <th>task_id</th><th>title</th><th>status</th><th>intake (read-only)</th>
-      <th>attempts</th><th>created_at</th><th>updated_at</th><th>error</th>
+      <th>任務 ID <span class="en-sub">(task id)</span></th>
+      <th>標題 <span class="en-sub">(title)</span></th>
+      <th>狀態 <span class="en-sub">(status)</span></th>
+      <th>工單入口（唯讀）<span class="en-sub">intake (read-only)</span></th>
+      <th>嘗試次數 <span class="en-sub">(attempts)</span></th>
+      <th>建立時間 <span class="en-sub">(created at)</span></th>
+      <th>更新時間 <span class="en-sub">(updated at)</span></th>
+      <th>錯誤 <span class="en-sub">(error)</span></th>
     </tr>
   </thead>
   <tbody>
@@ -41,7 +51,7 @@
     <tr>
       <td><a href="/dashboard/tasks/{{ t.task_id }}" title="{{ t.task_id }}" class="mono">{{ short_task_id(t.task_id) }}</a></td>
       <td>{{ truncate(t.title, 40) }}</td>
-      <td><span class="{{ status_class(t.status) }}">{{ t.status }}</span></td>
+      <td><span class="{{ status_class(t.status) }}">{{ zh_status.get(t.status, t.status) }}</span><span class="status-code">{{ t.status }}</span></td>
       <td class="intake-badges">
         {% for b in t.intake_status.display_badges %}
         <span class="badge badge-intake
@@ -64,10 +74,10 @@
 
 <div class="pager">
   {% if has_prev %}
-  <a href="/dashboard/tasks?{% if status %}status={{ status }}&amp;{% endif %}limit={{ limit }}&amp;offset={{ prev_offset }}">&laquo; Prev</a>
+  <a href="/dashboard/tasks?{% if status %}status={{ status }}&amp;{% endif %}limit={{ limit }}&amp;offset={{ prev_offset }}">&laquo; 上一頁 <span class="en-sub">Prev</span></a>
   {% endif %}
   {% if has_next %}
-  <a href="/dashboard/tasks?{% if status %}status={{ status }}&amp;{% endif %}limit={{ limit }}&amp;offset={{ next_offset }}">Next &raquo;</a>
+  <a href="/dashboard/tasks?{% if status %}status={{ status }}&amp;{% endif %}limit={{ limit }}&amp;offset={{ next_offset }}">下一頁 <span class="en-sub">Next</span> &raquo;</a>
   {% endif %}
 </div>
 {% endblock %}
