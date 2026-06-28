@@ -12,23 +12,24 @@
 
   <header class="topbar hud-panel">
     <div class="brand">
-      <span class="brand-title">Hermes x OpenClaw Owner Control Room</span>
-      <span class="brand-sub">Read-only command deck for queue, approvals, and system safety.</span>
+      <span class="brand-title">Hermes x OpenClaw Owner 控制室</span>
+      <span class="brand-en">Hermes x OpenClaw Owner Control Room</span>
+      <span class="brand-sub">用於工單、審核與系統安全的唯讀指揮台。</span>
       <h1 class="page-title">{{ title }}</h1>
     </div>
     <div class="topbar-chips">
-      <span class="chip chip-readonly">Read-only</span>
-      <span class="chip chip-safe">Safe</span>
-      <span class="readonly-badge">Read-only Dashboard</span>
+      <span class="chip chip-readonly">唯讀 <span class="en">Read-only</span></span>
+      <span class="chip chip-safe">安全 <span class="en">Safe</span></span>
+      <span class="readonly-badge">唯讀監控台</span>
     </div>
   </header>
 
   <nav class="nav">
-    <a href="/dashboard">Overview</a>
-    <a href="/dashboard/tasks">Tasks</a>
-    <a href="/dashboard/reviews">Reviews</a>
-    <a href="/dashboard/system">System</a>
-    {% if dashboard_auth_enabled %}<a href="/dashboard/logout">Logout</a>{% endif %}
+    <a href="/dashboard">總覽</a>
+    <a href="/dashboard/tasks">任務</a>
+    <a href="/dashboard/reviews">審核</a>
+    <a href="/dashboard/system">系統</a>
+    {% if dashboard_auth_enabled %}<a href="/dashboard/logout">登出</a>{% endif %}
   </nav>
 
   <main class="content">
@@ -36,7 +37,7 @@
   </main>
 
   <footer class="footer">
-    <p>本頁僅讀取 /queue/* observability 資料，不會修改任何 queue 狀態。</p>
+    <p>本頁僅讀取 /queue/* 可觀測資料，不會修改任何 queue 狀態。</p>
   </footer>
 </body>
 </html>

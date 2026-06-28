@@ -2,15 +2,15 @@
 {% block content %}
 <div class="login-shell">
   <section class="login-panel hud-panel glass">
-    <h2>Owner Control Room — Access</h2>
-    <p class="muted">此 Dashboard 已啟用認證關卡（DASHBOARD_AUTH_ENABLED=true）。請輸入 Dashboard token。</p>
+    <h2>控制台登入 <span class="en">Owner Control Room — Access</span></h2>
+    <p class="muted">此 Dashboard 已啟用認證關卡（DASHBOARD_AUTH_ENABLED=true）。請輸入控制台 token。</p>
 
     {% if error %}
     <p class="warn">token 不正確，請再試一次。</p>
     {% endif %}
 
     <form class="comment-form login-form" method="post" action="/dashboard/login">
-      <label>Dashboard token:
+      <label>控制台 token：
         <input type="password" name="dashboard_token" autocomplete="off" required>
       </label>
       <button type="submit">登入</button>

@@ -65,11 +65,11 @@ def main_test() -> int:
     _check(r.status_code == 200, "/dashboard 200")
     body = r.text
     _check("Hermes x OpenClaw Queue Control Board" in body, "首頁含 Control Board 標題")
-    _check("System Health" in body, "首頁含 System Health 卡")
-    _check("Queue Counts" in body, "首頁含 Queue Counts 卡")
-    _check("Quick Links" in body, "首頁含 Quick Links")
-    _check("View Tasks" in body and "Pending Reviews" in body
-           and "Recent Errors" in body, "Quick Links 含 View Tasks / Pending Reviews / Recent Errors")
+    _check("系統健康" in body, "首頁含 系統健康（System Health）卡")
+    _check("工單統計" in body, "首頁含 工單統計（Queue Counts）卡")
+    _check("快速連結" in body, "首頁含 快速連結（Quick Links）")
+    _check("查看任務" in body and "待審核項目" in body
+           and "最近錯誤" in body, "快速連結 含 查看任務 / 待審核項目 / 最近錯誤")
 
     print("[4-5] /dashboard/tasks 狀態篩選")
     r = client.get("/dashboard/tasks")

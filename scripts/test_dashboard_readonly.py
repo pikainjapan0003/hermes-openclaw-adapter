@@ -93,7 +93,7 @@ def main_test() -> int:
     _check("text/html" in r.headers.get("content-type", ""), "/dashboard 回 HTML")
     body = r.text
     _check("Hermes x OpenClaw Queue Control Board" in body, "首頁頂部標題出現")
-    _check("Read-only Dashboard" in body, "首頁標示 Read-only Dashboard")
+    _check("唯讀監控台" in body, "首頁標示 唯讀監控台（Read-only Dashboard）")
     _check(main.APP_VERSION in body, f"首頁顯示 version={main.APP_VERSION}")
     _check("queue" in body, "首頁顯示 execution_mode")
 
