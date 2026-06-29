@@ -26,6 +26,7 @@
       <th>標題 <span class="en-sub">(title)</span></th>
       <th>風險等級 <span class="en-sub">(risk / safety_level)</span></th>
       <th>審核準備狀態 <span class="en-sub">(approval_readiness)</span></th>
+      <th>決策紀錄 <span class="en-sub">(decision events)</span></th>
       <th>請求動作 <span class="en-sub">(requested action)</span></th>
       <th>目前狀態 <span class="en-sub">(current status)</span></th>
       <th>建立時間 <span class="en-sub">(created at)</span></th>
@@ -48,6 +49,13 @@
         {% set rb = {'not_ready': 'badge-unknown', 'owner_review_required': 'badge-warning', 'ready_for_owner_decision': 'badge-source', 'blocked_by_policy': 'badge-blocked', 'prohibited': 'badge-blocked'} %}
         {% set ar = (t.annotation.approval_readiness if t.annotation else 'not_ready') %}
         <span class="badge {{ rb.get(ar, 'badge-unknown') }}">{{ zh_readiness.get(ar, ar) }}</span><span class="status-code">{{ ar }}</span>
+      </td>
+      {# v0.7.3-B：唯讀 Owner 決策紀錄 indicator（不觸發任何 action）。 #}
+      <td>
+        {% set dcount = (t.decision_events.event_count if t.decision_events else 0) %}
+        <span class="badge badge-muted">決策紀錄：{{ dcount }}</span>
+        <span class="badge badge-unknown">只讀 <span class="en-sub">read-only</span></span>
+        <span class="badge badge-blocked">未派工 <span class="en-sub">dispatch_allowed = False</span></span>
       </td>
       <td>需要 Owner 核准 / 拒絕 <span class="en-sub">approve / reject</span></td>
       <td><span class="badge badge-waiting_review">等待審核</span><span class="status-code">waiting_review</span></td>

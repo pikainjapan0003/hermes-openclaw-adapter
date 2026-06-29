@@ -44,6 +44,9 @@ from app.dashboard_intake_view_v0_7 import derive_intake_status_view
 # v0.7.2-F-C：唯讀 annotation 推導（純函式）。只在渲染 review surfaces 時附加顯示用 annotation；
 # 不改 Queue 狀態、不接 approval wiring、不啟動 worker、不呼叫 OpenClaw / Hermes / Google Sheets。
 from app.queue_task_annotation_v0_7 import derive_queue_task_annotation
+# v0.7.3-B：唯讀 Owner 決策紀錄檢視（純函式）。只讀 payload.metadata.approval_decision_events 顯示；
+# 不記錄事件、不接 approval wiring、不啟動 worker、不呼叫 OpenClaw / Hermes / Google Sheets。
+from app.approval_decision_events_v0_7 import derive_approval_decision_event_view
 
 APP_NAME = "Hermes OpenClaw Adapter"
 APP_VERSION = "0.5.6"
@@ -843,6 +846,8 @@ def _obs_task_detail(item: dict[str, Any]) -> dict[str, Any]:
         "intake_status": derive_intake_status_view(item),
         # v0.7.2-F-C：唯讀 annotation（顯示用），execution_permission/dispatch_allowed 恆為 False。
         "annotation": derive_queue_task_annotation(item),
+        # v0.7.3-B：唯讀 Owner 決策紀錄檢視（顯示用），不記錄事件、不 dispatch。
+        "decision_events": derive_approval_decision_event_view(item),
     }
 
 
@@ -1070,6 +1075,8 @@ def _review_summary(item: dict[str, Any]) -> dict[str, Any]:
             "task_text_snippet": text[:200],
             # v0.7.2-F-C：唯讀 annotation（顯示用），execution_permission/dispatch_allowed 恆為 False。
             "annotation": derive_queue_task_annotation(item),
+            # v0.7.3-B：唯讀 Owner 決策紀錄檢視（顯示用），不記錄事件、不 dispatch。
+            "decision_events": derive_approval_decision_event_view(item),
         }
     )
     return summary

@@ -353,3 +353,9 @@ button:hover { filter: brightness(1.08); }
   background: rgba(255,207,92,0.06);
 }
 .annotation-safety-reminder p { margin: 2px 0; font-size: 0.9em; }
+
+/* --- v0.7.3-B approval decision events (read-only, display-only) --------- */
+/* 純視覺呈現；只讀 Owner 決策紀錄，不附帶任何 action、不 dispatch。 */
+.decision-events-panel { margin: 4px 0 20px; }
+.decision-events-empty { padding: 14px 12px; }
+.decision-events-empty p { margin: 2px 0; }

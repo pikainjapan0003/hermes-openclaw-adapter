@@ -88,6 +88,63 @@
 </section>
 {% endif %}
 
+{# v0.7.3-B：唯讀 Owner 決策紀錄（display-only）。資料來自 derive_approval_decision_event_view，
+   不記錄事件、不寫入、不 dispatch。execution_permission / dispatch_allowed 恆為 False。 #}
+{% if task.decision_events %}
+{% set dev = task.decision_events %}
+<section class="card decision-events-panel hud-panel" aria-label="Approval decision events">
+  <h3 class="zh-main">Owner 決策紀錄 <span class="en-sub">Approval Decision Events</span></h3>
+  <p class="muted">只讀顯示，不記錄事件、不改任何狀態、不觸發 worker、不 dispatch。
+    <span class="en-sub">read-only</span> 決策紀錄：{{ dev.event_count }}</p>
+
+  {% if dev.has_events %}
+  <table class="grid hoverable">
+    <thead>
+      <tr>
+        <th>決策類型 <span class="en-sub">(decision_type)</span></th>
+        <th>決策者 <span class="en-sub">(decided_by)</span></th>
+        <th>決策時間 <span class="en-sub">(decided_at)</span></th>
+        <th>原因 <span class="en-sub">(decision_reason)</span></th>
+        <th>狀態轉換 <span class="en-sub">(previous → next)</span></th>
+        <th>審核準備狀態 <span class="en-sub">(approval_readiness_at_decision)</span></th>
+        <th>執行權限 <span class="en-sub">(execution_permission_at_decision)</span></th>
+        <th>派工允許 <span class="en-sub">(dispatch_allowed_at_decision)</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for ev in dev.events %}
+      <tr>
+        <td><span class="badge badge-source">{{ ev.decision_type }}</span></td>
+        <td>{{ ev.decided_by }}</td>
+        <td class="muted nowrap">{{ ev.decided_at }}</td>
+        <td class="comment-content">{{ ev.decision_reason }}</td>
+        <td><span class="status-code">{{ ev.previous_status }}</span> → <span class="status-code">{{ ev.next_status }}</span></td>
+        <td><span class="status-code">{{ ev.approval_readiness_at_decision }}</span></td>
+        <td><span class="badge badge-blocked">未授權 <span class="en-sub">execution_permission = False</span></span></td>
+        <td><span class="badge badge-blocked">未允許 <span class="en-sub">dispatch_allowed = False</span></span></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state decision-events-empty">
+    <p>{{ dev.empty_state_message }}</p>
+    <p class="muted">{{ dev.empty_state_note }}</p>
+  </div>
+  {% endif %}
+
+  <div class="annotation-permission-row">
+    <span class="badge badge-blocked">執行權限：未授權 <span class="en-sub">execution_permission = False</span></span>
+    <span class="badge badge-blocked">派工允許：未允許 <span class="en-sub">dispatch_allowed = False</span></span>
+  </div>
+  <div class="annotation-safety-reminder owner-safety-boundary">
+    <p>approve is not execute.</p>
+    <p>Owner decision event is not Worker dispatch.</p>
+    <p>Decision and execution dispatch remain separate.</p>
+  </div>
+</section>
+{% endif %}
+
 <section class="card">
   <h3>摘要 <span class="en-sub">Summary</span></h3>
   <table class="kv">
