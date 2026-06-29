@@ -47,6 +47,9 @@ from app.queue_task_annotation_v0_7 import derive_queue_task_annotation
 # v0.7.3-B：唯讀 Owner 決策紀錄檢視（純函式）。只讀 payload.metadata.approval_decision_events 顯示；
 # 不記錄事件、不接 approval wiring、不啟動 worker、不呼叫 OpenClaw / Hermes / Google Sheets。
 from app.approval_decision_events_v0_7 import derive_approval_decision_event_view
+# v0.7.3-C：local / append-only Owner decision event recorder（純本地 audit metadata）。
+# 只在既有 Owner decision routes append local event；不 dispatch Worker、不接外部、不改 status transition。
+from app.approval_decision_event_recorder_v0_7 import build_approval_decision_event
 
 APP_NAME = "Hermes OpenClaw Adapter"
 APP_VERSION = "0.5.6"
@@ -1096,6 +1099,37 @@ def _add_system_comment(task_id: str, content: str) -> None:
         pass
 
 
+def _record_owner_decision(
+    task_id: str,
+    decision_type: str,
+    previous_status: str | None,
+    next_status: str | None,
+    reason: str | None,
+) -> None:
+    """v0.7.3-C：append 一筆 Owner approval decision event 到 task payload metadata。
+
+    local / append-only audit record。**不** dispatch Worker、**不**呼叫 OpenClaw /
+    Hermes / Google Sheets、**不**改 status transition。execution_permission /
+    dispatch_allowed 恆為 False。記錄失敗只吞掉，絕不反過來影響審核或做 external fallback。
+    """
+    try:
+        task = get_queue().get(task_id)
+        if task is None:
+            return
+        event = build_approval_decision_event(
+            task,
+            decision_type=decision_type,
+            previous_status=previous_status,
+            next_status=next_status,
+            decided_by="owner",
+            decision_reason=reason or "",
+            via=f"dashboard-{decision_type}",
+        )
+        get_queue().append_approval_decision_event(task_id, event)
+    except Exception:  # noqa: BLE001 - audit 記錄絕不可反過來影響審核狀態機
+        pass
+
+
 @app.get("/reviews/pending")
 def reviews_pending(
     limit: int = 20,
@@ -1502,6 +1536,8 @@ def dashboard_approve(task_id: str) -> RedirectResponse:
     _add_system_comment(
         task_id, "Task approved via dashboard; status changed from waiting_review to queued."
     )
+    # v0.7.3-C：local append-only audit；不 dispatch、不改 status transition。
+    _record_owner_decision(task_id, "approve", "waiting_review", "queued", None)
     return RedirectResponse(url=target, status_code=303)
 
 
@@ -1529,6 +1565,8 @@ def dashboard_reject(
         if reason_clean
         else "Task rejected via dashboard.",
     )
+    # v0.7.3-C：local append-only audit；不 dispatch、不改 status transition。
+    _record_owner_decision(task_id, "reject", "waiting_review", "rejected", reason_clean)
     return RedirectResponse(url=target, status_code=303)
 
 
@@ -1540,6 +1578,7 @@ def _dashboard_control(task_id: str, action: str, method, reason: str | None) ->
     target = f"/dashboard/tasks/{task_id}"
     if not _task_exists(task_id):
         raise HTTPException(status_code=404, detail="Task not found in queue")
+    previous_status = (get_queue().get(task_id) or {}).get("status")
     updated = method(get_queue())
     if updated is None:
         current = (get_queue().get(task_id) or {}).get("status")
@@ -1553,6 +1592,8 @@ def _dashboard_control(task_id: str, action: str, method, reason: str | None) ->
     _add_system_comment(
         task_id, f"{base} (via dashboard) Reason: {reason}" if reason else f"{base} (via dashboard)"
     )
+    # v0.7.3-C：local append-only audit；不 dispatch、不改 status transition。
+    _record_owner_decision(task_id, action, previous_status, new_status, reason)
     return RedirectResponse(url=target, status_code=303)
 
 

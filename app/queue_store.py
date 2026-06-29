@@ -186,6 +186,26 @@ class QueueStore:
             conn.close()
         return self.get(task_id)
 
+    def append_approval_decision_event(
+        self, task_id: str, event: dict[str, Any]
+    ) -> dict[str, Any] | None:
+        """v0.7.3-C：append 一筆 Owner approval decision event 到
+        ``payload.metadata.approval_decision_events``（local audit，append-only）。
+
+        只更新 payload 欄位（透過 _update 同時更新 updated_at）；不改 status、不改
+        schema、不改 enqueue/dequeue/Worker 語意。append-only：保留既有 events 與
+        unrelated metadata。找不到任務回 None。
+        """
+        from app.approval_decision_event_recorder_v0_7 import (
+            append_approval_decision_event_to_payload,
+        )
+
+        row = self.get(task_id)
+        if row is None:
+            return None
+        new_payload = append_approval_decision_event_to_payload(row.get("payload"), event)
+        return self._update(task_id, payload=json.dumps(new_payload, ensure_ascii=False))
+
     def mark_completed(self, task_id: str, result_ref: str | None = None) -> dict[str, Any] | None:
         return self._update(task_id, status=COMPLETED, result_ref=result_ref, error=None)
 
