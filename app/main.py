@@ -47,6 +47,9 @@ from app.queue_task_annotation_v0_7 import derive_queue_task_annotation
 # v0.7.3-B：唯讀 Owner 決策紀錄檢視（純函式）。只讀 payload.metadata.approval_decision_events 顯示；
 # 不記錄事件、不接 approval wiring、不啟動 worker、不呼叫 OpenClaw / Hermes / Google Sheets。
 from app.approval_decision_events_v0_7 import derive_approval_decision_event_view
+# v0.7.4-D：唯讀 Audit Trail Display 推導（純函式）。只在 GET display path 附加顯示用 audit trail；
+# 不寫 queue、不 dispatch、不 enforce guard、不啟動 worker、不呼叫 OpenClaw / Hermes / Google Sheets。
+from app.audit_trail_display_v0_7 import derive_audit_trail_display_view
 # v0.7.3-C：local / append-only Owner decision event recorder（純本地 audit metadata）。
 # 只在既有 Owner decision routes append local event；不 dispatch Worker、不接外部、不改 status transition。
 from app.approval_decision_event_recorder_v0_7 import build_approval_decision_event
@@ -851,6 +854,8 @@ def _obs_task_detail(item: dict[str, Any]) -> dict[str, Any]:
         "annotation": derive_queue_task_annotation(item),
         # v0.7.3-B：唯讀 Owner 決策紀錄檢視（顯示用），不記錄事件、不 dispatch。
         "decision_events": derive_approval_decision_event_view(item),
+        # v0.7.4-D：唯讀 Audit Trail Display（顯示用），不改 lifecycle、不 enforce guard、不 dispatch。
+        "audit_trail": derive_audit_trail_display_view(item),
     }
 
 
@@ -1080,6 +1085,8 @@ def _review_summary(item: dict[str, Any]) -> dict[str, Any]:
             "annotation": derive_queue_task_annotation(item),
             # v0.7.3-B：唯讀 Owner 決策紀錄檢視（顯示用），不記錄事件、不 dispatch。
             "decision_events": derive_approval_decision_event_view(item),
+            # v0.7.4-D：唯讀 Audit Trail Display（顯示用），不改 lifecycle、不 enforce guard、不 dispatch。
+            "audit_trail": derive_audit_trail_display_view(item),
         }
     )
     return summary

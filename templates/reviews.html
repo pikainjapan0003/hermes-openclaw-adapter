@@ -56,6 +56,14 @@
         <span class="badge badge-muted">決策紀錄：{{ dcount }}</span>
         <span class="badge badge-unknown">只讀 <span class="en-sub">read-only</span></span>
         <span class="badge badge-blocked">未派工 <span class="en-sub">dispatch_allowed = False</span></span>
+        {# v0.7.4-D：唯讀 Audit Trail summary（read-only text/badge，無按鈕、無表單）。 #}
+        {% if t.audit_trail %}
+        {% set at = t.audit_trail %}
+        <div class="audit-trail-review-summary">
+          <span class="badge badge-source">Audit：Task {{ at.message_family_counts.task_message }} / Decision {{ at.decision_message_count }} / Result {{ at.result_message_count }} / Advice {{ at.advice_message_count }}</span>
+          <span class="badge badge-muted">Lifecycle：{{ at.lifecycle_state }}</span>
+        </div>
+        {% endif %}
       </td>
       <td>需要 Owner 核准 / 拒絕 <span class="en-sub">approve / reject</span></td>
       <td><span class="badge badge-waiting_review">等待審核</span><span class="status-code">waiting_review</span></td>

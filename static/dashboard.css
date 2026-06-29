@@ -358,4 +358,19 @@ button:hover { filter: brightness(1.08); }
 /* 純視覺呈現；只讀 Owner 決策紀錄，不附帶任何 action、不 dispatch。 */
 .decision-events-panel { margin: 4px 0 20px; }
 .decision-events-empty { padding: 14px 12px; }
+
+/* --- v0.7.4-D audit trail display (read-only, display-only) -------------- */
+/* 純視覺呈現；只讀 audit trail / blackboard messages，不改 lifecycle、不 enforce */
+/* guard、不 dispatch、不呼叫外部。沒有任何 button / form。 */
+.audit-trail-panel { margin: 4px 0 20px; }
+.audit-trail-timeline { margin: 12px 0; }
+.audit-trail-timeline h4 { margin: 6px 0; font-size: 0.95em; }
+.audit-trail-timeline-list { list-style: none; margin: 6px 0; padding: 0; }
+.audit-trail-timeline-list li {
+  margin: 4px 0; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+}
+.audit-trail-future { opacity: 0.7; }
+.audit-trail-review-summary {
+  display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px;
+}
 .decision-events-empty p { margin: 2px 0; }

@@ -145,6 +145,60 @@
 </section>
 {% endif %}
 
+{# v0.7.4-D：唯讀 Audit Trail / Blackboard Messages 顯示（display-only）。資料來自
+   derive_audit_trail_display_view；只讀衍生，不改 lifecycle、不 enforce guard、不 dispatch、
+   不呼叫外部。固定安全旗標恆為 False，read_only 恆為 True。 #}
+{% if task.audit_trail %}
+{% set at = task.audit_trail %}
+<section class="card audit-trail-panel hud-panel" aria-label="Audit Trail / Blackboard Messages">
+  <h3 class="zh-main">Audit Trail / Blackboard Messages</h3>
+  <p class="muted">只讀顯示，不改任何狀態、不 enforce guard、不觸發 worker、不 dispatch、不呼叫外部。
+    <span class="en-sub">read-only display only</span></p>
+
+  <table class="grid">
+    <tbody>
+      <tr><th><span class="field-label">生命週期狀態</span><span class="field-code">lifecycle_state</span></th>
+        <td><span class="badge badge-source">{{ at.lifecycle_state_label }}</span><span class="status-code">{{ at.lifecycle_state }}</span></td></tr>
+      <tr><th><span class="field-label">Task Message</span><span class="field-code">task_message</span></th>
+        <td><span class="badge {% if at.task_message_present %}badge-source{% else %}badge-unknown{% endif %}">{% if at.task_message_present %}present{% else %}absent{% endif %}</span></td></tr>
+      <tr><th><span class="field-label">Decision Messages</span><span class="field-code">decision_message</span></th>
+        <td><span class="badge badge-muted">{{ at.decision_message_count }}</span></td></tr>
+      <tr><th><span class="field-label">Result Messages</span><span class="field-code">result_message</span></th>
+        <td><span class="badge badge-unknown">{{ at.result_message_count }} <span class="en-sub">future-only</span></span></td></tr>
+      <tr><th><span class="field-label">Advice Messages</span><span class="field-code">advice_message</span></th>
+        <td><span class="badge badge-unknown">{{ at.advice_message_count }} <span class="en-sub">future-only</span></span></td></tr>
+    </tbody>
+  </table>
+
+  <div class="audit-trail-timeline">
+    <h4 class="zh-main">訊息時間軸 <span class="en-sub">Timeline</span></h4>
+    <ul class="audit-trail-timeline-list">
+      {% for ti in at.timeline_items %}
+      <li class="{% if ti.future_only %}audit-trail-future{% endif %}">
+        <span class="badge {% if ti.observed %}badge-source{% else %}badge-unknown{% endif %}">{{ ti.label }}</span>
+        {% if ti.count is defined %}<span class="status-code">count = {{ ti.count }}</span>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <div class="annotation-permission-row">
+    <span class="badge badge-blocked">執行權限：未授權 <span class="en-sub">execution_permission = False</span></span>
+    <span class="badge badge-blocked">派工允許：未允許 <span class="en-sub">dispatch_allowed = False</span></span>
+    <span class="badge badge-blocked">Worker Dispatch：Disabled</span>
+    <span class="badge badge-blocked">OpenClaw：Not Called</span>
+    <span class="badge badge-blocked">Hermes：Not Called</span>
+    <span class="badge badge-blocked">Google Sheets：Disabled</span>
+    <span class="badge badge-unknown">只讀 <span class="en-sub">read_only = True</span></span>
+  </div>
+  <div class="annotation-safety-reminder owner-safety-boundary">
+    {% for note in at.lifecycle_display_notes %}<p>{{ note }}</p>{% endfor %}
+    <p>{{ at.result_message_future_note }}</p>
+    <p>{{ at.advice_message_future_note }}</p>
+  </div>
+</section>
+{% endif %}
+
 <section class="card">
   <h3>摘要 <span class="en-sub">Summary</span></h3>
   <table class="kv">
