@@ -1,0 +1,155 @@
+{
+  "fixture_id": "hermes-openclaw-local-mock-fixture-v0-8-1",
+  "schema_version": "v0.8.1-local-mock-1",
+  "is_mock": true,
+  "created_for": "Hermes x OpenClaw Adapter local mock fixture preview",
+  "artifact_scope": "synthetic local-only fixture JSON artifact",
+  "records": [
+    {
+      "fixture_id": "hermes-openclaw-local-mock-fixture-v0-8-1",
+      "schema_version": "v0.8.1-local-mock-1",
+      "is_mock": true,
+      "message_family": "Mock Task Message",
+      "message_id": "mock-task-message-v0-8-1-001",
+      "preview_id": "local-preview-task-001",
+      "created_for": "local mock preview only",
+      "display_title": "Mock Task Message",
+      "display_summary": "Synthetic local-only task proposal for preview. It is not a real queue task and cannot dispatch Worker.",
+      "safety_notes": [
+        "Synthetic local-only record.",
+        "No real queue data.",
+        "No Worker dispatch.",
+        "No OpenClaw call.",
+        "No Hermes action.",
+        "No Google Sheets access."
+      ],
+      "next_owner_action": "Review the mock task display only. Do not treat this as execution permission.",
+      "audit_notes": "Created by v0.8.1-L as a synthetic local-only fixture record.",
+      "rollback_notes": "Delete fixtures/local_mock_data/hermes_openclaw_local_mock_messages_v0_8_1.json to remove this fixture."
+    },
+    {
+      "fixture_id": "hermes-openclaw-local-mock-fixture-v0-8-1",
+      "schema_version": "v0.8.1-local-mock-1",
+      "is_mock": true,
+      "message_family": "Mock Decision Message",
+      "message_id": "mock-decision-message-v0-8-1-001",
+      "preview_id": "local-preview-decision-001",
+      "created_for": "local mock preview only",
+      "display_title": "Mock Decision Message",
+      "display_summary": "Synthetic Owner decision audit sample. Approval is not execution and decision is not dispatch.",
+      "safety_notes": [
+        "Synthetic local-only record.",
+        "Approval is not execution.",
+        "Decision message is an audit record, not a command.",
+        "Dispatch remains off.",
+        "Worker remains off."
+      ],
+      "next_owner_action": "Review the mock decision display only. Do not treat this as dispatch approval.",
+      "audit_notes": "Created by v0.8.1-L as a synthetic local-only fixture record.",
+      "rollback_notes": "Delete fixtures/local_mock_data/hermes_openclaw_local_mock_messages_v0_8_1.json to remove this fixture."
+    },
+    {
+      "fixture_id": "hermes-openclaw-local-mock-fixture-v0-8-1",
+      "schema_version": "v0.8.1-local-mock-1",
+      "is_mock": true,
+      "message_family": "Mock Result Message",
+      "message_id": "mock-result-message-v0-8-1-001",
+      "preview_id": "local-preview-result-001",
+      "created_for": "local mock preview only",
+      "display_title": "Mock Result Message",
+      "display_summary": "Synthetic dry-run result sample. It represents a mock outcome only and contains no external side effect.",
+      "safety_notes": [
+        "Synthetic local-only record.",
+        "Dry-run result sample only.",
+        "No external side effect.",
+        "No tool call.",
+        "No production change."
+      ],
+      "next_owner_action": "Review the mock result display only. Do not treat this as proof of real execution.",
+      "audit_notes": "Created by v0.8.1-L as a synthetic local-only fixture record.",
+      "rollback_notes": "Delete fixtures/local_mock_data/hermes_openclaw_local_mock_messages_v0_8_1.json to remove this fixture."
+    },
+    {
+      "fixture_id": "hermes-openclaw-local-mock-fixture-v0-8-1",
+      "schema_version": "v0.8.1-local-mock-1",
+      "is_mock": true,
+      "message_family": "Mock Advice Message",
+      "message_id": "mock-advice-message-v0-8-1-001",
+      "preview_id": "local-preview-advice-001",
+      "created_for": "local mock preview only",
+      "display_title": "Mock Advice Message",
+      "display_summary": "Synthetic Hermes-style advisory sample. It is advice only and must not create follow-up work automatically.",
+      "safety_notes": [
+        "Synthetic local-only record.",
+        "Advice is not execution.",
+        "Hermes readback is not automatic follow-up.",
+        "Owner confirmation remains required.",
+        "No autonomous action."
+      ],
+      "next_owner_action": "Review the mock advice display only. Decide separately whether any follow-up should exist.",
+      "audit_notes": "Created by v0.8.1-L as a synthetic local-only fixture record.",
+      "rollback_notes": "Delete fixtures/local_mock_data/hermes_openclaw_local_mock_messages_v0_8_1.json to remove this fixture."
+    },
+    {
+      "fixture_id": "hermes-openclaw-local-mock-fixture-v0-8-1",
+      "schema_version": "v0.8.1-local-mock-1",
+      "is_mock": true,
+      "message_family": "Mock Badge Status",
+      "message_id": "mock-badge-status-v0-8-1-001",
+      "preview_id": "local-preview-badge-001",
+      "created_for": "local mock preview only",
+      "display_title": "Mock Badge Status",
+      "display_summary": "Synthetic runtime badge sample showing dispatch and external systems disabled.",
+      "safety_notes": [
+        "DISPATCH OFF",
+        "WORKER OFF",
+        "OPENCLAW NOT CONNECTED",
+        "HERMES NOT CONNECTED",
+        "GOOGLE SHEETS DISABLED"
+      ],
+      "next_owner_action": "Confirm the mock badge display remains read-only and disabled.",
+      "audit_notes": "Created by v0.8.1-L as a synthetic local-only fixture record.",
+      "rollback_notes": "Delete fixtures/local_mock_data/hermes_openclaw_local_mock_messages_v0_8_1.json to remove this fixture."
+    },
+    {
+      "fixture_id": "hermes-openclaw-local-mock-fixture-v0-8-1",
+      "schema_version": "v0.8.1-local-mock-1",
+      "is_mock": true,
+      "message_family": "Mock Runtime-off Status",
+      "message_id": "mock-runtime-off-status-v0-8-1-001",
+      "preview_id": "local-preview-runtime-off-001",
+      "created_for": "local mock preview only",
+      "display_title": "Mock Runtime-off Status",
+      "display_summary": "Synthetic runtime-off sample confirming no Worker, OpenClaw, Hermes, Google Sheets, queue write, or POST action is active.",
+      "safety_notes": [
+        "Worker remains off.",
+        "OpenClaw remains not connected.",
+        "Hermes remains not connected.",
+        "Google Sheets remains disabled.",
+        "No real queue database read or write.",
+        "No POST."
+      ],
+      "next_owner_action": "Review runtime-off status. Any activation must be separately planned and approved.",
+      "audit_notes": "Created by v0.8.1-L as a synthetic local-only fixture record.",
+      "rollback_notes": "Delete fixtures/local_mock_data/hermes_openclaw_local_mock_messages_v0_8_1.json to remove this fixture."
+    }
+  ],
+  "safety_invariants": {
+    "is_mock": true,
+    "dispatch_enabled": false,
+    "worker_running": false,
+    "openclaw_connected": false,
+    "hermes_connected": false,
+    "google_sheets_enabled": false,
+    "external_side_effects": false,
+    "approval_is_execution": false,
+    "approval_readiness_is_execution": false,
+    "artifact_creation_permission": true,
+    "loader_permission": false,
+    "dashboard_change_permission": false,
+    "execution_permission": false,
+    "dispatch_permission": false,
+    "external_side_effects_permission": false
+  },
+  "rollback_notes": "Remove this local fixture by deleting fixtures/local_mock_data/hermes_openclaw_local_mock_messages_v0_8_1.json. No database migration, queue write, POST, Worker, OpenClaw, Hermes, or Google Sheets action is required."
+}
