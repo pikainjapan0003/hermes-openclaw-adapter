@@ -7,15 +7,20 @@ and the absence of any forbidden call/route/control pattern. It never diffs or s
 pre-existing lines in those files, so pre-existing POST routes / QueueStore usage elsewhere in
 app/main.py cannot trip this check.
 
-Diff scope is post-commit-aware: the "effective changed paths" and "effective added lines" for a file
-are the UNION of (a) `git diff --name-only EXPECTED_BASE_HEAD..HEAD` / `git diff --unified=0
-EXPECTED_BASE_HEAD..HEAD -- <file>` (the committed diff since the v0.8.1-Z base commit) and (b) the
-bare working-tree `git diff --name-only` / `git diff --unified=0 -- <file>` (any currently uncommitted
-change). This means the script gives the same answer whether the v0.8.2-A implementation is still
-uncommitted (pre-commit Owner Review), has already been committed (post-commit regression), or is in a
-mixed state (e.g. this validation script itself has an uncommitted follow-up edit after app/main.py
-and templates/system.html were already committed) — no separate "pre-commit vs post-commit mode" flag
-is needed because the union naturally degrades to whichever side is non-empty.
+Diff scope is post-commit-aware AND fixed-range-aware: the "effective changed paths" and "effective
+added lines" for a file are the UNION of (a) `git diff --name-only EXPECTED_BASE_HEAD..TARGET` / `git
+diff --unified=0 EXPECTED_BASE_HEAD..TARGET -- <file>` (the committed diff since the v0.8.1-Z base
+commit) and (b) the bare working-tree `git diff --name-only` / `git diff --unified=0 -- <file>` (any
+currently uncommitted change). TARGET is `EXPECTED_V0_8_2_A_FINAL_HEAD` once HEAD has grown past it
+(i.e. once v0.8.2-A itself is fully committed), so later unrelated commits (v0.8.2-B and beyond) are
+never pulled into the committed diff and never misclassified as v0.8.2-A changed files; TARGET falls
+back to `HEAD` while HEAD has not yet reached `EXPECTED_V0_8_2_A_FINAL_HEAD` (pre-final history). This
+means the script gives the same answer whether the v0.8.2-A implementation is still uncommitted
+(pre-commit Owner Review), has already been committed (post-commit regression), has since been
+followed by unrelated later commits (e.g. v0.8.2-B), or is in a mixed state (e.g. this validation
+script itself has an uncommitted follow-up edit after app/main.py and templates/system.html were
+already committed) — no separate mode flag is needed because the union naturally degrades to whichever
+side is non-empty and the fixed range naturally excludes unrelated later history.
 
 It does NOT import app runtime, Dashboard runtime, QueueStore, Worker/OpenClaw/Hermes/Google Sheets
 integration, or the v0.8.1-P loader; it never starts a server; it reads no real queue DB, sends no
@@ -39,6 +44,7 @@ MAIN_PY_PATH = REPO_ROOT / "app/main.py"
 SYSTEM_HTML_PATH = REPO_ROOT / "templates/system.html"
 
 EXPECTED_BASE_HEAD = "9fb42bc1dde7d9a0b6a9ea33842cfa6f3c7a56df"
+EXPECTED_V0_8_2_A_FINAL_HEAD = "7206afa7ed000fbaab761a1f0018524849cc8815"
 
 REQUIRED_IMPLEMENTATION_PATHS = {"app/main.py", "templates/system.html", SELF_SCRIPT_REL}
 ALLOWED_NEW_UNTRACKED = {SELF_SCRIPT_REL}
@@ -79,9 +85,25 @@ def git_tracked(rel: str) -> bool:
     return out.returncode == 0 and out.stdout.strip() != ""
 
 
+def committed_diff_target() -> str:
+    """The upper end of the v0.8.2-A committed diff range.
+
+    v0.8.2-A's finalized committed scope ends at EXPECTED_V0_8_2_A_FINAL_HEAD. Once HEAD has grown
+    past that point (e.g. v0.8.2-B and later commits), the committed diff must stay pinned to
+    EXPECTED_BASE_HEAD..EXPECTED_V0_8_2_A_FINAL_HEAD so later unrelated commits are never counted as
+    v0.8.2-A changed files. If HEAD has not yet reached EXPECTED_V0_8_2_A_FINAL_HEAD (pre-final
+    history, e.g. mid v0.8.2-A development), fall back to EXPECTED_BASE_HEAD..HEAD.
+    """
+    final_check = run_git(["merge-base", "--is-ancestor", EXPECTED_V0_8_2_A_FINAL_HEAD, "HEAD"])
+    if final_check.returncode == 0:
+        return EXPECTED_V0_8_2_A_FINAL_HEAD
+    return "HEAD"
+
+
 def committed_change_names_since_base() -> set[str]:
-    """Files changed in the committed diff between EXPECTED_BASE_HEAD and HEAD."""
-    return set(git_lines(["diff", "--name-only", f"{EXPECTED_BASE_HEAD}..HEAD"]))
+    """Files changed in the committed diff between EXPECTED_BASE_HEAD and committed_diff_target()."""
+    target = committed_diff_target()
+    return set(git_lines(["diff", "--name-only", f"{EXPECTED_BASE_HEAD}..{target}"]))
 
 
 def working_tree_change_names() -> set[str]:
@@ -117,9 +139,10 @@ def git_added_lines(rel: str) -> str:
     """Effective added lines for `rel`: union of committed-since-base added lines and any
     uncommitted working-tree added lines. Post-commit-aware (see module docstring)."""
     parts: list[str] = []
+    target = committed_diff_target()
 
     if rel in committed_change_names_since_base():
-        parts.append(diff_added_lines(["diff", "--unified=0", f"{EXPECTED_BASE_HEAD}..HEAD", "--", rel]))
+        parts.append(diff_added_lines(["diff", "--unified=0", f"{EXPECTED_BASE_HEAD}..{target}", "--", rel]))
 
     if rel in working_tree_change_names():
         parts.append(diff_added_lines(["diff", "--unified=0", "--", rel]))
