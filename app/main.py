@@ -3,9 +3,11 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import hmac
+import importlib.util
 import json
 import os
 import re
+import sys
 import threading
 import time
 import uuid
@@ -53,6 +55,40 @@ from app.audit_trail_display_v0_7 import derive_audit_trail_display_view
 # v0.7.3-C：local / append-only Owner decision event recorder（純本地 audit metadata）。
 # 只在既有 Owner decision routes append local event；不 dispatch Worker、不接外部、不改 status transition。
 from app.approval_decision_event_recorder_v0_7 import build_approval_decision_event
+
+# v0.8.2-A：唯讀 Local Mock Dashboard Preview（來自 v0.8.1-V read-only preview adapter，純函式）。只在既有
+# GET /dashboard/system observe surface 附加顯示用 synthetic local-only read-only preview model；
+# 不寫 queue、不 dispatch、不啟動 worker、不呼叫 OpenClaw / Hermes / Google Sheets、不讀 secrets、不 POST。
+_V0_8_2_A_ADAPTER_PATH = (
+    Path(__file__).resolve().parent.parent / "scripts" / "local_mock_fixture_dashboard_preview_adapter_v0_8_1.py"
+)
+
+
+def _load_v0_8_2_a_build_dashboard_preview_model():
+    """Dynamically load build_dashboard_preview_model() from the v0.8.1-V read-only adapter module.
+
+    Mirrors the v0.8.1-W runtime check's loading pattern: temporarily add scripts/ to sys.path so the
+    adapter's own bare sibling import of the v0.8.1-P loader resolves, load the adapter by file path
+    via importlib, then remove scripts/ from sys.path again. Never modifies the loader or adapter file.
+    """
+    scripts_dir = str(_V0_8_2_A_ADAPTER_PATH.parent)
+    inserted = False
+    if scripts_dir not in sys.path:
+        sys.path.insert(0, scripts_dir)
+        inserted = True
+    try:
+        spec = importlib.util.spec_from_file_location(
+            "local_mock_fixture_dashboard_preview_adapter_v0_8_1", _V0_8_2_A_ADAPTER_PATH
+        )
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module.build_dashboard_preview_model
+    finally:
+        if inserted and scripts_dir in sys.path:
+            sys.path.remove(scripts_dir)
+
+
+build_dashboard_preview_model = _load_v0_8_2_a_build_dashboard_preview_model()
 
 APP_NAME = "Hermes OpenClaw Adapter"
 APP_VERSION = "0.5.6"
@@ -1720,6 +1756,8 @@ def dashboard_system(request: Request) -> HTMLResponse:
     db_exists = (
         False if EXECUTION_MODE == "background" else Path(QUEUE_DB_PATH).exists()
     )
+    # v0.8.2-A：唯讀 local mock preview model（來自 v0.8.1-V read-only adapter）。不寫 queue、不 dispatch。
+    local_mock_preview_model = build_dashboard_preview_model()
     return templates.TemplateResponse(
         "system.html",
         {
@@ -1732,5 +1770,6 @@ def dashboard_system(request: Request) -> HTMLResponse:
             "worker": _worker_snapshot(),
             "openclaw": _openclaw_cli_status(),
             "generated_at": utc_now_iso(),
+            "local_mock_preview_model": local_mock_preview_model,
         },
     )
