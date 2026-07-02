@@ -1,12 +1,21 @@
 """v0.8.2-A readiness check: Dashboard Preview Adapter Read-only Display Integration.
 
 Pure local filesystem + git metadata validation. This script confirms the tracked state of the
-v0.8.1-V/Z artifacts, confirms the tracked-diff scope (`git diff --name-only` / `git status
---porcelain` / `git ls-files --others --exclude-standard`), and inspects ONLY the *added* lines of
-`app/main.py` and `templates/system.html` (via `git diff --unified=0`) for the required
-build_dashboard_preview_model() wiring and the absence of any forbidden call/route/control pattern.
-It never diffs or scans unrelated pre-existing lines in those files, so pre-existing POST routes /
-QueueStore usage elsewhere in app/main.py cannot trip this check.
+v0.8.1-V/Z artifacts, confirms the effective changed-file scope, and inspects ONLY the *added* lines
+of `app/main.py` and `templates/system.html` for the required build_dashboard_preview_model() wiring
+and the absence of any forbidden call/route/control pattern. It never diffs or scans unrelated
+pre-existing lines in those files, so pre-existing POST routes / QueueStore usage elsewhere in
+app/main.py cannot trip this check.
+
+Diff scope is post-commit-aware: the "effective changed paths" and "effective added lines" for a file
+are the UNION of (a) `git diff --name-only EXPECTED_BASE_HEAD..HEAD` / `git diff --unified=0
+EXPECTED_BASE_HEAD..HEAD -- <file>` (the committed diff since the v0.8.1-Z base commit) and (b) the
+bare working-tree `git diff --name-only` / `git diff --unified=0 -- <file>` (any currently uncommitted
+change). This means the script gives the same answer whether the v0.8.2-A implementation is still
+uncommitted (pre-commit Owner Review), has already been committed (post-commit regression), or is in a
+mixed state (e.g. this validation script itself has an uncommitted follow-up edit after app/main.py
+and templates/system.html were already committed) — no separate "pre-commit vs post-commit mode" flag
+is needed because the union naturally degrades to whichever side is non-empty.
 
 It does NOT import app runtime, Dashboard runtime, QueueStore, Worker/OpenClaw/Hermes/Google Sheets
 integration, or the v0.8.1-P loader; it never starts a server; it reads no real queue DB, sends no
@@ -20,7 +29,8 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
-SELF_SCRIPT_PATH = REPO_ROOT / "scripts/check_hermes_openclaw_local_mock_fixture_dashboard_preview_adapter_read_only_display_integration_v0_8_2_a.py"
+SELF_SCRIPT_REL = "scripts/check_hermes_openclaw_local_mock_fixture_dashboard_preview_adapter_read_only_display_integration_v0_8_2_a.py"
+SELF_SCRIPT_PATH = REPO_ROOT / SELF_SCRIPT_REL
 
 V_ADAPTER_PATH = REPO_ROOT / "scripts/local_mock_fixture_dashboard_preview_adapter_v0_8_1.py"
 Z_DOC_PATH = REPO_ROOT / "docs/HERMES_OPENCLAW_LOCAL_MOCK_FIXTURE_DASHBOARD_PREVIEW_ADAPTER_INTEGRATION_IMPLEMENTATION_PLAN_V0_8_1_Z.md"
@@ -30,10 +40,8 @@ SYSTEM_HTML_PATH = REPO_ROOT / "templates/system.html"
 
 EXPECTED_BASE_HEAD = "9fb42bc1dde7d9a0b6a9ea33842cfa6f3c7a56df"
 
-ALLOWED_MODIFIED_TRACKED = {"app/main.py", "templates/system.html"}
-ALLOWED_NEW_UNTRACKED = {
-    "scripts/check_hermes_openclaw_local_mock_fixture_dashboard_preview_adapter_read_only_display_integration_v0_8_2_a.py"
-}
+REQUIRED_IMPLEMENTATION_PATHS = {"app/main.py", "templates/system.html", SELF_SCRIPT_REL}
+ALLOWED_NEW_UNTRACKED = {SELF_SCRIPT_REL}
 
 PASS: list[str] = []
 FAIL: list[str] = []
@@ -53,23 +61,50 @@ def check(label: str, condition: bool) -> None:
     ok(label) if condition else xx(label)
 
 
-def git_tracked(rel: str) -> bool:
-    out = subprocess.run(
-        ["git", "-C", str(REPO_ROOT), "ls-files", "--", rel],
+def run_git(args: list[str]) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["git", "-C", str(REPO_ROOT), *args],
         capture_output=True,
         text=True,
     )
+
+
+def git_lines(args: list[str]) -> list[str]:
+    out = run_git(args)
+    return [line for line in out.stdout.splitlines() if line.strip()]
+
+
+def git_tracked(rel: str) -> bool:
+    out = run_git(["ls-files", "--", rel])
     return out.returncode == 0 and out.stdout.strip() != ""
 
 
-def git_added_lines(rel: str) -> str:
-    """Return only the '+' added lines (excluding the '+++' file header) for a tracked file's diff."""
-    out = subprocess.run(
-        ["git", "-C", str(REPO_ROOT), "diff", "--unified=0", "--", rel],
-        capture_output=True,
-        text=True,
-    )
-    added = []
+def committed_change_names_since_base() -> set[str]:
+    """Files changed in the committed diff between EXPECTED_BASE_HEAD and HEAD."""
+    return set(git_lines(["diff", "--name-only", f"{EXPECTED_BASE_HEAD}..HEAD"]))
+
+
+def working_tree_change_names() -> set[str]:
+    """Files with an uncommitted (working-tree vs index/HEAD) change."""
+    return set(git_lines(["diff", "--name-only"]))
+
+
+def untracked_names() -> set[str]:
+    return set(git_lines(["ls-files", "--others", "--exclude-standard"]))
+
+
+def effective_changed_paths() -> set[str]:
+    """Union of committed-since-base changes, uncommitted working-tree changes, and allowed new
+    untracked files. Works whether this round is fully committed, fully uncommitted, or mixed."""
+    committed = committed_change_names_since_base()
+    working = working_tree_change_names()
+    allowed_untracked = {p for p in untracked_names() if p in ALLOWED_NEW_UNTRACKED}
+    return committed | working | allowed_untracked
+
+
+def diff_added_lines(args: list[str]) -> str:
+    out = run_git(args)
+    added: list[str] = []
     for line in out.stdout.splitlines():
         if line.startswith("+++"):
             continue
@@ -78,15 +113,25 @@ def git_added_lines(rel: str) -> str:
     return "\n".join(added)
 
 
+def git_added_lines(rel: str) -> str:
+    """Effective added lines for `rel`: union of committed-since-base added lines and any
+    uncommitted working-tree added lines. Post-commit-aware (see module docstring)."""
+    parts: list[str] = []
+
+    if rel in committed_change_names_since_base():
+        parts.append(diff_added_lines(["diff", "--unified=0", f"{EXPECTED_BASE_HEAD}..HEAD", "--", rel]))
+
+    if rel in working_tree_change_names():
+        parts.append(diff_added_lines(["diff", "--unified=0", "--", rel]))
+
+    return "\n".join(part for part in parts if part)
+
+
 # ---------------------------------------------------------------------------
 # [A] current HEAD contains EXPECTED_BASE_HEAD in git history
 # ---------------------------------------------------------------------------
 print("[A] current HEAD contains EXPECTED_BASE_HEAD in git history")
-ancestor_check = subprocess.run(
-    ["git", "-C", str(REPO_ROOT), "merge-base", "--is-ancestor", EXPECTED_BASE_HEAD, "HEAD"],
-    capture_output=True,
-    text=True,
-)
+ancestor_check = run_git(["merge-base", "--is-ancestor", EXPECTED_BASE_HEAD, "HEAD"])
 check(
     f"A. HEAD contains {EXPECTED_BASE_HEAD} in git history",
     ancestor_check.returncode == 0,
@@ -127,30 +172,20 @@ print("[F] v0.8.2-A validation script exists")
 check("F. v0.8.2-A validation script exists at expected path", SELF_SCRIPT_PATH.exists())
 
 # ---------------------------------------------------------------------------
-# [G] git diff only touches allowed files
+# [G] effective changed paths only touch allowed files
 # ---------------------------------------------------------------------------
-print("[G] git diff only touches allowed files")
-diff_names_out = subprocess.run(
-    ["git", "-C", str(REPO_ROOT), "diff", "--name-only"],
-    capture_output=True,
-    text=True,
-)
-modified_tracked = {l for l in diff_names_out.stdout.splitlines() if l.strip()}
-unexpected_modified = modified_tracked - ALLOWED_MODIFIED_TRACKED
-missing_modified = ALLOWED_MODIFIED_TRACKED - modified_tracked
+print("[G] effective changed paths only touch allowed files")
+effective_changed = effective_changed_paths()
+unexpected_changed = effective_changed - REQUIRED_IMPLEMENTATION_PATHS
+missing_changed = REQUIRED_IMPLEMENTATION_PATHS - effective_changed
 check(
-    f"G. only app/main.py and templates/system.html are modified（unexpected={sorted(unexpected_modified)}, missing={sorted(missing_modified)}）"
-    if (unexpected_modified or missing_modified)
-    else "G. only app/main.py and templates/system.html are modified",
-    not unexpected_modified and not missing_modified,
+    f"G. only app/main.py, templates/system.html, and the v0.8.2-A validation script are changed（unexpected={sorted(unexpected_changed)}, missing={sorted(missing_changed)}）"
+    if (unexpected_changed or missing_changed)
+    else "G. only app/main.py, templates/system.html, and the v0.8.2-A validation script are changed",
+    not unexpected_changed and not missing_changed,
 )
 
-others_out = subprocess.run(
-    ["git", "-C", str(REPO_ROOT), "ls-files", "--others", "--exclude-standard"],
-    capture_output=True,
-    text=True,
-)
-untracked = {l for l in others_out.stdout.splitlines() if l.strip()}
+untracked = untracked_names()
 unexpected_untracked = {
     u for u in untracked if u not in ALLOWED_NEW_UNTRACKED and not u.startswith("patches/")
 }
@@ -162,9 +197,12 @@ check(
 )
 
 # ---------------------------------------------------------------------------
-# app/main.py added-lines-only checks [H-N]
+# app/main.py effective-added-lines checks [H0, H-N]
 # ---------------------------------------------------------------------------
 main_added = git_added_lines("app/main.py")
+
+print("[H0] app/main.py effective added lines are non-empty")
+check("H0. app/main.py effective added lines are non-empty", bool(main_added.strip()))
 
 print("[H] app/main.py imports build_dashboard_preview_model from V adapter module")
 check(
@@ -222,9 +260,12 @@ check(
 )
 
 # ---------------------------------------------------------------------------
-# templates/system.html added-lines-only checks [O-S]
+# templates/system.html effective-added-lines checks [O0, O-S]
 # ---------------------------------------------------------------------------
 system_added = git_added_lines("templates/system.html")
+
+print("[O0] templates/system.html effective added lines are non-empty")
+check("O0. templates/system.html effective added lines are non-empty", bool(system_added.strip()))
 
 print("[O] templates/system.html added lines contain Local Mock Dashboard Preview")
 check(
@@ -287,24 +328,24 @@ check(
 )
 
 # ---------------------------------------------------------------------------
-# [T-X] no other protected artifact changed
+# [T-X] no other protected artifact changed (using effective changed paths)
 # ---------------------------------------------------------------------------
 print("[T] no static file changed")
-check("T. no static file changed", not any(p.startswith("static/") for p in modified_tracked))
+check("T. no static file changed", not any(p.startswith("static/") for p in effective_changed))
 
 print("[U] no fixture JSON changed")
 check(
     "U. no fixture JSON changed",
-    "fixtures/local_mock_data/hermes_openclaw_local_mock_messages_v0_8_1.json" not in modified_tracked,
+    "fixtures/local_mock_data/hermes_openclaw_local_mock_messages_v0_8_1.json" not in effective_changed,
 )
 
 print("[V] no P loader changed")
-check("V. no P loader changed", "scripts/load_local_mock_fixture_preview_v0_8_1.py" not in modified_tracked)
+check("V. no P loader changed", "scripts/load_local_mock_fixture_preview_v0_8_1.py" not in effective_changed)
 
 print("[W] no V adapter changed")
 check(
     "W. no V adapter changed",
-    "scripts/local_mock_fixture_dashboard_preview_adapter_v0_8_1.py" not in modified_tracked,
+    "scripts/local_mock_fixture_dashboard_preview_adapter_v0_8_1.py" not in effective_changed,
 )
 
 print("[X] no W/X/Y/Z artifacts changed")
@@ -319,7 +360,7 @@ PROTECTED_WXYZ = {
 }
 check(
     "X. no W/X/Y/Z artifacts changed",
-    not (modified_tracked & PROTECTED_WXYZ),
+    not (effective_changed & PROTECTED_WXYZ),
 )
 
 # ---------------------------------------------------------------------------
@@ -328,7 +369,7 @@ check(
 print("[Y] patches/ remains untracked and untouched")
 check(
     "Y. patches/ remains untracked and untouched",
-    not any(p.startswith("patches/") for p in modified_tracked),
+    not any(p.startswith("patches/") for p in effective_changed),
 )
 
 # ---------------------------------------------------------------------------
