@@ -82,14 +82,25 @@
 </table>
 
 {# v0.8.2-A：唯讀 Local Mock Dashboard Preview（display-only，來自 v0.8.1-V read-only adapter）。
-   純顯示區塊，無互動控制元件，不觸發任何操作。 #}
+   純顯示區塊，無互動控制元件，不觸發任何操作。
+   v0.8.2-C：僅重新整理版面／標籤／說明文字／表格可讀性／CSS 樣式；資料來源仍為 local_mock_preview_model
+   （build_dashboard_preview_model()），唯讀邊界與 permission flags 顯示方式不變，沒有新增任何互動控制。 #}
 {% if local_mock_preview_model %}
-<h3>本機模擬預覽 <span class="en-sub">Local Mock Dashboard Preview</span></h3>
-<p class="muted">唯讀合成本機預覽，不執行、不派發。 <span class="en-sub">Read-only synthetic local-only preview. Not runnable. Not sent anywhere.</span></p>
+<section class="local-mock-preview">
+  <div class="local-mock-preview__header">
+    <h3>本機模擬預覽 <span class="en-sub">Local Mock Dashboard Preview</span></h3>
+    <p class="muted">唯讀合成本機預覽，不執行、不派發、無任何外部副作用。
+      <span class="en-sub">Read-only synthetic local-only preview. Not runnable. Not sent anywhere. No execution, no dispatch, no external side effects.</span></p>
+  </div>
 
-<div class="cards">
-  <section class="card">
-    <h3>執行時徽章 <span class="en-sub">Runtime Badges</span></h3>
+  <div class="local-mock-preview__notice">
+    <p><strong>需 Owner Review <span class="en-sub">Owner Review required</span>：</strong>
+      本區塊僅供檢視，任何真實執行前都必須先經過 Owner Review。
+      <span class="en-sub">Owner Review required before any real execution.</span></p>
+  </div>
+
+  <div class="local-mock-preview__badges">
+    <h4>執行時徽章 <span class="en-sub">Runtime Badges</span></h4>
     <p>
       <span class="badge badge-rejected">DISPATCH OFF</span>
       <span class="badge badge-rejected">WORKER OFF</span>
@@ -97,46 +108,68 @@
       <span class="badge badge-rejected">HERMES NOT CONNECTED</span>
       <span class="badge badge-rejected">GOOGLE SHEETS DISABLED</span>
     </p>
-  </section>
+  </div>
 
-  <section class="card">
-    <h3>安全旗標 <span class="en-sub">Safety Flags</span></h3>
-    <table class="kv">
+  <div class="local-mock-preview__meta-grid">
+    <div class="local-mock-preview__flag-card">
+      <span class="field-label">合成資料</span><span class="field-code">is_mock</span>
+      <strong>{{ local_mock_preview_model.is_mock }}</strong>
+    </div>
+    <div class="local-mock-preview__flag-card">
+      <span class="field-label">僅本機</span><span class="field-code">local_only</span>
+      <strong>{{ local_mock_preview_model.local_only }}</strong>
+    </div>
+    <div class="local-mock-preview__flag-card">
+      <span class="field-label">唯讀</span><span class="field-code">read_only</span>
+      <strong>{{ local_mock_preview_model.read_only }}</strong>
+    </div>
+    <div class="local-mock-preview__flag-card">
+      <span class="field-label">可執行</span><span class="field-code">execution_permission</span>
+      <strong>{{ local_mock_preview_model.execution_permission }}</strong>
+    </div>
+    <div class="local-mock-preview__flag-card">
+      <span class="field-label">可派發</span><span class="field-code">dispatch_permission</span>
+      <strong>{{ local_mock_preview_model.dispatch_permission }}</strong>
+    </div>
+    <div class="local-mock-preview__flag-card">
+      <span class="field-label">可外部副作用</span><span class="field-code">external_side_effects_permission</span>
+      <strong>{{ local_mock_preview_model.external_side_effects_permission }}</strong>
+    </div>
+  </div>
+
+  <div class="local-mock-preview__table-wrap">
+    {% if local_mock_preview_model.rows %}
+    <table class="local-mock-preview__table grid hoverable">
+      <caption>唯讀合成預覽列，本表無法觸發任何操作。 <span class="en-sub">Read-only synthetic preview rows. No action can be triggered from this table.</span></caption>
+      <thead>
+        <tr>
+          <th>顯示序號 <span class="en-sub">display_index</span></th>
+          <th>標題 <span class="en-sub">display_title</span></th>
+          <th>摘要 <span class="en-sub">display_summary</span></th>
+          <th>來源角色 <span class="en-sub">source_role</span></th>
+          <th>目標角色 <span class="en-sub">target_role</span></th>
+          <th>狀態 <span class="en-sub">status</span></th>
+        </tr>
+      </thead>
       <tbody>
-        <tr><th><span class="field-label">合成資料</span><span class="field-code">is_mock</span></th><td>{{ local_mock_preview_model.is_mock }}</td></tr>
-        <tr><th><span class="field-label">僅本機</span><span class="field-code">local_only</span></th><td>{{ local_mock_preview_model.local_only }}</td></tr>
-        <tr><th><span class="field-label">唯讀</span><span class="field-code">read_only</span></th><td>{{ local_mock_preview_model.read_only }}</td></tr>
-        <tr><th><span class="field-label">可執行</span><span class="field-code">execution_permission</span></th><td>{{ local_mock_preview_model.execution_permission }}</td></tr>
-        <tr><th><span class="field-label">可派發</span><span class="field-code">dispatch_permission</span></th><td>{{ local_mock_preview_model.dispatch_permission }}</td></tr>
-        <tr><th><span class="field-label">可外部副作用</span><span class="field-code">external_side_effects_permission</span></th><td>{{ local_mock_preview_model.external_side_effects_permission }}</td></tr>
+        {% for row in local_mock_preview_model.rows %}
+        <tr>
+          <td>{{ row.display_index }}</td>
+          <td>{{ row.display_title }}</td>
+          <td>{{ row.display_summary }}</td>
+          <td>{{ row.source_role }}</td>
+          <td>{{ row.target_role }}</td>
+          <td><span class="badge badge-info">{{ row.status }}</span></td>
+        </tr>
+        {% endfor %}
       </tbody>
     </table>
-  </section>
-</div>
-
-<table class="grid hoverable">
-  <thead>
-    <tr>
-      <th>顯示序號 <span class="en-sub">display_index</span></th>
-      <th>標題 <span class="en-sub">display_title</span></th>
-      <th>摘要 <span class="en-sub">display_summary</span></th>
-      <th>來源角色 <span class="en-sub">source_role</span></th>
-      <th>目標角色 <span class="en-sub">target_role</span></th>
-      <th>狀態 <span class="en-sub">status</span></th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for row in local_mock_preview_model.rows %}
-    <tr>
-      <td>{{ row.display_index }}</td>
-      <td>{{ row.display_title }}</td>
-      <td>{{ row.display_summary }}</td>
-      <td>{{ row.source_role }}</td>
-      <td>{{ row.target_role }}</td>
-      <td><span class="badge badge-info">{{ row.status }}</span></td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+    {% else %}
+    <div class="local-mock-preview__empty">
+      <p>目前沒有可顯示的本機模擬預覽列。 <span class="en-sub">No local mock preview rows to display.</span></p>
+    </div>
+    {% endif %}
+  </div>
+</section>
 {% endif %}
 {% endblock %}
