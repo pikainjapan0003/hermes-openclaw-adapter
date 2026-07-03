@@ -414,3 +414,50 @@ button:hover { filter: brightness(1.08); }
 @media (max-width: 640px) {
   .local-mock-preview__meta-grid { grid-template-columns: 1fr; }
 }
+
+/* v0.8.3-D: read-only worker dry-run preview display (display-only, no interactive controls). */
+/* 純視覺呈現；不引入任何 button / form / action URL，只顯示 v0.8.3-B synthetic local-only 唯讀 preview model。 */
+.worker-dry-run-preview { margin: 4px 0 20px; }
+.worker-dry-run-preview__header { margin-bottom: 8px; }
+.worker-dry-run-preview__header h3 { margin-bottom: 4px; }
+.worker-dry-run-preview__notice {
+  margin: 8px 0 14px; padding: 10px 12px;
+  border: 1px solid rgba(255,207,92,0.35); border-radius: 8px;
+  background: rgba(255,207,92,0.06);
+}
+.worker-dry-run-preview__notice p { margin: 2px 0; font-size: 0.9em; }
+.worker-dry-run-preview__badges { margin: 4px 0 16px; }
+.worker-dry-run-preview__badges h4 { margin: 0 0 6px; }
+.worker-dry-run-preview__badges p { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 6px; }
+.worker-dry-run-preview__flag-list { margin: 4px 0 16px; }
+.worker-dry-run-preview__flag-list h4 { margin: 0 0 6px; }
+.worker-dry-run-preview__meta-grid {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px; margin: 4px 0 18px;
+}
+.worker-dry-run-preview__meta-grid--runtime {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.worker-dry-run-preview__flag-card {
+  background: var(--glass); border: 1px solid var(--line); border-radius: 10px;
+  padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; min-width: 0;
+}
+.worker-dry-run-preview__flag-card strong { font-size: 0.95em; color: var(--text); }
+.worker-dry-run-preview__flag {
+  background: var(--glass); border: 1px solid var(--line); border-radius: 10px;
+  padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; min-width: 0;
+}
+.worker-dry-run-preview__flag strong { font-size: 0.9em; color: var(--text); }
+.worker-dry-run-preview__boundary {
+  background: var(--glass); border: 1px dashed var(--glass-border); border-radius: 10px;
+  padding: 12px; margin: 4px 0 8px;
+}
+.worker-dry-run-preview__boundary p { margin: 2px 0; font-size: 0.9em; }
+@media (max-width: 900px) {
+  .worker-dry-run-preview__meta-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .worker-dry-run-preview__meta-grid--runtime { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .worker-dry-run-preview__meta-grid { grid-template-columns: 1fr; }
+  .worker-dry-run-preview__meta-grid--runtime { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

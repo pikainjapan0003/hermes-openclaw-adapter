@@ -172,4 +172,163 @@
   </div>
 </section>
 {% endif %}
+
+{# v0.8.3-D：唯讀 Worker Dry-run Preview（display-only，來自 v0.8.3-B standalone synthetic local-only builder）。
+   純顯示區塊，無互動控制元件，不觸發任何操作；與既有 v0.8.2 local mock preview block 完全獨立、彼此不互相修改。
+   資料來源為 build_worker_dry_run_preview_model()，唯讀邊界、Owner Review 提示與 permission/runtime flags
+   一律顯示 false，沒有新增任何 button/form/action URL。 #}
+{% if worker_dry_run_preview %}
+<section id="worker-dry-run-preview" class="worker-dry-run-preview" aria-labelledby="worker-dry-run-preview-title">
+  <div class="worker-dry-run-preview__header">
+    <h3 id="worker-dry-run-preview-title">Worker 空跑預覽 <span class="en-sub">Worker Dry-run Preview</span></h3>
+    <p class="muted">合成本機唯讀 Worker 空跑預覽，僅供檢視，不執行、不派發、無任何外部副作用。
+      <span class="en-sub">Synthetic local-only. Preview only. Not runnable. Not sent anywhere. No execution, no dispatch, no external side effects.</span></p>
+  </div>
+
+  <div class="worker-dry-run-preview__notice">
+    <p><strong>需 Owner Review <span class="en-sub">Owner Review required</span>：</strong>
+      本區塊僅供檢視，任何真實執行前都必須先經過 Owner Review。
+      <span class="en-sub">Owner Review required before any real execution.</span></p>
+    <p><span class="field-label">審查提示</span> <span class="en-sub">Review notice</span>：{{ worker_dry_run_preview.review_notice }}</p>
+  </div>
+
+  <div class="worker-dry-run-preview__badges">
+    <h4>安全邊界狀態 <span class="en-sub">Safety Boundary Status</span></h4>
+    <p>
+      <span class="badge badge-rejected">Worker OFF</span>
+      <span class="badge badge-rejected">Worker loop OFF</span>
+      <span class="badge badge-rejected">OpenClaw NOT CALLED</span>
+      <span class="badge badge-rejected">Hermes NOT CALLED</span>
+      <span class="badge badge-rejected">Google Sheets DISABLED</span>
+      <span class="badge badge-rejected">Real queue DB NOT READ</span>
+      <span class="badge badge-rejected">Queue NOT WRITTEN</span>
+      <span class="badge badge-rejected">POST DISABLED</span>
+    </p>
+    <p>
+      <span class="badge badge-rejected">Execution permission FALSE</span>
+      <span class="badge badge-rejected">Dispatch permission FALSE</span>
+      <span class="badge badge-rejected">External side effects permission FALSE</span>
+    </p>
+  </div>
+
+  <div class="worker-dry-run-preview__meta-grid">
+    <div class="worker-dry-run-preview__flag-card">
+      <span class="field-label">空跑編號</span> <span class="en-sub">Dry-run ID</span><span class="field-code">dry_run_id</span>
+      <strong>{{ worker_dry_run_preview.dry_run_id }}</strong>
+    </div>
+    <div class="worker-dry-run-preview__flag-card">
+      <span class="field-label">來源</span> <span class="en-sub">Source</span><span class="field-code">source</span>
+      <strong>{{ worker_dry_run_preview.source }}</strong>
+    </div>
+    <div class="worker-dry-run-preview__flag-card">
+      <span class="field-label">任務標題</span> <span class="en-sub">Task title</span><span class="field-code">task_title</span>
+      <strong>{{ worker_dry_run_preview.task_title }}</strong>
+    </div>
+    <div class="worker-dry-run-preview__flag-card">
+      <span class="field-label">任務摘要</span> <span class="en-sub">Task summary</span><span class="field-code">task_summary</span>
+      <strong>{{ worker_dry_run_preview.task_summary }}</strong>
+    </div>
+    <div class="worker-dry-run-preview__flag-card">
+      <span class="field-label">來源角色</span> <span class="en-sub">Source role</span><span class="field-code">source_role</span>
+      <strong>{{ worker_dry_run_preview.source_role }}</strong>
+    </div>
+    <div class="worker-dry-run-preview__flag-card">
+      <span class="field-label">目標角色</span> <span class="en-sub">Target role</span><span class="field-code">target_role</span>
+      <strong>{{ worker_dry_run_preview.target_role }}</strong>
+    </div>
+    <div class="worker-dry-run-preview__flag-card">
+      <span class="field-label">建議 Worker 動作</span> <span class="en-sub">Proposed worker action</span><span class="field-code">proposed_worker_action</span>
+      <strong>{{ worker_dry_run_preview.proposed_worker_action }}</strong>
+    </div>
+    <div class="worker-dry-run-preview__flag-card">
+      <span class="field-label">空跑狀態</span> <span class="en-sub">Dry-run status</span><span class="field-code">dry_run_status</span>
+      <strong>{{ worker_dry_run_preview.dry_run_status }}</strong>
+    </div>
+  </div>
+
+  <div class="worker-dry-run-preview__flag-list">
+    <h4>權限旗標 <span class="en-sub">Permission Flags</span></h4>
+    <div class="worker-dry-run-preview__meta-grid">
+      <div class="worker-dry-run-preview__flag-card">
+        <span class="field-label">可執行</span><span class="field-code">execution_permission</span>
+        <strong>{{ worker_dry_run_preview.permissions.execution_permission }}</strong>
+      </div>
+      <div class="worker-dry-run-preview__flag-card">
+        <span class="field-label">可派發</span><span class="field-code">dispatch_permission</span>
+        <strong>{{ worker_dry_run_preview.permissions.dispatch_permission }}</strong>
+      </div>
+      <div class="worker-dry-run-preview__flag-card">
+        <span class="field-label">可外部副作用</span><span class="field-code">external_side_effects_permission</span>
+        <strong>{{ worker_dry_run_preview.permissions.external_side_effects_permission }}</strong>
+      </div>
+    </div>
+  </div>
+
+  <div class="worker-dry-run-preview__flag-list">
+    <h4>執行時狀態旗標 <span class="en-sub">Runtime State Flags</span></h4>
+    <div class="worker-dry-run-preview__meta-grid worker-dry-run-preview__meta-grid--runtime">
+      <div class="worker-dry-run-preview__flag">
+        <span class="field-code">worker_started</span>
+        <strong>{{ worker_dry_run_preview.runtime_state.worker_started }}</strong>
+      </div>
+      <div class="worker-dry-run-preview__flag">
+        <span class="field-code">worker_loop_started</span>
+        <strong>{{ worker_dry_run_preview.runtime_state.worker_loop_started }}</strong>
+      </div>
+      <div class="worker-dry-run-preview__flag">
+        <span class="field-code">openclaw_called</span>
+        <strong>{{ worker_dry_run_preview.runtime_state.openclaw_called }}</strong>
+      </div>
+      <div class="worker-dry-run-preview__flag">
+        <span class="field-code">hermes_called</span>
+        <strong>{{ worker_dry_run_preview.runtime_state.hermes_called }}</strong>
+      </div>
+      <div class="worker-dry-run-preview__flag">
+        <span class="field-code">google_sheets_enabled</span>
+        <strong>{{ worker_dry_run_preview.runtime_state.google_sheets_enabled }}</strong>
+      </div>
+      <div class="worker-dry-run-preview__flag">
+        <span class="field-code">real_queue_db_read</span>
+        <strong>{{ worker_dry_run_preview.runtime_state.real_queue_db_read }}</strong>
+      </div>
+      <div class="worker-dry-run-preview__flag">
+        <span class="field-code">queue_written</span>
+        <strong>{{ worker_dry_run_preview.runtime_state.queue_written }}</strong>
+      </div>
+      <div class="worker-dry-run-preview__flag">
+        <span class="field-code">post_enabled</span>
+        <strong>{{ worker_dry_run_preview.runtime_state.post_enabled }}</strong>
+      </div>
+      <div class="worker-dry-run-preview__flag">
+        <span class="field-code">secrets_read</span>
+        <strong>{{ worker_dry_run_preview.runtime_state.secrets_read }}</strong>
+      </div>
+      <div class="worker-dry-run-preview__flag">
+        <span class="field-code">webhook_created</span>
+        <strong>{{ worker_dry_run_preview.runtime_state.webhook_created }}</strong>
+      </div>
+      <div class="worker-dry-run-preview__flag">
+        <span class="field-code">endpoint_created</span>
+        <strong>{{ worker_dry_run_preview.runtime_state.endpoint_created }}</strong>
+      </div>
+      <div class="worker-dry-run-preview__flag">
+        <span class="field-code">connector_created</span>
+        <strong>{{ worker_dry_run_preview.runtime_state.connector_created }}</strong>
+      </div>
+      <div class="worker-dry-run-preview__flag">
+        <span class="field-code">production_db_created</span>
+        <strong>{{ worker_dry_run_preview.runtime_state.production_db_created }}</strong>
+      </div>
+      <div class="worker-dry-run-preview__flag">
+        <span class="field-code">remote_blackboard_api_runtime_created</span>
+        <strong>{{ worker_dry_run_preview.runtime_state.remote_blackboard_api_runtime_created }}</strong>
+      </div>
+    </div>
+  </div>
+
+  <div class="worker-dry-run-preview__boundary">
+    <p><span class="field-label">邊界摘要</span> <span class="en-sub">Boundary summary</span>：{{ worker_dry_run_preview.boundary_summary }}</p>
+  </div>
+</section>
+{% endif %}
 {% endblock %}
