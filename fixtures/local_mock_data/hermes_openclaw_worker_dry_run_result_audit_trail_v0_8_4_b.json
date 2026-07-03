@@ -1,0 +1,82 @@
+{
+  "version": "v0.8.4-B",
+  "source": "synthetic_local_only",
+  "preview_only": true,
+  "dry_run_result": {
+    "result_id": "result-local-v0-8-4-b-001",
+    "related_dry_run_id": "dryrun-local-v0-8-3-b-001",
+    "result_status": "preview_result_not_executed",
+    "result_summary": "Synthetic local-only description of what a future Worker result might contain. No task was executed and no result was produced by any real Worker.",
+    "result_generated_from": "synthetic_fixture",
+    "result_generated_at": "2026-01-01T00:00:00Z",
+    "execution_result": null,
+    "external_side_effects": [],
+    "owner_review_required": true
+  },
+  "audit_trail_record": {
+    "audit_id": "audit-local-v0-8-4-b-001",
+    "related_result_id": "result-local-v0-8-4-b-001",
+    "audit_source": "synthetic_local_fixture",
+    "audit_status": "preview_audit_not_persisted",
+    "events": [
+      {
+        "event_id": "audit-event-local-v0-8-4-b-001",
+        "event_type": "dry_run_preview_generated",
+        "event_source": "synthetic_local_only",
+        "event_timestamp": "2026-01-01T00:00:00Z",
+        "event_actor": "local_plan_only_placeholder",
+        "event_notes": "Synthetic local-only placeholder event describing that a dry-run preview shape exists. No real Worker, OpenClaw, or Hermes actor performed this event."
+      },
+      {
+        "event_id": "audit-event-local-v0-8-4-b-002",
+        "event_type": "dry_run_result_generated",
+        "event_source": "synthetic_local_only",
+        "event_timestamp": "2026-01-01T00:00:00Z",
+        "event_actor": "local_plan_only_placeholder",
+        "event_notes": "Synthetic local-only placeholder event describing that a dry-run result shape exists. No task was executed to produce this event."
+      }
+    ],
+    "persistence_target": "none",
+    "owner_review_required": true
+  },
+  "owner_review_event": {
+    "review_event_id": "review-local-v0-8-4-b-001",
+    "related_audit_id": "audit-local-v0-8-4-b-001",
+    "review_status": "owner_review_required",
+    "review_action_available": false,
+    "review_notice": "This is a synthetic local-only preview only. Owner Review is required before any future round may change any permission or runtime-state flag away from false."
+  },
+  "readback_summary": {
+    "summary_id": "readback-local-v0-8-4-b-001",
+    "related_result_id": "result-local-v0-8-4-b-001",
+    "summary_status": "preview_readback_only",
+    "operator_summary": "Synthetic local-only readback summary. Describes the shape of a future dry-run result and audit trail without implying any real Worker execution occurred.",
+    "safety_summary": "No Worker, OpenClaw, Hermes, Google Sheets, or real queue involvement. All permission and runtime-state flags are false.",
+    "next_step_hint": "A future round may plan read-only Dashboard display of this synthetic model; it must not start a real Worker or add any execution/dispatch control."
+  },
+  "permissions": {
+    "execution_permission": false,
+    "dispatch_permission": false,
+    "external_side_effects_permission": false,
+    "result_persistence_permission": false,
+    "audit_trail_write_permission": false
+  },
+  "runtime_state": {
+    "worker_started": false,
+    "worker_loop_started": false,
+    "task_executed": false,
+    "openclaw_called": false,
+    "hermes_called": false,
+    "google_sheets_enabled": false,
+    "real_queue_db_read": false,
+    "queue_written": false,
+    "post_enabled": false,
+    "secrets_read": false,
+    "webhook_created": false,
+    "endpoint_created": false,
+    "connector_created": false,
+    "production_db_created": false,
+    "remote_blackboard_api_runtime_created": false
+  },
+  "boundary_summary": "Synthetic local-only Worker dry-run result / audit trail / owner review event / readback summary preview. No Worker, Worker loop, OpenClaw, Hermes, Google Sheets, real queue DB, POST, execution, dispatch, secrets, webhook, endpoint, connector, or production/shared DB is used. All permission and runtime-state flags are false."
+}
