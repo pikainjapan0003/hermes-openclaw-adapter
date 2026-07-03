@@ -115,6 +115,31 @@ def _load_v0_8_3_d_build_worker_dry_run_preview_model():
 
 build_worker_dry_run_preview_model = _load_v0_8_3_d_build_worker_dry_run_preview_model()
 
+# v0.8.4-D：唯讀 Worker Dry-run Result / Audit Trail（來自 v0.8.4-B standalone synthetic local-only builder，純函式）。
+# 只在既有 GET /dashboard/system observe surface 附加顯示用 synthetic local-only read-only result/audit-trail model；
+# 不寫 queue、不 dispatch、不啟動 worker、不呼叫 OpenClaw / Hermes / Google Sheets、不讀 secrets、不 POST。
+_V0_8_4_D_BUILDER_PATH = (
+    Path(__file__).resolve().parent.parent / "scripts" / "worker_dry_run_result_audit_trail_boundary_v0_8_4_b.py"
+)
+
+
+def _load_v0_8_4_d_build_worker_dry_run_result_audit_trail_model():
+    """Dynamically load build_worker_dry_run_result_audit_trail_model() from the v0.8.4-B standalone builder.
+
+    Mirrors the v0.8.3-D loader's file-path importlib pattern. The v0.8.4-B builder has no sibling-
+    module imports of its own (stdlib json/pathlib only), so no sys.path manipulation is needed. Never
+    modifies the builder file.
+    """
+    spec = importlib.util.spec_from_file_location(
+        "worker_dry_run_result_audit_trail_boundary_v0_8_4_b", _V0_8_4_D_BUILDER_PATH
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.build_worker_dry_run_result_audit_trail_model
+
+
+build_worker_dry_run_result_audit_trail_model = _load_v0_8_4_d_build_worker_dry_run_result_audit_trail_model()
+
 APP_NAME = "Hermes OpenClaw Adapter"
 APP_VERSION = "0.5.6"
 
@@ -1786,6 +1811,9 @@ def dashboard_system(request: Request) -> HTMLResponse:
     # v0.8.3-D：唯讀 worker dry-run preview model（來自 v0.8.3-B standalone synthetic local-only builder）。
     # 不寫 queue、不 dispatch、不啟動 worker、不呼叫 OpenClaw / Hermes / Google Sheets。
     worker_dry_run_preview = build_worker_dry_run_preview_model()
+    # v0.8.4-D：唯讀 worker dry-run result / audit trail model（來自 v0.8.4-B standalone synthetic local-only builder）。
+    # 不寫 queue、不 dispatch、不啟動 worker、不呼叫 OpenClaw / Hermes / Google Sheets。
+    worker_dry_run_result_audit_trail = build_worker_dry_run_result_audit_trail_model()
     return templates.TemplateResponse(
         "system.html",
         {
@@ -1800,5 +1828,6 @@ def dashboard_system(request: Request) -> HTMLResponse:
             "generated_at": utc_now_iso(),
             "local_mock_preview_model": local_mock_preview_model,
             "worker_dry_run_preview": worker_dry_run_preview,
+            "worker_dry_run_result_audit_trail": worker_dry_run_result_audit_trail,
         },
     )

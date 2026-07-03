@@ -331,4 +331,186 @@
   </div>
 </section>
 {% endif %}
+
+{# v0.8.4-D：唯讀 Worker Dry-run Result / Audit Trail（display-only，來自 v0.8.4-B standalone synthetic local-only builder）。
+   純顯示區塊，無互動控制元件，不觸發任何操作；與既有 v0.8.3-D worker dry-run preview block 完全獨立、彼此不互相修改。
+   資料來源為 build_worker_dry_run_result_audit_trail_model()，唯讀邊界、Owner Review 提示與 permission/runtime flags
+   一律顯示 false，沒有新增任何 button/form/action URL。 #}
+{% if worker_dry_run_result_audit_trail %}
+<section id="worker-dry-run-result-audit-trail" class="worker-dry-run-result-audit-trail" aria-labelledby="worker-dry-run-result-audit-trail-title">
+  <div class="worker-dry-run-result-audit-trail__header">
+    <h3 id="worker-dry-run-result-audit-trail-title">Worker 空跑結果／稽核軌跡 <span class="en-sub">Worker Dry-run Result / Audit Trail</span></h3>
+    <p class="muted">合成本機唯讀 Worker 空跑結果與稽核軌跡，僅供檢視，不執行、不派發、無任何外部副作用。
+      <span class="en-sub">Synthetic local-only. Preview-only result. Not runnable. Not sent anywhere. No execution, no dispatch, no external side effects.</span></p>
+  </div>
+
+  <div class="worker-dry-run-result-audit-trail__notice boundary-notice">
+    <p><strong>需 Owner Review <span class="en-sub">Owner review status: owner review required</span>：</strong>
+      本區塊僅供檢視，任何真實執行前都必須先經過 Owner Review。
+      <span class="en-sub">Boundary notice: Owner Review required before any real execution.</span></p>
+  </div>
+
+  <div class="worker-dry-run-result-audit-trail__badges">
+    <h4>安全邊界狀態 <span class="en-sub">Safety Boundary Status</span></h4>
+    <p>
+      <span class="badge badge-rejected">No execution</span>
+      <span class="badge badge-rejected">No dispatch</span>
+      <span class="badge badge-rejected">No external side effects</span>
+      <span class="badge badge-rejected">Worker OFF</span>
+      <span class="badge badge-rejected">OpenClaw NOT CALLED</span>
+      <span class="badge badge-rejected">Hermes NOT CALLED</span>
+      <span class="badge badge-rejected">Google Sheets DISABLED</span>
+      <span class="badge badge-rejected">Real queue DB NOT READ</span>
+      <span class="badge badge-rejected">Queue NOT WRITTEN</span>
+      <span class="badge badge-rejected">POST DISABLED</span>
+    </p>
+  </div>
+
+  <div class="dry-run-result-grid">
+    <div class="dry-run-result-card">
+      <h4>空跑結果 <span class="en-sub">Dry-run Result</span></h4>
+      <p><span class="field-label">結果編號</span> <span class="en-sub">Result ID</span><span class="field-code">result_id</span>
+        <strong>{{ worker_dry_run_result_audit_trail.dry_run_result.result_id }}</strong></p>
+      <p><span class="field-label">結果狀態</span> <span class="en-sub">Result status</span><span class="field-code">result_status</span>
+        <strong>{{ worker_dry_run_result_audit_trail.dry_run_result.result_status }}</strong></p>
+      <p><span class="field-label">結果摘要</span> <span class="en-sub">Result summary</span><span class="field-code">result_summary</span>
+        <strong>{{ worker_dry_run_result_audit_trail.dry_run_result.result_summary }}</strong></p>
+      <p><span class="field-label">結果來源</span> <span class="en-sub">Result generated from</span><span class="field-code">result_generated_from</span>
+        <strong>{{ worker_dry_run_result_audit_trail.dry_run_result.result_generated_from }}</strong></p>
+      <p><span class="field-label">外部副作用</span> <span class="en-sub">External side effects</span><span class="field-code">external_side_effects</span>
+        <strong>{{ worker_dry_run_result_audit_trail.dry_run_result.external_side_effects }}</strong></p>
+    </div>
+
+    <div class="audit-trail-card">
+      <h4>稽核軌跡 <span class="en-sub">Audit Trail</span></h4>
+      <p><span class="field-label">稽核編號</span> <span class="en-sub">Audit ID</span><span class="field-code">audit_id</span>
+        <strong>{{ worker_dry_run_result_audit_trail.audit_trail_record.audit_id }}</strong></p>
+      <p><span class="field-label">稽核狀態</span> <span class="en-sub">Audit status</span><span class="field-code">audit_status</span>
+        <strong>{{ worker_dry_run_result_audit_trail.audit_trail_record.audit_status }}</strong></p>
+      <p><span class="field-label">稽核來源</span> <span class="en-sub">Audit source</span><span class="field-code">audit_source</span>
+        <strong>{{ worker_dry_run_result_audit_trail.audit_trail_record.audit_source }}</strong></p>
+      <p><span class="field-label">持久化目標</span> <span class="en-sub">Persistence target</span><span class="field-code">persistence_target</span>
+        <strong>{{ worker_dry_run_result_audit_trail.audit_trail_record.persistence_target }}</strong></p>
+      {% for event in worker_dry_run_result_audit_trail.audit_trail_record.events %}
+      <p class="audit-trail-card__event"><span class="field-code">{{ event.event_type }}</span>：{{ event.event_notes }}</p>
+      {% endfor %}
+    </div>
+
+    <div class="owner-review-event-card">
+      <h4>Owner Review 事件 <span class="en-sub">Owner Review Event</span></h4>
+      <p><span class="field-label">審查事件編號</span> <span class="en-sub">Review event ID</span><span class="field-code">review_event_id</span>
+        <strong>{{ worker_dry_run_result_audit_trail.owner_review_event.review_event_id }}</strong></p>
+      <p><span class="field-label">審查狀態</span> <span class="en-sub">Owner review status</span><span class="field-code">review_status</span>
+        <strong>{{ worker_dry_run_result_audit_trail.owner_review_event.review_status }}</strong></p>
+      <p><span class="field-label">審查提示</span> <span class="en-sub">Review notice</span>：{{ worker_dry_run_result_audit_trail.owner_review_event.review_notice }}</p>
+    </div>
+
+    <div class="readback-summary-card">
+      <h4>回讀摘要 <span class="en-sub">Readback Summary</span></h4>
+      <p><span class="field-label">摘要編號</span> <span class="en-sub">Summary ID</span><span class="field-code">summary_id</span>
+        <strong>{{ worker_dry_run_result_audit_trail.readback_summary.summary_id }}</strong></p>
+      <p><span class="field-label">回讀狀態</span> <span class="en-sub">Readback status</span><span class="field-code">summary_status</span>
+        <strong>{{ worker_dry_run_result_audit_trail.readback_summary.summary_status }}</strong></p>
+      <p><span class="field-label">操作者摘要</span> <span class="en-sub">Operator summary</span>：{{ worker_dry_run_result_audit_trail.readback_summary.operator_summary }}</p>
+      <p><span class="field-label">安全摘要</span> <span class="en-sub">Safety summary</span>：{{ worker_dry_run_result_audit_trail.readback_summary.safety_summary }}</p>
+    </div>
+  </div>
+
+  <div class="permission-flag-list">
+    <h4>權限旗標 <span class="en-sub">Permission flags</span></h4>
+    <div class="worker-dry-run-result-audit-trail__meta-grid">
+      <div class="worker-dry-run-result-audit-trail__flag-card">
+        <span class="field-label">可執行</span><span class="field-code">execution_permission</span>
+        <strong>{{ worker_dry_run_result_audit_trail.permissions.execution_permission }}</strong>
+      </div>
+      <div class="worker-dry-run-result-audit-trail__flag-card">
+        <span class="field-label">可派發</span><span class="field-code">dispatch_permission</span>
+        <strong>{{ worker_dry_run_result_audit_trail.permissions.dispatch_permission }}</strong>
+      </div>
+      <div class="worker-dry-run-result-audit-trail__flag-card">
+        <span class="field-label">可外部副作用</span><span class="field-code">external_side_effects_permission</span>
+        <strong>{{ worker_dry_run_result_audit_trail.permissions.external_side_effects_permission }}</strong>
+      </div>
+      <div class="worker-dry-run-result-audit-trail__flag-card">
+        <span class="field-label">可持久化結果</span><span class="field-code">result_persistence_permission</span>
+        <strong>{{ worker_dry_run_result_audit_trail.permissions.result_persistence_permission }}</strong>
+      </div>
+      <div class="worker-dry-run-result-audit-trail__flag-card">
+        <span class="field-label">可寫入稽核軌跡</span><span class="field-code">audit_trail_write_permission</span>
+        <strong>{{ worker_dry_run_result_audit_trail.permissions.audit_trail_write_permission }}</strong>
+      </div>
+    </div>
+  </div>
+
+  <div class="runtime-flag-list">
+    <h4>執行時狀態旗標 <span class="en-sub">Runtime flags</span></h4>
+    <div class="worker-dry-run-result-audit-trail__meta-grid worker-dry-run-result-audit-trail__meta-grid--runtime">
+      <div class="worker-dry-run-result-audit-trail__flag">
+        <span class="field-code">worker_started</span>
+        <strong>{{ worker_dry_run_result_audit_trail.runtime_state.worker_started }}</strong>
+      </div>
+      <div class="worker-dry-run-result-audit-trail__flag">
+        <span class="field-code">worker_loop_started</span>
+        <strong>{{ worker_dry_run_result_audit_trail.runtime_state.worker_loop_started }}</strong>
+      </div>
+      <div class="worker-dry-run-result-audit-trail__flag">
+        <span class="field-code">task_executed</span>
+        <strong>{{ worker_dry_run_result_audit_trail.runtime_state.task_executed }}</strong>
+      </div>
+      <div class="worker-dry-run-result-audit-trail__flag">
+        <span class="field-code">openclaw_called</span>
+        <strong>{{ worker_dry_run_result_audit_trail.runtime_state.openclaw_called }}</strong>
+      </div>
+      <div class="worker-dry-run-result-audit-trail__flag">
+        <span class="field-code">hermes_called</span>
+        <strong>{{ worker_dry_run_result_audit_trail.runtime_state.hermes_called }}</strong>
+      </div>
+      <div class="worker-dry-run-result-audit-trail__flag">
+        <span class="field-code">google_sheets_enabled</span>
+        <strong>{{ worker_dry_run_result_audit_trail.runtime_state.google_sheets_enabled }}</strong>
+      </div>
+      <div class="worker-dry-run-result-audit-trail__flag">
+        <span class="field-code">real_queue_db_read</span>
+        <strong>{{ worker_dry_run_result_audit_trail.runtime_state.real_queue_db_read }}</strong>
+      </div>
+      <div class="worker-dry-run-result-audit-trail__flag">
+        <span class="field-code">queue_written</span>
+        <strong>{{ worker_dry_run_result_audit_trail.runtime_state.queue_written }}</strong>
+      </div>
+      <div class="worker-dry-run-result-audit-trail__flag">
+        <span class="field-code">post_enabled</span>
+        <strong>{{ worker_dry_run_result_audit_trail.runtime_state.post_enabled }}</strong>
+      </div>
+      <div class="worker-dry-run-result-audit-trail__flag">
+        <span class="field-code">secrets_read</span>
+        <strong>{{ worker_dry_run_result_audit_trail.runtime_state.secrets_read }}</strong>
+      </div>
+      <div class="worker-dry-run-result-audit-trail__flag">
+        <span class="field-code">webhook_created</span>
+        <strong>{{ worker_dry_run_result_audit_trail.runtime_state.webhook_created }}</strong>
+      </div>
+      <div class="worker-dry-run-result-audit-trail__flag">
+        <span class="field-code">endpoint_created</span>
+        <strong>{{ worker_dry_run_result_audit_trail.runtime_state.endpoint_created }}</strong>
+      </div>
+      <div class="worker-dry-run-result-audit-trail__flag">
+        <span class="field-code">connector_created</span>
+        <strong>{{ worker_dry_run_result_audit_trail.runtime_state.connector_created }}</strong>
+      </div>
+      <div class="worker-dry-run-result-audit-trail__flag">
+        <span class="field-code">production_db_created</span>
+        <strong>{{ worker_dry_run_result_audit_trail.runtime_state.production_db_created }}</strong>
+      </div>
+      <div class="worker-dry-run-result-audit-trail__flag">
+        <span class="field-code">remote_blackboard_api_runtime_created</span>
+        <strong>{{ worker_dry_run_result_audit_trail.runtime_state.remote_blackboard_api_runtime_created }}</strong>
+      </div>
+    </div>
+  </div>
+
+  <div class="boundary-notice worker-dry-run-result-audit-trail__boundary">
+    <p><span class="field-label">邊界摘要</span> <span class="en-sub">Boundary notice</span>：{{ worker_dry_run_result_audit_trail.boundary_summary }}</p>
+  </div>
+</section>
+{% endif %}
 {% endblock %}
