@@ -55,6 +55,10 @@ from app.audit_trail_display_v0_7 import derive_audit_trail_display_view
 # v0.7.3-C：local / append-only Owner decision event recorder（純本地 audit metadata）。
 # 只在既有 Owner decision routes append local event；不 dispatch Worker、不接外部、不改 status transition。
 from app.approval_decision_event_recorder_v0_7 import build_approval_decision_event
+# v0.8.5-C：唯讀 Worker → Mock Gateway Dry-run（純函式，local-only / mock-only / dry-run-only）。
+# 只在 GET /dashboard/system 附加顯示用 synthetic local-only mock result；不寫 queue、不 dispatch、
+# 不啟動 worker、不啟動 worker loop、不呼叫 real OpenClaw / Hermes / Google Sheets、不讀 secrets。
+from app.worker_mock_gateway_dry_run import run_worker_to_mock_gateway_dry_run
 
 # v0.8.2-A：唯讀 Local Mock Dashboard Preview（來自 v0.8.1-V read-only preview adapter，純函式）。只在既有
 # GET /dashboard/system observe surface 附加顯示用 synthetic local-only read-only preview model；
@@ -139,6 +143,54 @@ def _load_v0_8_4_d_build_worker_dry_run_result_audit_trail_model():
 
 
 build_worker_dry_run_result_audit_trail_model = _load_v0_8_4_d_build_worker_dry_run_result_audit_trail_model()
+
+# v0.8.5-D：唯讀 Dashboard Mock Result View（來自 v0.8.5-C run_worker_to_mock_gateway_dry_run，純函式）。
+# 只在既有 GET /dashboard/system observe surface 附加顯示用 synthetic local-only read-only mock result
+# preview；不寫 queue、不寫 audit trail、不啟動 worker、不啟動 worker loop、不派工、不呼叫 real
+# OpenClaw / Hermes / Google Sheets、不讀 secrets、不 POST。envelope 為固定 deterministic synthetic
+# 常數，非使用者輸入。
+_V0_8_5_D_SYNTHETIC_COMMAND_ENVELOPE = {
+    "command_id": "cmd-dashboard-preview-0001",
+    "task_id": "task-dashboard-preview-0001",
+    "tool_target": "example.tool",
+    "requested_action": "describe a hypothetical action, never executed",
+    "risk_level": "low",
+    "approval_snapshot": {"owner_review_required": True},
+    "execution_mode": "mock_only",
+    "dry_run": True,
+    "mock_only": True,
+    "external_touchpoints": [],
+    "rollback_plan": "no rollback needed; nothing is executed",
+    "external_side_effects_allowed": False,
+}
+
+
+def build_dashboard_mock_result_view_model() -> dict[str, Any]:
+    """從固定 synthetic command envelope 推導 Dashboard mock result 唯讀 preview（純函式）。
+
+    呼叫 v0.8.5-C ``run_worker_to_mock_gateway_dry_run()``，並附加 ``preview_only`` 顯示旗標。
+    不 mutate 任何狀態、不寫入任何檔案、不連外、不派工。
+    """
+    dry_run_result = run_worker_to_mock_gateway_dry_run(_V0_8_5_D_SYNTHETIC_COMMAND_ENVELOPE)
+    gateway_response = dry_run_result.get("gateway_response") or {}
+    return {
+        "source": dry_run_result.get("source"),
+        "mock_gateway": gateway_response.get("mock_gateway"),
+        "worker_dry_run": dry_run_result.get("worker_dry_run"),
+        "worker_loop_started": dry_run_result.get("worker_loop_started"),
+        "worker_dispatched": dry_run_result.get("worker_dispatched"),
+        "real_openclaw_called": dry_run_result.get("real_openclaw_called"),
+        "external_side_effects_performed": dry_run_result.get("external_side_effects_performed"),
+        "queue_written": dry_run_result.get("queue_written"),
+        "audit_trail_written": dry_run_result.get("audit_trail_written"),
+        "dashboard_control_added": dry_run_result.get("dashboard_control_added"),
+        "preview_only": True,
+        "accepted": dry_run_result.get("accepted"),
+        "command_id": gateway_response.get("command_id"),
+        "tool_target": gateway_response.get("tool_target"),
+        "mock_response_summary": gateway_response.get("mock_response_summary"),
+    }
+
 
 APP_NAME = "Hermes OpenClaw Adapter"
 APP_VERSION = "0.5.6"
@@ -1814,6 +1866,9 @@ def dashboard_system(request: Request) -> HTMLResponse:
     # v0.8.4-D：唯讀 worker dry-run result / audit trail model（來自 v0.8.4-B standalone synthetic local-only builder）。
     # 不寫 queue、不 dispatch、不啟動 worker、不呼叫 OpenClaw / Hermes / Google Sheets。
     worker_dry_run_result_audit_trail = build_worker_dry_run_result_audit_trail_model()
+    # v0.8.5-D：唯讀 Dashboard mock result view（來自 v0.8.5-C run_worker_to_mock_gateway_dry_run）。
+    # 不寫 queue、不寫 audit trail、不啟動 worker、不啟動 worker loop、不派工、不呼叫 OpenClaw / Hermes / Google Sheets。
+    dashboard_mock_result_view = build_dashboard_mock_result_view_model()
     return templates.TemplateResponse(
         "system.html",
         {
@@ -1829,5 +1884,6 @@ def dashboard_system(request: Request) -> HTMLResponse:
             "local_mock_preview_model": local_mock_preview_model,
             "worker_dry_run_preview": worker_dry_run_preview,
             "worker_dry_run_result_audit_trail": worker_dry_run_result_audit_trail,
+            "dashboard_mock_result_view": dashboard_mock_result_view,
         },
     )

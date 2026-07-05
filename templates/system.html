@@ -513,4 +513,66 @@
   </div>
 </section>
 {% endif %}
+
+{# v0.8.5-D：唯讀 Dashboard Mock Result View（display-only，來自 v0.8.5-C run_worker_to_mock_gateway_dry_run）。
+   純顯示區塊，無互動控制元件，不觸發任何操作。資料來源為 build_dashboard_mock_result_view_model()，
+   固定 synthetic command envelope 推導，preview_only 恆為 true，沒有新增任何 button/form/action URL。
+   Dashboard mock result view is read-only. Mock result preview is not actual execution result. #}
+{% if dashboard_mock_result_view %}
+<section id="dashboard-mock-result-view" class="dashboard-mock-result-view" aria-labelledby="dashboard-mock-result-view-title">
+  <div class="dashboard-mock-result-view__header">
+    <h3 id="dashboard-mock-result-view-title">Dashboard 模擬結果檢視 <span class="en-sub">Dashboard Mock Result View</span></h3>
+    <p class="muted">合成本機唯讀 mock gateway dry-run 結果預覽，僅供檢視。
+      <span class="en-sub">This is a mock result preview. Dashboard mock result view is read-only.</span></p>
+  </div>
+
+  <div class="dashboard-mock-result-view__notice boundary-notice">
+    <p><strong>唯讀邊界 <span class="en-sub">Read-only boundary</span>：</strong>
+      Dashboard mock result view is not execution permission. Dashboard display does not grant Owner approval.
+      Mock result preview is not actual execution result. Mock result preview is not Worker dispatch.
+      Mock result preview is not real OpenClaw call. Mock result preview is not audit trail persistence.
+      Mock result preview is not queue write. External side effects remain forbidden by default.
+      <span class="en-sub">READ-ONLY PREVIEW.</span></p>
+  </div>
+
+  <div class="dashboard-mock-result-view__badges">
+    <h4>安全邊界狀態 <span class="en-sub">Safety Boundary Status</span></h4>
+    <p>
+      <span class="badge badge-rejected">MOCK ONLY</span>
+      <span class="badge badge-rejected">DRY RUN ONLY</span>
+      <span class="badge badge-rejected">WORKER NOT DISPATCHED</span>
+      <span class="badge badge-rejected">OPENCLAW NOT CONNECTED</span>
+      <span class="badge badge-rejected">NO EXTERNAL SIDE EFFECTS</span>
+      <span class="badge badge-rejected">READ-ONLY PREVIEW</span>
+    </p>
+  </div>
+
+  <div class="dashboard-mock-result-view__grid">
+    <div class="dashboard-mock-result-view__card">
+      <p><span class="field-label">來源</span> <span class="en-sub">Source</span><span class="field-code">source</span>
+        <strong>{{ dashboard_mock_result_view.source }}</strong></p>
+      <p><span class="field-label">Mock gateway</span><span class="field-code">mock_gateway</span>
+        <strong>{{ dashboard_mock_result_view.mock_gateway }}</strong></p>
+      <p><span class="field-label">Worker 空跑</span> <span class="en-sub">Worker dry-run</span><span class="field-code">worker_dry_run</span>
+        <strong>{{ dashboard_mock_result_view.worker_dry_run }}</strong></p>
+      <p><span class="field-label">Worker loop 已啟動</span><span class="field-code">worker_loop_started</span>
+        <strong>{{ dashboard_mock_result_view.worker_loop_started }}</strong></p>
+      <p><span class="field-label">Worker 已派發</span><span class="field-code">worker_dispatched</span>
+        <strong>{{ dashboard_mock_result_view.worker_dispatched }}</strong></p>
+      <p><span class="field-label">Real OpenClaw 已呼叫</span><span class="field-code">real_openclaw_called</span>
+        <strong>{{ dashboard_mock_result_view.real_openclaw_called }}</strong></p>
+      <p><span class="field-label">外部副作用已發生</span><span class="field-code">external_side_effects_performed</span>
+        <strong>{{ dashboard_mock_result_view.external_side_effects_performed }}</strong></p>
+      <p><span class="field-label">Queue 已寫入</span><span class="field-code">queue_written</span>
+        <strong>{{ dashboard_mock_result_view.queue_written }}</strong></p>
+      <p><span class="field-label">稽核軌跡已寫入</span><span class="field-code">audit_trail_written</span>
+        <strong>{{ dashboard_mock_result_view.audit_trail_written }}</strong></p>
+      <p><span class="field-label">Dashboard control 已新增</span><span class="field-code">dashboard_control_added</span>
+        <strong>{{ dashboard_mock_result_view.dashboard_control_added }}</strong></p>
+      <p><span class="field-label">僅供預覽</span> <span class="en-sub">Preview only</span><span class="field-code">preview_only</span>
+        <strong>{{ dashboard_mock_result_view.preview_only }}</strong></p>
+    </div>
+  </div>
+</section>
+{% endif %}
 {% endblock %}
