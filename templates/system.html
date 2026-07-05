@@ -575,4 +575,90 @@
   </div>
 </section>
 {% endif %}
+
+{# v0.9-D：唯讀 Dashboard Hermes Advice Panel（display-only，來自 v0.9-C build_mock_hermes_advice）。
+   純顯示區塊，無互動控制元件，不觸發任何操作。資料來源為 build_dashboard_hermes_advice_view_model()，
+   固定 synthetic source context 推導，preview_only 恆為 true，沒有新增任何 button/form/action URL。
+   Dashboard Hermes advice panel is read-only. Dashboard Hermes advice panel is not Hermes activation. #}
+{% if dashboard_hermes_advice_view %}
+<section id="dashboard-hermes-advice-view" class="dashboard-hermes-advice-view" aria-labelledby="dashboard-hermes-advice-view-title">
+  <div class="dashboard-hermes-advice-view__header">
+    <h3 id="dashboard-hermes-advice-view-title">Dashboard Hermes 建議檢視 <span class="en-sub">Dashboard Hermes Advice Panel</span></h3>
+    <p class="muted">合成本機唯讀 mock Hermes advice 預覽，僅供檢視。
+      <span class="en-sub">This is a Mock Hermes advice preview. Dashboard Hermes advice panel is read-only.</span></p>
+  </div>
+
+  <div class="dashboard-hermes-advice-view__notice boundary-notice">
+    <p><strong>唯讀邊界 <span class="en-sub">Read-only boundary</span>：</strong>
+      Dashboard Hermes advice panel is not Hermes activation. Mock Hermes advice is not Owner approval.
+      Mock Hermes advice is not Blackboard write. Mock Hermes advice is not automatic follow-up execution.
+      Mock Hermes advice is not Worker dispatch. Mock Hermes advice is not OpenClaw call.
+      Mock Hermes cannot bypass Owner Review. Mock Hermes cannot bypass Blackboard Activation Policy.
+      External side effects remain forbidden by default. Owner confirmation remains required.
+      <span class="en-sub">READ-ONLY PREVIEW.</span></p>
+  </div>
+
+  <div class="dashboard-hermes-advice-view__badges">
+    <h4>安全邊界狀態 <span class="en-sub">Safety Boundary Status</span></h4>
+    <p>
+      <span class="badge badge-rejected">MOCK HERMES ONLY</span>
+      <span class="badge badge-rejected">ADVISORY ONLY</span>
+      <span class="badge badge-rejected">READ-ONLY PREVIEW</span>
+      <span class="badge badge-rejected">NOT OWNER APPROVAL</span>
+      <span class="badge badge-rejected">NOT BLACKBOARD WRITE</span>
+      <span class="badge badge-rejected">NOT WORKER DISPATCH</span>
+      <span class="badge badge-rejected">NOT OPENCLAW CALL</span>
+      <span class="badge badge-rejected">NO EXTERNAL SIDE EFFECTS</span>
+      <span class="badge badge-rejected">OWNER CONFIRMATION REQUIRED</span>
+    </p>
+  </div>
+
+  <div class="dashboard-hermes-advice-view__grid">
+    <div class="dashboard-hermes-advice-view__card">
+      <p><span class="field-label">建議來源</span> <span class="en-sub">Advice source</span><span class="field-code">advice_source</span>
+        <strong>{{ dashboard_hermes_advice_view.advice_source }}</strong></p>
+      <p><span class="field-label">Mock Hermes</span><span class="field-code">mock_hermes</span>
+        <strong>{{ dashboard_hermes_advice_view.mock_hermes }}</strong></p>
+      <p><span class="field-label">Real Hermes 已呼叫</span><span class="field-code">real_hermes_called</span>
+        <strong>{{ dashboard_hermes_advice_view.real_hermes_called }}</strong></p>
+      <p><span class="field-label">Hermes runtime 已啟動</span><span class="field-code">hermes_runtime_activated</span>
+        <strong>{{ dashboard_hermes_advice_view.hermes_runtime_activated }}</strong></p>
+      <p><span class="field-label">Hermes memory 已讀取</span><span class="field-code">hermes_memory_read</span>
+        <strong>{{ dashboard_hermes_advice_view.hermes_memory_read }}</strong></p>
+      <p><span class="field-label">Hermes tool 已呼叫</span><span class="field-code">hermes_tool_called</span>
+        <strong>{{ dashboard_hermes_advice_view.hermes_tool_called }}</strong></p>
+      <p><span class="field-label">不得執行</span> <span class="en-sub">Must not execute</span><span class="field-code">must_not_execute</span>
+        <strong>{{ dashboard_hermes_advice_view.must_not_execute }}</strong></p>
+      <p><span class="field-label">需 Owner 確認</span><span class="field-code">requires_owner_confirmation</span>
+        <strong>{{ dashboard_hermes_advice_view.requires_owner_confirmation }}</strong></p>
+      <p><span class="field-label">Blackboard 寫入允許</span><span class="field-code">blackboard_write_allowed</span>
+        <strong>{{ dashboard_hermes_advice_view.blackboard_write_allowed }}</strong></p>
+      <p><span class="field-label">Queue 寫入允許</span><span class="field-code">queue_write_allowed</span>
+        <strong>{{ dashboard_hermes_advice_view.queue_write_allowed }}</strong></p>
+      <p><span class="field-label">稽核軌跡寫入允許</span><span class="field-code">audit_trail_write_allowed</span>
+        <strong>{{ dashboard_hermes_advice_view.audit_trail_write_allowed }}</strong></p>
+      <p><span class="field-label">Worker 派發允許</span><span class="field-code">worker_dispatch_allowed</span>
+        <strong>{{ dashboard_hermes_advice_view.worker_dispatch_allowed }}</strong></p>
+      <p><span class="field-label">OpenClaw 呼叫允許</span><span class="field-code">openclaw_call_allowed</span>
+        <strong>{{ dashboard_hermes_advice_view.openclaw_call_allowed }}</strong></p>
+      <p><span class="field-label">外部副作用允許</span><span class="field-code">external_side_effects_allowed</span>
+        <strong>{{ dashboard_hermes_advice_view.external_side_effects_allowed }}</strong></p>
+      <p><span class="field-label">僅供預覽</span> <span class="en-sub">Preview only</span><span class="field-code">preview_only</span>
+        <strong>{{ dashboard_hermes_advice_view.preview_only }}</strong></p>
+    </div>
+    <div class="dashboard-hermes-advice-view__card">
+      <p><span class="field-label">策略摘要</span> <span class="en-sub">Strategy summary</span><span class="field-code">strategy_summary</span>
+        <strong>{{ dashboard_hermes_advice_view.strategy_summary }}</strong></p>
+      <p><span class="field-label">建議行動</span> <span class="en-sub">Recommended action</span><span class="field-code">recommended_action</span>
+        <strong>{{ dashboard_hermes_advice_view.recommended_action }}</strong></p>
+      <p><span class="field-label">給 Owner 的問題</span> <span class="en-sub">Owner question</span><span class="field-code">owner_question</span>
+        <strong>{{ dashboard_hermes_advice_view.owner_question }}</strong></p>
+      <p><span class="field-label">建議下一步</span> <span class="en-sub">Suggested next step</span><span class="field-code">suggested_next_step</span>
+        <strong>{{ dashboard_hermes_advice_view.suggested_next_step }}</strong></p>
+      <p><span class="field-label">信心程度</span> <span class="en-sub">Confidence</span><span class="field-code">confidence</span>
+        <strong>{{ dashboard_hermes_advice_view.confidence }}</strong></p>
+    </div>
+  </div>
+</section>
+{% endif %}
 {% endblock %}

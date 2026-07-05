@@ -59,6 +59,11 @@ from app.approval_decision_event_recorder_v0_7 import build_approval_decision_ev
 # 只在 GET /dashboard/system 附加顯示用 synthetic local-only mock result；不寫 queue、不 dispatch、
 # 不啟動 worker、不啟動 worker loop、不呼叫 real OpenClaw / Hermes / Google Sheets、不讀 secrets。
 from app.worker_mock_gateway_dry_run import run_worker_to_mock_gateway_dry_run
+# v0.9-C：唯讀 Mock Hermes Generator（純函式，local-only / mock-only / advisory-only）。
+# 只在 GET /dashboard/system 附加顯示用 synthetic local-only mock Hermes advice；不啟動 Hermes
+# runtime、不讀 Hermes memory、不呼叫 Hermes tool、不寫 Blackboard、不寫 queue、不寫 audit trail、
+# 不呼叫 Worker、不呼叫 real OpenClaw、不呼叫 Google Sheets、不讀 secrets。
+from app.mock_hermes_generator import build_mock_hermes_advice
 
 # v0.8.2-A：唯讀 Local Mock Dashboard Preview（來自 v0.8.1-V read-only preview adapter，純函式）。只在既有
 # GET /dashboard/system observe surface 附加顯示用 synthetic local-only read-only preview model；
@@ -189,6 +194,58 @@ def build_dashboard_mock_result_view_model() -> dict[str, Any]:
         "command_id": gateway_response.get("command_id"),
         "tool_target": gateway_response.get("tool_target"),
         "mock_response_summary": gateway_response.get("mock_response_summary"),
+    }
+
+
+# v0.9-D：唯讀 Dashboard Hermes Advice Panel（來自 v0.9-C build_mock_hermes_advice，純函式）。
+# 只在既有 GET /dashboard/system observe surface 附加顯示用 synthetic local-only read-only mock
+# Hermes advice preview；不啟動 Hermes runtime、不讀 Hermes memory、不呼叫 Hermes tool、不寫
+# Blackboard、不寫 queue、不寫 audit trail、不派工、不呼叫 real OpenClaw / Google Sheets、不讀
+# secrets、不 POST。source context 為固定 deterministic synthetic 常數，非使用者輸入。
+_V0_9_D_SYNTHETIC_HERMES_SOURCE_CONTEXT = {
+    "task_id": "task-dashboard-hermes-preview-0001",
+    "source_message_ids": ["msg-dashboard-hermes-preview-0001"],
+    "source_result_ids": ["result-dashboard-hermes-preview-0001"],
+    "source_decision_ids": ["decision-dashboard-hermes-preview-0001"],
+    "strategy_summary": "synthetic strategy summary, advisory only, for Dashboard preview",
+    "recommended_action": "describe a hypothetical next step, never executed",
+    "risk_assessment": "low",
+    "missing_information": "none",
+    "owner_question": "does the Owner want to proceed with this synthetic plan?",
+    "suggested_next_step": "await Owner confirmation before any further action",
+    "confidence": "medium",
+}
+
+
+def build_dashboard_hermes_advice_view_model() -> dict[str, Any]:
+    """從固定 synthetic source context 推導 Dashboard Hermes advice 唯讀 preview（純函式）。
+
+    呼叫 v0.9-C ``build_mock_hermes_advice()``，並附加 ``preview_only`` 顯示旗標。
+    不 mutate 任何狀態、不寫入任何檔案、不連外、不派工、不啟動 Hermes runtime。
+    """
+    advice = build_mock_hermes_advice(_V0_9_D_SYNTHETIC_HERMES_SOURCE_CONTEXT)
+    return {
+        "advice_source": advice.get("advice_source"),
+        "mock_hermes": advice.get("mock_hermes"),
+        "real_hermes_called": advice.get("real_hermes_called"),
+        "hermes_runtime_activated": advice.get("hermes_runtime_activated"),
+        "hermes_memory_read": advice.get("hermes_memory_read"),
+        "hermes_tool_called": advice.get("hermes_tool_called"),
+        "must_not_execute": advice.get("must_not_execute"),
+        "requires_owner_confirmation": advice.get("requires_owner_confirmation"),
+        "blackboard_write_allowed": advice.get("blackboard_write_allowed"),
+        "queue_write_allowed": advice.get("queue_write_allowed"),
+        "audit_trail_write_allowed": advice.get("audit_trail_write_allowed"),
+        "worker_dispatch_allowed": advice.get("worker_dispatch_allowed"),
+        "openclaw_call_allowed": advice.get("openclaw_call_allowed"),
+        "external_side_effects_allowed": advice.get("external_side_effects_allowed"),
+        "preview_only": True,
+        "accepted": advice.get("accepted"),
+        "strategy_summary": advice.get("strategy_summary"),
+        "recommended_action": advice.get("recommended_action"),
+        "owner_question": advice.get("owner_question"),
+        "suggested_next_step": advice.get("suggested_next_step"),
+        "confidence": advice.get("confidence"),
     }
 
 
@@ -1869,6 +1926,10 @@ def dashboard_system(request: Request) -> HTMLResponse:
     # v0.8.5-D：唯讀 Dashboard mock result view（來自 v0.8.5-C run_worker_to_mock_gateway_dry_run）。
     # 不寫 queue、不寫 audit trail、不啟動 worker、不啟動 worker loop、不派工、不呼叫 OpenClaw / Hermes / Google Sheets。
     dashboard_mock_result_view = build_dashboard_mock_result_view_model()
+    # v0.9-D：唯讀 Dashboard Hermes advice panel（來自 v0.9-C build_mock_hermes_advice）。
+    # 不啟動 Hermes runtime、不讀 Hermes memory、不呼叫 Hermes tool、不寫 Blackboard、不寫 queue、
+    # 不寫 audit trail、不派工、不呼叫 OpenClaw / Google Sheets。
+    dashboard_hermes_advice_view = build_dashboard_hermes_advice_view_model()
     return templates.TemplateResponse(
         "system.html",
         {
@@ -1885,5 +1946,6 @@ def dashboard_system(request: Request) -> HTMLResponse:
             "worker_dry_run_preview": worker_dry_run_preview,
             "worker_dry_run_result_audit_trail": worker_dry_run_result_audit_trail,
             "dashboard_mock_result_view": dashboard_mock_result_view,
+            "dashboard_hermes_advice_view": dashboard_hermes_advice_view,
         },
     )
