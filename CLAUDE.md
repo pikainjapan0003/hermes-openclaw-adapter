@@ -180,3 +180,26 @@ Claude Code 完成任務後，final summary 應使用繁體中文，並包含：
 ```
 
 不得自行生成下一步指令。下一步指令由 ChatGPT / Owner Review 產生。
+
+## 12. Agent Operating System 路由（2026-07-07 Fable 5 建立）
+
+任何 session 執行任務前，先讀：
+
+```
+docs/agent_operating_system/README.md
+```
+
+資料夾內容（按需跳轉）：
+
+```
+docs/agent_operating_system/01_SAFETY_BOUNDARIES.md          安全邊界正本（最高優先）
+docs/agent_operating_system/05_VERIFIED_LONG_TERM_PLAN.md    長期計劃表（Phase 0–11）
+docs/agent_operating_system/10_MODEL_ORCHESTRATION.md        模型調度
+docs/agent_operating_system/20_JUDGMENT_RUBRICS.md           判斷 rubrics
+docs/agent_operating_system/30_DELEGATION_PROMPTS.md         派工模板
+docs/agent_operating_system/40_MAINTENANCE_PROTOCOL.md       維護協議
+docs/agent_operating_system/90_LESSONS_LEARNED.md            踩坑紀錄
+docs/agent_operating_system/99_LETTER_TO_FUTURE_SESSIONS.md  交接信
+```
+
+優先序：本檔（Loop Format Contract）與 01_SAFETY_BOUNDARIES.md 優先於其他一切文件。授權只存在於 Owner instruction 的逐字句子裡；不確定 → HOLD。
