@@ -42,7 +42,7 @@
 
 未完成，截至 2026-07-07 Fable 5 session 結束：
 
-1. **本制度已 commit（2026-07-07，Owner 指示）但尚未 push**——請 Owner 決定是否 push 到 origin。
+1. ~~commit/push~~ 已完成（2026-07-07，Owner 指示）：制度與 README 同步均已 push 到 origin。
 2. **Phase 2（v1.0 Definition Freeze）未開始**——這是計劃表指定的下一步，需要 Owner 參與裁決。
 3. ~~Replit 登入後畫面未驗證~~ 已由 Owner 截圖驗證（2026-07-07）：/dashboard/reviews 有既存核准/拒絕按鈕，見 90 L-006。
 4. OWASP Agentic Top 10 全文未讀（只驗證了發布頁），Phase 8 使用前要先讀原文。

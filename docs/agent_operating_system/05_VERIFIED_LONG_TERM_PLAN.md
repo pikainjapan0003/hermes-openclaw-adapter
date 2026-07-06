@@ -36,7 +36,7 @@
 - 系統 = Hermes（advisory only）× Blackboard（概念存在，schema 未定）× Worker（dry-run only）× OpenClaw（mock gateway only）× Dashboard（GET-only display）× Owner（唯一 approver）。
 - v1.0-RC-R closeout 已完成並 push：`HEAD 7a93127e6ee5de4941700d48078cd35836944086`，本機 == GitHub live（本 session 以 `git ls-remote` 驗證）。
 - 全系統處於 read-only / mock / dry-run / synthetic rehearsal 狀態。無任何 real write、real dispatch、real call 曾發生（v1.0-RC-R 第 9 節逐條確認）。
-- 工作區狀態：`CLAUDE.md` 修改與 `docs/agent_operating_system/` 全套已於 2026-07-07 依 Owner 指示 commit（`docs: add agent operating system`）；**push 尚待 Owner 指示**；`patches/` 未追蹤（既知狀態，不在本次 commit 內）。
+- 工作區狀態：制度全套與 README 同步已於 2026-07-07 依 Owner 指示 commit 並 push（`8648f00`、`47bbc4e`，本機==origin）；`patches/` 未追蹤（既知狀態）。
 - Replit `https://hermes-openclaw-adapter.replit.app/dashboard/system` 可載入，標示唯讀，登入牆前無任何執行控制（WebFetch 驗證）。登入後畫面已由 Owner 截圖確認（2026-07-07）：總覽/任務/系統頁為唯讀顯示；**`/dashboard/reviews` 含既存的 Owner 核准/拒絕按鈕**（v0.7.x 建立，decision ≠ dispatch，`dispatch_allowed=False`，詳見 90 L-006）。dashboard 版本 0.5.6、Worker OFF、OpenClaw/Hermes 未接線、Google Sheets 已停用。
 - 已知主要缺口（Drive v1.0 報告 + 本 session 檢查）：Blackboard 9 種 schema 未定、approval packet 未定、audit/rollback 真實 write path 不存在、connector scope packet 未成熟、v1.0 定義未凍結。注意：`app/google_sheets_oauth_writer.py` 是**既存的真實寫入能力模組**（env flag 防護、預設關閉、檔名無 real_ 標記），動它前先讀 00 D-09 第 (4) 條。
 
