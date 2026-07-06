@@ -748,4 +748,113 @@
   </div>
 </section>
 {% endif %}
+
+{# v1.0-RC-D：唯讀 Full Loop Rehearsal Timeline（display-only，來自本地 synthetic fixture + preview adapter）。
+   純顯示區塊，無互動控制元件，不觸發任何操作。資料來源為 build_full_loop_rehearsal_preview_model()，
+   固定本地 synthetic fixture 推導，preview_only/read_only 恆為安全值，沒有新增任何 button/form/action URL。
+   Full Loop Rehearsal Preview is read-only. Preview is not execution permission. Timeline is not dispatch permission. #}
+{% if full_loop_rehearsal_preview %}
+<section id="full-loop-rehearsal-timeline" class="full-loop-rehearsal-timeline" aria-labelledby="full-loop-rehearsal-timeline-title">
+  <div class="full-loop-rehearsal-timeline__header">
+    <h3 id="full-loop-rehearsal-timeline-title">全流程 Blackboard Loop 彩排時間軸 <span class="en-sub">FULL BLACKBOARD LOOP REHEARSAL TIMELINE</span></h3>
+    <p class="muted">合成本機唯讀全流程彩排預覽，僅供檢視。
+      <span class="en-sub">Validated fixture only. Read-only preview.</span></p>
+  </div>
+
+  <div class="full-loop-rehearsal-timeline__notice boundary-notice">
+    <p><strong>唯讀邊界 <span class="en-sub">Read-only boundary</span>：</strong>
+      Preview is not execution permission. Timeline is not dispatch permission.
+      No Blackboard/queue/audit trail write. No Worker dispatch. No OpenClaw call. No Hermes runtime.
+      No connector call. No external side effects. Owner review remains required.
+      Hermes readback is advisory only.
+      <span class="en-sub">READ ONLY. SYNTHETIC / MOCK ONLY. DRY RUN ONLY.</span></p>
+  </div>
+
+  <div class="full-loop-rehearsal-timeline__badges">
+    <h4>安全邊界狀態 <span class="en-sub">Safety Boundary Status</span></h4>
+    <p>
+      <span class="badge badge-rejected">FULL LOOP REHEARSAL PREVIEW</span>
+      <span class="badge badge-rejected">READ ONLY</span>
+      <span class="badge badge-rejected">SYNTHETIC / MOCK ONLY</span>
+      <span class="badge badge-rejected">DRY RUN ONLY</span>
+      <span class="badge badge-rejected">VALIDATED FIXTURE ONLY</span>
+      <span class="badge badge-rejected">NO BLACKBOARD WRITE</span>
+      <span class="badge badge-rejected">NO QUEUE WRITE</span>
+      <span class="badge badge-rejected">NO AUDIT TRAIL WRITE</span>
+      <span class="badge badge-rejected">NO WORKER DISPATCH</span>
+      <span class="badge badge-rejected">NO OPENCLAW CALL</span>
+      <span class="badge badge-rejected">NO HERMES RUNTIME</span>
+      <span class="badge badge-rejected">NO CONNECTOR CALL</span>
+      <span class="badge badge-rejected">NO EXTERNAL SIDE EFFECTS</span>
+      <span class="badge badge-rejected">OWNER REVIEW REQUIRED</span>
+      <span class="badge badge-rejected">DISPLAY IS NOT EXECUTION PERMISSION</span>
+      <span class="badge badge-rejected">TIMELINE IS NOT DISPATCH PERMISSION</span>
+      <span class="badge badge-rejected">HERMES READBACK IS ADVISORY ONLY</span>
+    </p>
+  </div>
+
+  <div class="full-loop-rehearsal-timeline__summary">
+    <p><span class="field-label">Fixture ID</span><span class="field-code">fixture_id</span>
+      <strong>{{ full_loop_rehearsal_preview.fixture_id }}</strong></p>
+    <p><span class="field-label">Fixture 版本</span> <span class="en-sub">Fixture version</span><span class="field-code">fixture_version</span>
+      <strong>{{ full_loop_rehearsal_preview.fixture_version }}</strong></p>
+    <p><span class="field-label">驗證狀態</span> <span class="en-sub">Validation status</span><span class="field-code">validation_status</span>
+      <strong>{{ full_loop_rehearsal_preview.validation_status }}</strong></p>
+    <p><span class="field-label">驗證摘要</span> <span class="en-sub">Validation summary</span><span class="field-code">validation_summary</span>
+      <strong>{{ full_loop_rehearsal_preview.validation_summary }}</strong></p>
+    <p><span class="field-label">需 Owner Review</span><span class="field-code">owner_review_required</span>
+      <strong>{{ full_loop_rehearsal_preview.owner_review_required }}</strong></p>
+    <p><span class="field-label">給 Owner 的下一步問題</span> <span class="en-sub">Next Owner review question</span><span class="field-code">next_owner_review_question</span>
+      <strong>{{ full_loop_rehearsal_preview.next_owner_review_question }}</strong></p>
+    {% if full_loop_rehearsal_preview.fail_closed_reasons %}
+    <div class="full-loop-rehearsal-timeline__hold">
+      <p><strong>HOLD 原因 <span class="en-sub">Fail-closed reasons</span>：</strong></p>
+      <ul>
+        {% for reason in full_loop_rehearsal_preview.fail_closed_reasons %}
+        <li><code>{{ reason }}</code></li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="full-loop-rehearsal-timeline__steps">
+    {% for step in full_loop_rehearsal_preview.timeline_preview %}
+    <div class="full-loop-rehearsal-timeline__card">
+      <p class="full-loop-rehearsal-timeline__card-title">
+        <span class="field-code">#{{ step.step_order }}</span> <strong>{{ step.step_title }}</strong>
+        <span class="en-sub">{{ step.step_id }}</span>
+      </p>
+      <p><span class="field-label">來源 → 目標</span> <span class="en-sub">source → target</span>
+        <strong>{{ step.source_component }} → {{ step.target_component }}</strong></p>
+      <p><span class="field-label">驗證狀態</span><span class="field-code">validation_status</span>
+        <strong>{{ step.validation_status }}</strong></p>
+      <p><span class="field-label">需 Owner Review</span><span class="field-code">owner_review_required</span>
+        <strong>{{ step.owner_review_required }}</strong></p>
+      <p><span class="field-label">允許下一步</span><span class="field-code">next_step_allowed</span>
+        <strong>{{ step.next_step_allowed }}</strong></p>
+      <p><span class="field-label">下一步需 Owner 確認</span><span class="field-code">next_step_requires_owner_confirmation</span>
+        <strong>{{ step.next_step_requires_owner_confirmation }}</strong></p>
+      <p><span class="field-label">允許行為</span> <span class="en-sub">Allowed behavior</span>
+        <strong>{{ step.allowed_behavior_summary }}</strong></p>
+      <p><span class="field-label">禁止行為</span> <span class="en-sub">Forbidden behavior</span>
+        <strong>{{ step.forbidden_behavior_summary }}</strong></p>
+      <p><span class="field-label">安全旗標</span> <span class="en-sub">Safety flags</span>
+        <strong>{{ step.safety_flags_summary }}</strong></p>
+      <p><span class="field-label">備註</span> <span class="en-sub">Notes</span>
+        <strong>{{ step.notes }}</strong></p>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="full-loop-rehearsal-timeline__nongoals">
+    <h4>不做的事 <span class="en-sub">Non-goals</span></h4>
+    <ul>
+      {% for item in full_loop_rehearsal_preview.non_goals %}
+      <li>{{ item }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+</section>
+{% endif %}
 {% endblock %}

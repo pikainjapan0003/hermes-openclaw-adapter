@@ -70,6 +70,12 @@ from app.mock_hermes_generator import build_mock_hermes_advice
 # 讀真實 callback、不寫 Blackboard、不寫 queue、不寫 audit trail、不派工、不呼叫 OpenClaw、不啟動
 # Hermes runtime、不呼叫 Google Sheets、不讀 secrets、不 POST。
 from app.result_feedback_preview import build_result_feedback_preview_view_model
+# v1.0-RC-D：唯讀 Full Loop Rehearsal Preview（純函式，local-only / mock-only / read-only）。只在既有
+# GET /dashboard/system observe surface 附加顯示用 synthetic local-only read-only full-loop rehearsal
+# timeline preview（來自本地 fixture，經 fail-closed 驗證）；不實作真正的 Full Blackboard Loop、不寫
+# Blackboard、不寫 queue、不寫 audit trail、不派工、不呼叫 OpenClaw、不啟動 Hermes runtime、不呼叫
+# connector、不新增 Dashboard control、不新增 route/endpoint/webhook。
+from app.full_loop_preview_adapter import build_full_loop_rehearsal_preview_model
 
 # v0.8.2-A：唯讀 Local Mock Dashboard Preview（來自 v0.8.1-V read-only preview adapter，純函式）。只在既有
 # GET /dashboard/system observe surface 附加顯示用 synthetic local-only read-only preview model；
@@ -1940,6 +1946,10 @@ def dashboard_system(request: Request) -> HTMLResponse:
     # 不實作 callback receiver、不開 webhook、不新增 route/endpoint、不讀真實 callback、不寫
     # Blackboard、不寫 queue、不寫 audit trail、不派工、不呼叫 Worker / OpenClaw、不啟動 Hermes runtime。
     result_feedback_preview_view = build_result_feedback_preview_view_model()
+    # v1.0-RC-D：唯讀 Full Loop Rehearsal Preview（來自本地 synthetic fixture，經 fail-closed 驗證，純函式）。
+    # 不實作真正的 Full Blackboard Loop、不寫 Blackboard、不寫 queue、不寫 audit trail、不派工、不呼叫
+    # OpenClaw、不啟動 Hermes runtime、不呼叫 connector、不新增 Dashboard control。
+    full_loop_rehearsal_preview = build_full_loop_rehearsal_preview_model()
     return templates.TemplateResponse(
         "system.html",
         {
@@ -1958,5 +1968,6 @@ def dashboard_system(request: Request) -> HTMLResponse:
             "dashboard_mock_result_view": dashboard_mock_result_view,
             "dashboard_hermes_advice_view": dashboard_hermes_advice_view,
             "result_feedback_preview_view": result_feedback_preview_view,
+            "full_loop_rehearsal_preview": full_loop_rehearsal_preview,
         },
     )
