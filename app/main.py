@@ -64,6 +64,12 @@ from app.worker_mock_gateway_dry_run import run_worker_to_mock_gateway_dry_run
 # runtime、不讀 Hermes memory、不呼叫 Hermes tool、不寫 Blackboard、不寫 queue、不寫 audit trail、
 # 不呼叫 Worker、不呼叫 real OpenClaw、不呼叫 Google Sheets、不讀 secrets。
 from app.mock_hermes_generator import build_mock_hermes_advice
+# v0.9.6-D：唯讀 Result Feedback Preview（純函式，local-only / mock-only / read-only）。只在既有
+# GET /dashboard/system observe surface 附加顯示用 synthetic local-only read-only result feedback
+# preview（來自本地 fixture）；不實作 callback receiver、不開 webhook、不新增 route/endpoint、不
+# 讀真實 callback、不寫 Blackboard、不寫 queue、不寫 audit trail、不派工、不呼叫 OpenClaw、不啟動
+# Hermes runtime、不呼叫 Google Sheets、不讀 secrets、不 POST。
+from app.result_feedback_preview import build_result_feedback_preview_view_model
 
 # v0.8.2-A：唯讀 Local Mock Dashboard Preview（來自 v0.8.1-V read-only preview adapter，純函式）。只在既有
 # GET /dashboard/system observe surface 附加顯示用 synthetic local-only read-only preview model；
@@ -1930,6 +1936,10 @@ def dashboard_system(request: Request) -> HTMLResponse:
     # 不啟動 Hermes runtime、不讀 Hermes memory、不呼叫 Hermes tool、不寫 Blackboard、不寫 queue、
     # 不寫 audit trail、不派工、不呼叫 OpenClaw / Google Sheets。
     dashboard_hermes_advice_view = build_dashboard_hermes_advice_view_model()
+    # v0.9.6-D：唯讀 Result Feedback Preview（來自本地 synthetic fixture，純函式）。
+    # 不實作 callback receiver、不開 webhook、不新增 route/endpoint、不讀真實 callback、不寫
+    # Blackboard、不寫 queue、不寫 audit trail、不派工、不呼叫 Worker / OpenClaw、不啟動 Hermes runtime。
+    result_feedback_preview_view = build_result_feedback_preview_view_model()
     return templates.TemplateResponse(
         "system.html",
         {
@@ -1947,5 +1957,6 @@ def dashboard_system(request: Request) -> HTMLResponse:
             "worker_dry_run_result_audit_trail": worker_dry_run_result_audit_trail,
             "dashboard_mock_result_view": dashboard_mock_result_view,
             "dashboard_hermes_advice_view": dashboard_hermes_advice_view,
+            "result_feedback_preview_view": result_feedback_preview_view,
         },
     )

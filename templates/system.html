@@ -661,4 +661,91 @@
   </div>
 </section>
 {% endif %}
+
+{# v0.9.6-D：唯讀 Result Feedback Preview（display-only，來自本地 synthetic fixture）。
+   純顯示區塊，無互動控制元件，不觸發任何操作。資料來源為 build_result_feedback_preview_view_model()，
+   固定本地 synthetic fixture 推導，preview_only 恆為 true，沒有新增任何 button/form/action URL。
+   Result Feedback Preview is read-only. Result Feedback Preview is not execution permission. #}
+{% if result_feedback_preview_view %}
+<section id="result-feedback-preview-view" class="result-feedback-preview-view" aria-labelledby="result-feedback-preview-view-title">
+  <div class="result-feedback-preview-view__header">
+    <h3 id="result-feedback-preview-view-title">結果回饋預覽 <span class="en-sub">Result Feedback Preview</span></h3>
+    <p class="muted">合成本機唯讀 Result Feedback 預覽，僅供檢視。
+      <span class="en-sub">Validated Result Message Only. Read-only preview.</span></p>
+  </div>
+
+  <div class="result-feedback-preview-view__notice boundary-notice">
+    <p><strong>唯讀邊界 <span class="en-sub">Read-only boundary</span>：</strong>
+      Display is not execution permission. Result message is not next dispatch permission.
+      No raw callback payload is shown. No external side effects occur. Owner review remains required.
+      Hermes readback is advisory only.
+      <span class="en-sub">READ ONLY. SYNTHETIC / MOCK ONLY.</span></p>
+  </div>
+
+  <div class="result-feedback-preview-view__badges">
+    <h4>安全邊界狀態 <span class="en-sub">Safety Boundary Status</span></h4>
+    <p>
+      <span class="badge badge-rejected">RESULT FEEDBACK PREVIEW</span>
+      <span class="badge badge-rejected">READ ONLY</span>
+      <span class="badge badge-rejected">SYNTHETIC / MOCK ONLY</span>
+      <span class="badge badge-rejected">VALIDATED RESULT MESSAGE ONLY</span>
+      <span class="badge badge-rejected">NO RAW CALLBACK PAYLOAD</span>
+      <span class="badge badge-rejected">NO EXTERNAL SIDE EFFECTS</span>
+      <span class="badge badge-rejected">OWNER REVIEW REQUIRED</span>
+      <span class="badge badge-rejected">DISPLAY IS NOT EXECUTION PERMISSION</span>
+      <span class="badge badge-rejected">RESULT MESSAGE IS NOT NEXT DISPATCH PERMISSION</span>
+      <span class="badge badge-rejected">HERMES READBACK IS ADVISORY ONLY</span>
+    </p>
+  </div>
+
+  <div class="result-feedback-preview-view__grid">
+    <div class="result-feedback-preview-view__card">
+      <p><span class="field-label">Callback ID</span><span class="field-code">callback_id</span>
+        <strong>{{ result_feedback_preview_view.callback_id }}</strong></p>
+      <p><span class="field-label">Task ID</span><span class="field-code">task_id</span>
+        <strong>{{ result_feedback_preview_view.task_id }}</strong></p>
+      <p><span class="field-label">Command ID</span><span class="field-code">command_id</span>
+        <strong>{{ result_feedback_preview_view.command_id }}</strong></p>
+      <p><span class="field-label">結果類型</span> <span class="en-sub">Result type</span><span class="field-code">result_type</span>
+        <strong>{{ result_feedback_preview_view.result_type }}</strong></p>
+      <p><span class="field-label">結果狀態</span> <span class="en-sub">Result status</span><span class="field-code">result_status</span>
+        <strong>{{ result_feedback_preview_view.result_status }}</strong></p>
+      <p><span class="field-label">執行模式</span> <span class="en-sub">Execution mode</span><span class="field-code">execution_mode</span>
+        <strong>{{ result_feedback_preview_view.execution_mode }}</strong></p>
+      <p><span class="field-label">Dry run</span><span class="field-code">dry_run</span>
+        <strong>{{ result_feedback_preview_view.dry_run }}</strong></p>
+      <p><span class="field-label">Mock only</span><span class="field-code">mock_only</span>
+        <strong>{{ result_feedback_preview_view.mock_only }}</strong></p>
+      <p><span class="field-label">需 Owner Review</span><span class="field-code">owner_review_required</span>
+        <strong>{{ result_feedback_preview_view.owner_review_required }}</strong></p>
+      <p><span class="field-label">開始時間</span> <span class="en-sub">Started at</span><span class="field-code">started_at</span>
+        <strong>{{ result_feedback_preview_view.started_at }}</strong></p>
+      <p><span class="field-label">完成時間</span> <span class="en-sub">Completed at</span><span class="field-code">completed_at</span>
+        <strong>{{ result_feedback_preview_view.completed_at }}</strong></p>
+      <p><span class="field-label">僅供預覽</span> <span class="en-sub">Preview only</span><span class="field-code">preview_only</span>
+        <strong>{{ result_feedback_preview_view.preview_only }}</strong></p>
+    </div>
+    <div class="result-feedback-preview-view__card">
+      <p><span class="field-label">摘要</span> <span class="en-sub">Summary</span><span class="field-code">summary</span>
+        <strong>{{ result_feedback_preview_view.summary }}</strong></p>
+      <p><span class="field-label">輸出預覽（已消毒）</span> <span class="en-sub">Output preview, redacted</span><span class="field-code">output_preview</span>
+        <strong>{{ result_feedback_preview_view.output_preview }}</strong></p>
+      <p><span class="field-label">錯誤摘要</span> <span class="en-sub">Error summary</span><span class="field-code">error_summary</span>
+        <strong>{{ result_feedback_preview_view.error_summary }}</strong></p>
+      <p><span class="field-label">驗證狀態</span> <span class="en-sub">Validation status</span><span class="field-code">validation_status</span>
+        <strong>{{ result_feedback_preview_view.validation_status }}</strong></p>
+      <p><span class="field-label">回滾備註</span> <span class="en-sub">Rollback note</span><span class="field-code">rollback_note</span>
+        <strong>{{ result_feedback_preview_view.rollback_note }}</strong></p>
+      <p><span class="field-label">稽核備註</span> <span class="en-sub">Audit note</span><span class="field-code">audit_note</span>
+        <strong>{{ result_feedback_preview_view.audit_note }}</strong></p>
+      <p><span class="field-label">安全旗標</span> <span class="en-sub">Safety flags</span><span class="field-code">safety_flags</span></p>
+      <ul class="result-feedback-preview-view__flags">
+        {% for flag in result_feedback_preview_view.safety_flags %}
+        <li><code>{{ flag }}</code></li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</section>
+{% endif %}
 {% endblock %}

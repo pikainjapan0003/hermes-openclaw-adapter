@@ -578,3 +578,32 @@ button:hover { filter: brightness(1.08); }
 @media (max-width: 900px) {
   .dashboard-hermes-advice-view__grid { grid-template-columns: 1fr; }
 }
+
+/* v0.9.6-D: read-only Result Feedback Preview (display-only, no interactive controls). */
+/* 純視覺呈現；不引入任何 button / form / action URL，只顯示本地 synthetic fixture 唯讀 result feedback preview。 */
+.result-feedback-preview-view { margin: 4px 0 20px; }
+.result-feedback-preview-view__header { margin-bottom: 8px; }
+.result-feedback-preview-view__header h3 { margin-bottom: 4px; }
+.result-feedback-preview-view__notice.boundary-notice {
+  margin: 8px 0 14px; padding: 10px 12px;
+  border: 1px solid rgba(255,207,92,0.35); border-radius: 8px;
+  background: rgba(255,207,92,0.06);
+}
+.result-feedback-preview-view__notice p { margin: 2px 0; font-size: 0.9em; }
+.result-feedback-preview-view__badges { margin: 4px 0 16px; }
+.result-feedback-preview-view__badges h4 { margin: 0 0 6px; }
+.result-feedback-preview-view__badges p { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 6px; }
+.result-feedback-preview-view__grid {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px; margin: 4px 0 18px;
+}
+.result-feedback-preview-view__card {
+  background: var(--glass); border: 1px solid var(--line); border-radius: 10px;
+  padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; min-width: 0;
+}
+.result-feedback-preview-view__card p { margin: 2px 0; font-size: 0.9em; }
+.result-feedback-preview-view__flags { margin: 2px 0 0; padding-left: 18px; font-size: 0.85em; }
+.result-feedback-preview-view__flags li { margin: 1px 0; }
+@media (max-width: 900px) {
+  .result-feedback-preview-view__grid { grid-template-columns: 1fr; }
+}
