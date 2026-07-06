@@ -17,7 +17,19 @@ data/results.jsonl  ──(GET /tasks/{id}/result)──────────
 
 ---
 
-## Project Status (v0.7.2 line)
+## 目前狀態（2026-07-07 更新 — 本節取代下方所有舊版本狀態描述）
+
+- 開發已推進至 **v1.0-RC-R closeout**：Full Blackboard Loop 已完成 read-only / mock / dry-run 全流程彩排（`docs/HERMES_FULL_BLACKBOARD_LOOP_REHEARSAL_CLOSEOUT_V1_0_RC_R.md`）。
+- **尚未進入 v1.0 implementation**。仍然：無 Worker dispatch、無 real OpenClaw call、無 Hermes runtime activation、無 connector call、無外部副作用。
+- 治理制度與長期路線圖已建立於 **`docs/agent_operating_system/`**：
+  - 入口索引：`README.md`｜安全邊界正本：`01_SAFETY_BOUNDARIES.md`｜Phase 0–11 計劃表：`05_VERIFIED_LONG_TERM_PLAN.md`
+  - 任何 AI session 開工前，先讀 `CLAUDE.md` 第 12 節路由。
+- 現況的唯一權威鏈：`CLAUDE.md` §12 → `docs/agent_operating_system/README.md` → `05_VERIFIED_LONG_TERM_PLAN.md` 第 5 節狀態表。**本檔以下章節與其他 166 份 docs 均為歷史紀錄**，與現況不符處以上述權威鏈為準。
+- 下一步：Phase 2（v1.0 Definition Freeze，需 Owner 裁決）。
+
+---
+
+## Project Status (v0.7.2 line)（歷史紀錄 historical — 見上方目前狀態）
 
 Hermes × OpenClaw Adapter is a **safety-focused intermediary layer (adapter)** between the
 Hermes "brain" and an OpenClaw execution backend. The current development focus is a
