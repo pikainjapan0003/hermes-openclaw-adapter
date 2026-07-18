@@ -283,7 +283,8 @@
 |---|---|---|---|
 | 0 | 常態運行 | 2026-07-07 | 本 session 已跑一輪，三源一致 |
 | 1 | 本 session 建立 | 2026-07-07 | 待 Owner 接受 + 首個弱模型 session 磨合 |
-| 2–11 | 未開始 | — | Phase 2 為下一個建議動作；候選定義已備好（第 6.3、6.9 節），剩正式簽核 |
+| 2 | **完成** | 2026-07-18 | `02_V1_0_DEFINITION.md` 凍結（Owner 逐字簽核，見該檔 §5；fresh-context read-back 通過） |
+| 3–11 | 未開始 | — | Phase 3（Blackboard Contract Hardening）為下一個建議動作；實作仍需 Owner instruction 逐字授權 |
 
 ---
 

@@ -43,10 +43,10 @@
 未完成，截至 2026-07-07 Fable 5 session 結束：
 
 1. ~~commit/push~~ 已完成（2026-07-07，Owner 指示）：制度與 README 同步均已 push 到 origin。
-2. **Phase 2（v1.0 Definition Freeze）未開始**——這是計劃表指定的下一步，需要 Owner 參與裁決。（2026-07-08 更新：候選定義與簽核 checklist 已備好，見 05 §6.3/§6.9；Phase 2 只剩帶 Owner 逐條簽核 + 產出 02 文件。2026-07-18 更新：02 草稿已產出並過 read-back，只待 Owner 簽核句。）
+2. ~~Phase 2（v1.0 Definition Freeze）~~ **已完成（2026-07-18）**：02_V1_0_DEFINITION.md 凍結，Owner 逐字簽核（該檔 §5）。下一步＝Phase 3（Blackboard Contract Hardening），實作需 Owner instruction 逐字授權。
 3. ~~Replit 登入後畫面未驗證~~ 已由 Owner 截圖驗證（2026-07-07）：/dashboard/reviews 有既存核准/拒絕按鈕，見 90 L-006。
 4. OWASP Agentic Top 10 全文未讀（只驗證了發布頁），Phase 8 使用前要先讀原文。
-5. `patches/` 目錄未追蹤狀態未處理（既知，Owner 未指示）。
+5. ~~`patches/` 目錄未追蹤狀態未處理~~ **已結案（2026-07-18，Owner 指示歸檔）**：內容為早已入庫的 v0.7.2-UI-B 舊補丁（commit 820ec62），已移出 repo 至 `~/projects/hermes-openclaw-adapter-patches-bak-20260718/`。
 6. Drive 資料夾中 v0.8.x 歷史報告未全文讀取（對現況非必要）。
 
 ## 6. 下一個 session 的第一步建議
