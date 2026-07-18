@@ -61,9 +61,9 @@ def test_contract_inventory_is_exact() -> None:
     schema_files = sorted(SCHEMA_DIR.glob("*.schema.json"))
     fixture_files = sorted(FIXTURE_DIR.glob("*.json"))
 
-    assert len(SCHEMA_FILES) == 9
-    assert len(schema_files) == 9
-    assert len(fixture_files) == 27
+    assert len(SCHEMA_FILES) == 10
+    assert len(schema_files) == 10
+    assert len(fixture_files) == 30
     assert {path.name for path in schema_files} == set(SCHEMA_FILES.values())
 
     expected_fixtures = {

@@ -25,6 +25,7 @@ SCHEMA_FILES: dict[str, str] = {
     "result_message": "result_message.schema.json",
     "audit_event": "audit_event.schema.json",
     "rollback_event": "rollback_event.schema.json",
+    "approval_packet": "approval_packet.schema.json",
 }
 
 _SCHEMA_DIR = (

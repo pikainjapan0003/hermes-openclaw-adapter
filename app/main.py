@@ -76,6 +76,9 @@ from app.result_feedback_preview import build_result_feedback_preview_view_model
 # Blackboard、不寫 queue、不寫 audit trail、不派工、不呼叫 OpenClaw、不啟動 Hermes runtime、不呼叫
 # connector、不新增 Dashboard control、不新增 route/endpoint/webhook。
 from app.full_loop_preview_adapter import build_full_loop_rehearsal_preview_model
+# Phase 4：唯讀 Owner approval packet preview（純函式、資料格式 only）。只在既有
+# GET /dashboard/reviews 顯示；不寫 queue、不派工、不執行、不產生 execution token。
+from app.approval_packet_builder import build_dashboard_approval_packet_preview
 
 # v0.8.2-A：唯讀 Local Mock Dashboard Preview（來自 v0.8.1-V read-only preview adapter，純函式）。只在既有
 # GET /dashboard/system observe surface 附加顯示用 synthetic local-only read-only preview model；
@@ -1716,6 +1719,7 @@ def dashboard_reviews(
             status=WAITING_REVIEW, limit=limit, offset=offset
         )
         items = [_review_summary(i) for i in rows]
+    approval_packet = build_dashboard_approval_packet_preview()
     return templates.TemplateResponse(
         "reviews.html",
         {
@@ -1725,6 +1729,7 @@ def dashboard_reviews(
             "total": total,
             "limit": limit,
             "offset": offset,
+            "approval_packet": approval_packet,
         },
     )
 

@@ -1,0 +1,44 @@
+{% if approval_packet %}
+<section class="card hud-panel" aria-label="Owner approval packet preview">
+  <h3 class="zh-main">Owner 審批包 <span class="en-sub">Owner Approval Packet</span></h3>
+  <p class="muted">手機優先的 N=1 無害查詢資料預覽；裁決仍使用本頁既有審核入口。</p>
+  <p class="owner-safety-boundary">
+    此 packet 只是一筆資料，不是執行機制。即使 <span class="status-code">decision = approve</span>，
+    也不會派工或執行；Phase 4 的 execution token 永遠是 null。
+  </p>
+
+  <table class="kv">
+    <tbody>
+      <tr><th>動作摘要 <span class="en-sub">action_summary</span></th><td>{{ approval_packet.action_summary }}</td></tr>
+      <tr><th>風險等級 <span class="en-sub">risk_level</span></th><td><span class="badge badge-source">{{ approval_packet.risk_level }}</span></td></tr>
+      <tr><th>精確目標 <span class="en-sub">exact_target</span></th><td>
+        <span class="status-code">{{ approval_packet.exact_target.action_type }}</span><br>
+        task: <span class="mono">{{ approval_packet.exact_target.task_id }}</span><br>
+        command: <span class="mono">{{ approval_packet.exact_target.command_id }}</span><br>
+        query: {{ approval_packet.exact_target.query_action }}
+      </td></tr>
+      <tr><th>預期副作用 <span class="en-sub">expected_side_effects</span></th><td>
+        {% if approval_packet.expected_side_effects %}
+          {{ approval_packet.expected_side_effects | join(', ') }}
+        {% else %}
+          <span class="badge badge-muted">無 <span class="en-sub">none</span></span>
+        {% endif %}
+      </td></tr>
+      <tr><th>Rollback <span class="en-sub">rollback_path</span></th><td>{{ approval_packet.rollback_path }}</td></tr>
+      <tr><th>逾時 <span class="en-sub">timeout</span></th><td>{{ approval_packet.timeout }} 秒</td></tr>
+      <tr><th>Dry-run 證據 <span class="en-sub">dry_run_evidence</span></th><td>
+        dry-run: <span class="mono">{{ approval_packet.dry_run_evidence.dry_run_id }}</span><br>
+        result: <span class="mono">{{ approval_packet.dry_run_evidence.result_id }}</span><br>
+        <span class="status-code">{{ approval_packet.dry_run_evidence.result_status }}</span>
+      </td></tr>
+      <tr><th>Audit 預覽 <span class="en-sub">audit_trail_preview</span></th><td>
+        {{ approval_packet.audit_trail_preview.summary }}<br>
+        <span class="status-code">persisted = {{ approval_packet.audit_trail_preview.persisted }}</span>
+      </td></tr>
+      <tr><th>裁決時間 <span class="en-sub">approval_timestamp</span></th><td>{{ format_empty(approval_packet.approval_timestamp) }}</td></tr>
+      <tr><th>執行 token <span class="en-sub">single_use_execution_token</span></th><td><span class="badge badge-blocked">null</span></td></tr>
+      <tr><th>資料動詞 <span class="en-sub">decision</span></th><td><span class="status-code">{{ approval_packet.decision }}</span></td></tr>
+    </tbody>
+  </table>
+</section>
+{% endif %}

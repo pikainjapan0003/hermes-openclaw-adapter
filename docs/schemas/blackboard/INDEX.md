@@ -15,6 +15,18 @@ Status: Phase 3 package 2 contract implementation. These schemas validate data o
 | `result_message` | `result_message.schema.json` |
 | `audit_event` | `audit_event.schema.json` |
 | `rollback_event` | `rollback_event.schema.json` |
+| `approval_packet` | `approval_packet.schema.json` |
+
+## Phase 4 Owner approval packet
+
+`approval_packet` is a data-only, offline review packet for one synthetic,
+harmless N=1 query. It binds a `worker_dry_run` id and `result_message` id to an
+exact task, command, and query action. The risk is fixed to `low`, expected side
+effects must be empty, and the inert timeout is fixed to 30 seconds.
+
+The `decision` data verb is one of `approve | edit | reject | respond`.
+`single_use_execution_token` is structurally locked to `null` for Phase 4.
+Neither a decision nor this packet grants execution or dispatch permission.
 
 ## Required common fields
 
