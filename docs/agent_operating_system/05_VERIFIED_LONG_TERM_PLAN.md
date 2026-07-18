@@ -29,6 +29,8 @@
 
 順序原則：0–1 隨時做；2 是 3–7 的前提；3→4→5 有依賴鏈；6 可與 4、5 並行；**7 依賴 Phase 5 的 evidence bundle，必須在 5 之後**；8 規劃可提早；9 必須在 3+4+5+7 全部完成後；10 在 9 之後（先證明執行紀律，再開外部讀取）；11 貫穿全程。
 
+**二次補強（2026-07-08）**：Owner 盤問 20 題的裁決與各 Phase 修訂記錄於**第 6 節**；第 3 節內容與第 6 節衝突時以第 6 節為準。要點：Phase 9 併入 v1.0（6.3）、Phase 8 升為 v1.0 後第一優先、Phase 10 無限期停留規劃。
+
 ---
 
 ## 1. 目前系統狀態（2026-07-07 驗證）
@@ -137,6 +139,7 @@
 - HOLD 條件：Owner 未逐字簽核前，任何人不得宣稱 v1.0 定義已凍結。
 - 模型與流程：Sonnet 級起草，Owner 逐條裁決（這是品味/取捨題，流程補不了，見誠實條款）。
 - 進入下一階段：Owner 簽核。
+- **二次補強**：v1.0 候選定義已由 Owner 預裁決（6.3：Phase 9 N=1 併入 v1.0），本 Phase 工作縮小為按 6.9 checklist 逐條正式簽核 + 產出 02 文件。
 
 ### Phase 3：Blackboard Contract Hardening
 
@@ -216,6 +219,7 @@
 - HOLD 條件：規劃過程發現需要暴露新 endpoint 才可行 → 記為 open question 交 Owner，不自行放寬。
 - 模型與流程：強模型起草（架構取捨題）；Sonnet 級可做資料收集。
 - 進入下一階段：Owner 決定是否排入實作（可長期停在規劃）。
+- **二次補強**：優先級上調——手機開 Replit 是完成態主介面（Q11），本 Phase 是 v1.0 後第一優先；方案預定向 GitHub→Replit 單向拉取、顯示帶資料時間戳（6.5/6.7/6.10）。
 
 ### Phase 9：Limited Controlled Execution Rehearsal（首次真實執行）
 
@@ -229,6 +233,7 @@
 - HOLD 條件：evidence bundle 與實際執行參數有任何不一致 → 廢棄 token，重走流程。
 - 模型與流程：可用的最強模型主導；Owner 同步在場逐步確認；全程不委派有副作用的步驟給 subagent。
 - 進入下一階段：Owner 對 N=1 結果簽核，並明文決定是否擴大白名單（每次擴大都是新的 Owner 決定）。
+- **二次補強**：本 Phase 已併入 v1.0 範圍（Q4）；白名單動作已由 Owner 預指定＝無害查詢型 `openclaw agent` 調用、零寫入（Q5，見 6.8 階梯）；屆時仍需逐字授權 + Owner 在場。
 
 ### Phase 10：Connector Read-only Expansion
 
@@ -242,6 +247,7 @@
 - HOLD 條件：packet 內級別與指令要求不符 → HOLD。
 - 模型與流程：Sonnet 級實作，強模型審 gate 代碼。
 - 進入下一階段：Owner 按資源逐項發放 packet（常態運行，無終點）。
+- **二次補強**：本 Phase **無限期停留規劃**（Q3=C：先服務系統自身）；業務（pika/Vault）要接入時才重啟，且須先跑 6.11 T1 重審。
 
 ### Phase 11：Long-term Loop Engineering（貫穿全程）
 
@@ -277,4 +283,173 @@
 |---|---|---|---|
 | 0 | 常態運行 | 2026-07-07 | 本 session 已跑一輪，三源一致 |
 | 1 | 本 session 建立 | 2026-07-07 | 待 Owner 接受 + 首個弱模型 session 磨合 |
-| 2–11 | 未開始 | — | Phase 2 為下一個建議動作 |
+| 2–11 | 未開始 | — | Phase 2 為下一個建議動作；候選定義已備好（第 6.3、6.9 節），剩正式簽核 |
+
+---
+
+## 6. 二次補強（Second-pass Refinement，2026-07-08 Owner 盤問整合）
+
+- 來源：2026-07-08 grill-me 盤問，三輪共 20 題（Round 1 核心方向 Q1–Q10、Round 2 執行條件 Q11–Q15、Round 3 風險取捨 Q16–Q20），Owner 全數親答、零 SKIP。
+- 效力：本節記錄的是 **Owner 已裁決的方向**，第 3 節各 Phase 內容與本節衝突時以本節為準（本節較新）。但**本節仍不是授權**——第 7 行鐵律照舊，實作仍需 Owner instruction 逐字授權。
+- 修改權限：本節記錄 Owner 裁決，屬 40 F2——修改任何一條裁決都必須先問 Owner。
+
+### 6.0 決策紀錄（Q1–Q20 速查）
+
+| Q | 主題 | Owner 裁決 |
+|---|---|---|
+| 1 | 終局形態 | 傳話中樞（留言板）。權力全在 Owner；Hermes 監工調度、OpenClaw 做事；**刻意保持簡單** |
+| 2 | 第一條 loop | 全鏈路：Hermes → Blackboard → OpenClaw → Result → Hermes readback |
+| 3 | 第一個服務對象 | 系統自身（自我維護），暫不接 pika / Vault 業務 |
+| 4 | v1.0 範圍 | **必須含一次真實全鏈路執行**（Phase 9 N=1 併入 v1.0） |
+| 5 | N=1 動作 | 無害查詢型 `openclaw agent` 真實調用，零寫入 |
+| 6 | 成功指標 | 信任感：三個月後 Owner 敢把某類真實任務放心交給它 |
+| 7 | 砍點 | 無。永遠修到好，接受 bug 長存，賭模型會進步 |
+| 8 | 並行授權粒度 | 三級：無害自動跑／寫入逐件批／高風險（花錢等）**不派 AI**，Hermes 在計劃中標記提醒 Owner 親自做 |
+| 9 | Owner 可投入時間 | 每天可碰（每週 5+ 小時），同步審批可行 |
+| 10 | 時程 | 2–3 個月穩紮穩打（系統還是記憶空白的嬰兒階段） |
+| 11 | 主使用介面 | 完成態＝手機開 Replit dashboard（看狀態、批任務）；Claude Code 是施工介面 |
+| 12 | 三環境關係 | **GitHub 為王**（source of truth）；流向：本機 → GitHub → Replit |
+| 13 | Blackboard 介質 | repo 內 `data/` JSON 檔，隨 git 走（一條管道，歷史免費） |
+| 14 | 模型費用配置 | 規劃/審查/檢查 → ChatGPT 5.5；寫代碼 → Sonnet；Opus 幾乎不用 |
+| 15 | Hermes 肉身 | adapter 程式 + 三腦：GPT-5.5 → Minimax M3 → Deepseek v4 Pro（用量耗盡右移） |
+| 16 | 三腦資料外送 | 不設限（自有專案資料）。重審觸發器見 6.11 |
+| 17 | 最怕的錯 | A 越權動作最怕；謊報用**多審查員異模型交叉**壓；失控迴圈可手動 kill |
+| 18 | v1.1 首次真實寫入 | repo 內測試檔（git 回滾＝標準 rollback path） |
+| 19 | 手機審批門檻 | Replit 現有登入牆即可（Owner 知悉風險）。重審觸發器見 6.11 |
+| 20 | 腦降級規則 | 三腦同權，不縮權限、不加降級標記 |
+
+### 6.1 Owner Goal Profile
+
+- **終局**：一個刻意簡單的傳話中樞。Blackboard 是留言板＝多 agent 並行協作的協調介質；使用權力永遠在 Owner。
+- **真實痛點**（原話大意）：做專案時，一個 AI agent 從計劃、施作、監工到審查用到底，又難又花時間。
+- **願景場景**：Hermes 把計劃切成細小任務 → 丟給多個角色化 OpenClaw（工程師、UI 設計師、PM、測試員、安全審查員…）並行施工 → Owner 只看哪個報錯。
+- **服務順序**：系統自身 → （未來另行決定）Vault / pika。
+- **節奏**：每週 5+ 小時、v1.0 目標 2–3 個月、無砍點。
+- **成功指標**：信任感。反向指標＝信任事故（越權、謊報、假驗收）；Phase 11 健檢必查「本期間有無信任事故」。
+- **弱模型設計裁決規則**：任何提案先過一問——「這會不會讓傳話層變複雜？」會 → 預設否決，除非 Owner 明示要。
+
+### 6.2 Loop Engineering Definition
+
+- 「長期穩定運行的 loop」＝ **Hermes 留言 → Blackboard → OpenClaw 執行 → Result 回貼 → Hermes readback** 這條全鏈路。
+- 可機械判定的「穩定」定義：連續 3 次完整 rehearsal（屆時為真實 run）**無人工介入**跑完全鏈路，且每次 audit 記錄完整、schema 驗證全過。
+- 長期形態：同一條 loop 橫向擴成多 worker 並行（角色化），錯誤狀態上浮給 Owner；並行擴張屬 v1.2 之後，本計劃表內不實作。
+
+### 6.3 v1.0 Definition Candidate（供 Phase 2 正式凍結）
+
+```text
+v1.0 = Owner-supervised Full-chain Baseline
+     = Phase 3–7 全部完成
+     + Phase 9 的 N=1：一次無害查詢型 openclaw agent 真實調用成功
+```
+
+- 包含：本機 Blackboard 讀寫（schema 驗證）、approval packet 流程、dry-run evidence、audit 檔 local write、rollback preview、**一次真實全鏈路查詢調用（零寫入）**。
+- 不包含：任何真實寫入型執行（→ v1.1）、真實代碼任務（→ v1.2）、connector read/write（Phase 10，無限期規劃）、production DB、remote API runtime、Dashboard 新控制項。
+- 與第一輪定義（Drive 報告建議版）的差異：**Phase 9 N=1 併入 v1.0**（Owner Q4=C）；理由：「傳話中樞的 v1.0」必須證明真的能傳話。
+- 本候選仍需 Phase 2 正式簽核（見 6.9），簽核前不得宣稱 v1.0 定義已凍結。
+
+### 6.4 Risk Tolerance Matrix
+
+| 風險 | Owner 容忍度 | 防禦配置（弱模型照做） |
+|---|---|---|
+| 越權動作（未授權的寫/發/叫） | **零容忍，最怕** | 01 禁令牆 + 四問 + adversarial review，防禦資源最厚；發生即最高優先回報 |
+| 謊報／假驗收 | 低 | 高風險審查一律 ≥2 個不同模型交叉審（20 R-13）；單一模型自審不得作為通過依據 |
+| 弄壞 repo | 中 | GitHub 為王 + git 回滾為標準恢復路；破壞性 git 操作仍需授權 |
+| 失控迴圈 | 中（Owner 可用 Claude Code 手動終止） | 嬰兒階段不建自動 circuit breaker；多 worker 並行前重新評估 |
+| 亂花錢／不可逆動作 | 結構性排除 | `OWNER_MANUAL` 級任務**不進派工佇列**（見 6.8），Hermes 只在計劃中標記提醒 |
+| 資料送三腦廠商 | 不設限（Q16=A，自有資料） | 無需 sensitivity 欄位；重審觸發器見 6.11 |
+| 手機審批入口被冒用 | 接受（Q19=A，現有登入牆） | Owner 已知悉；重審觸發器見 6.11 |
+
+### 6.5 Tool Role Map
+
+| 角色 | 定位 | 規則 |
+|---|---|---|
+| 本機 WSL repo | 開發工作區 | 一切開發在此發生 |
+| GitHub master | **source of truth** | 漂移裁決一律以 GitHub master 為準；同步方向固定：本機 → GitHub → Replit。push 仍需 Owner 指示 |
+| Replit | 部署/展示層；**完成態的手機主介面** | 從 GitHub 拉取部署；不得直接在 Replit 上改代碼；顯示須帶資料時間戳（新鮮度標示） |
+| Claude Code | 施工介面（建造 Hermes 的工人） | 不是 Hermes 本人 |
+| ChatGPT 5.5 | 規劃/審查/檢查顧問 | 經 Owner 搬運（export bundle → Drive → GPT），異步 |
+| 手機 | 完成態使用介面 | 看狀態、批任務；門檻＝Replit 登入牆（Q19） |
+
+- Phase 0 漂移處理修訂：三源不一致 → 回報差異 + **按「GitHub 為準」提出同步提案**（不再只是空等），實際同步動作仍需 Owner 指示。
+
+### 6.6 Model Use Policy（三層分工）
+
+1. **建造層（Claude Code session）**：寫代碼/測試/文件 → Sonnet；Opus 選配（Owner 極少用）。「升最強模型」的實際含義：先升環境內最強試一次；制度性/架構性問題 → **打包審查包（問題+失敗軌跡+選項）等 Owner 搬給 ChatGPT 5.5**，異步取回裁決。細則見 10 C8。
+2. **Hermes 腦（runtime）**：GPT-5.5 → Minimax M3 → Deepseek v4 Pro，用量耗盡右移；**三腦同權**（Q20=A），不加降級規則。Blackboard 訊息記 `produced_by`（純來源記錄，不掛任何規則）。
+3. **OpenClaw worker（執行層）**：做事的手；未來角色化多開（工程師/測試員/安審…），v1.2 後才擴。
+
+- 高風險審查硬規則（Q17）：安全邊界/寫入路徑/執行閘/Owner 簽核前產物 → **≥2 個不同模型的審查員交叉審**，絕不指派單一 agent 或單一模型。見 20 R-13。
+
+### 6.7 Blackboard Storage Decision（決策樹已走完）
+
+```text
+留言板存哪？→ repo 內 data/ 下 JSON 檔，隨 git 走（Q13=A）
+  好處：一條管道（本機→GitHub→Replit）、git 歷史免費、Replit 拉取即更新
+  代價：手機看到的 = 最後一次 push（顯示須帶時間戳）
+升級條件（唯一）：多 worker 並行寫入頻繁衝突 → 屆時重問 Owner 是否升 SQLite（6.11）
+在那之前：任何人提議換介質 → 預設否決（違反 Q1「保持簡單」）
+```
+
+### 6.8 First Real Write Gate（真實動作解鎖階梯）
+
+| 版本 | 解鎖動作 | 前置條件 | rollback path |
+|---|---|---|---|
+| v1.0（Phase 9 N=1） | 無害查詢型 `openclaw agent` 調用，**零寫入** | Phase 3/4/5/7 完成 + Owner 在場 + 單次 token | 無需（無副作用） |
+| v1.1 | repo 內測試檔**一次**真實寫入（全鏈路） | v1.0 簽核完成 + 新 packet/token | `git checkout`/`git revert`（標準答案） |
+| v1.2 | 首次真實代碼任務（Owner 痛點場景第一次真演練） | v1.1 簽核完成 + 多審查員驗收 | git + 測試綠才算收工 |
+
+- 每級解鎖都是**新的 Owner instruction**，不跨級繼承、不跨 session 繼承（01 §4 不變）。
+- 任務三級分類（Q8，schema 欄位 `execution_class`，正式定義見 01 §6）：
+
+```text
+AUTO           唯讀/無害      Owner 批計劃後可自動並行（計劃級授權格式未定，見 6.11 OPEN）
+OWNER_APPROVAL 會寫入/副作用   逐件送 Owner 批
+OWNER_MANUAL   高風險（花錢/不可逆） 不進派工佇列；Hermes 在計劃中標記「這件 Owner 親自做」
+```
+
+### 6.9 Phase 2 Owner Decision Checklist（弱模型帶著 Owner 逐條簽）
+
+Phase 2 執行時，向 Owner 逐條取得逐字簽核，全部完成才得產出 `02_V1_0_DEFINITION.md` 並宣告凍結：
+
+```text
+[ ] 1. v1.0 候選定義（6.3 全文）逐字接受？（含 Phase 9 併入 v1.0）
+[ ] 2. 「包含」六項，各自的驗收方式逐項接受？
+[ ] 3. 「不包含」各項的推遲去向（v1.1/v1.2/Phase 10）接受？
+[ ] 4. 任務三級分類寫入 01 §6 接受？
+[ ] 5. 02 文件內記錄簽核行：Owner approved on <date>, instruction quote: <逐字>
+```
+
+- 已預裁決（盤問時 Owner 口頭已答，Phase 2 只需正式化，不必重問）：Q4/Q5/Q8 的內容。若 Owner 在簽核時改主意，以新裁決為準並更新本節 6.0 表。
+
+### 6.10 Phase 3–11 Adjustment Notes（對第 3 節的修訂，衝突時以本節為準）
+
+- **Phase 3**：9 種 schema 新增欄位：`execution_class`（6.8）、`produced_by`（腦/模型來源，純記錄）、`parent_task_id`（任務拆解父子鏈）、`role`（worker 角色身份）。設計原則改為「**夠用就好**」（Q1）：先為單 worker 全鏈路 loop 設計；並行相關欄位只預留、不實作機制。
+- **Phase 4**：審批包**對著 N=1 查詢型動作具體設計**，不做通用格式（Q5）；顯示區塊以手機畫面為目標（Q11）；裁決入口＝既存 `/dashboard/reviews` 按鈕（不新建入口）。
+- **Phase 5**：證據包同樣聚焦 N=1 動作；通用化推遲到 v1.1。
+- **Phase 6**：`/dashboard/reviews` 核准入口正式列入白名單管理；門檻維持 Replit 登入牆（Q19，Owner 已裁決，測試不需要求二次確認）。
+- **Phase 7**：不變，仍在 v1.0 範圍內。
+- **Phase 8**：**優先級上調**——手機是完成態主介面（Q11），Phase 8 是 v1.0 之後第一優先；方案已預定向：GitHub → Replit 單向拉取（Q12/Q13），顯示帶資料時間戳。
+- **Phase 9**：併入 v1.0（Q4）；白名單動作已由 Owner 預指定＝無害查詢型調用（Q5），不再是「屆時指定」；「Owner 必須在場」維持。
+- **Phase 10**：**無限期停留規劃**（Q3=C）；業務（pika/Vault）接入時才重啟，屆時先跑 6.11 的 Q16 重審。
+- **Phase 11**：健檢新增必查項「本期間有無信任事故（越權/謊報/假驗收）」（Q6/Q17）；**不**新增省時統計、任務完成率等 metrics 機制（Q6 裁決成功指標＝信任感，不需儀表）。
+- **Phase 0**：漂移處理按 6.5 修訂（GitHub 為準提案制）。
+
+### 6.11 重審觸發器與 OPEN QUESTIONS
+
+重審觸發器（觸發時弱模型必須停下重問 Owner，引用本節）：
+
+```text
+T1 他人個資（如 pika 客戶資料）將進入 Blackboard → 重問 Q16（三腦外送是否分級）
+T2 /dashboard/reviews 核准按鈕第一次接上真實 dispatch → 重問 Q19（是否加二次確認）
+T3 多 worker 並行寫入頻繁衝突 → 重問 Q13（是否升 SQLite）
+T4 Hermes 腦供應商/條款變動 → 重問 Q16、Q20
+```
+
+OPEN QUESTIONS（Owner 尚未裁決，遇到即 HOLD）：
+
+```text
+O1 「計劃級授權」的正式格式未定義——Owner 批准 Hermes 切分計劃後，AUTO 級任務自動派發
+   的授權要長什麼樣（一句話？簽核欄？）。首次多 worker 並行（v1.2 後）前必須定。
+   在定義之前：AUTO 級任務照現行 01 §2/§4 逐字授權規則處理（fail closed）。
+O2 角色化 worker（工程師/測試員/安審…）的角色定義與 prompt 由誰維護、存哪——v1.2 前定。
+```
