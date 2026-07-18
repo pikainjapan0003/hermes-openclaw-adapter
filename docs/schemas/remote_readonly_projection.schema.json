@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hermes-openclaw-adapter.local/schemas/remote_readonly_projection.schema.json",
+  "title": "Phase 8-A N=1 Remote Read-only Display Projection",
+  "description": "Offline-only, lossy display projection. It is not a Blackboard message, transport envelope, approval mechanism, or execution mechanism.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "projection_schema_version",
+    "data_generated_at",
+    "source_commit_sha",
+    "pulled_at",
+    "task_display_id",
+    "parent_task_display_id",
+    "phase",
+    "status",
+    "execution_class",
+    "safety_summary",
+    "approval_readiness",
+    "decision_summary",
+    "evidence_bundle_hash",
+    "stale_after"
+  ],
+  "properties": {
+    "projection_schema_version": {
+      "const": "1.0"
+    },
+    "data_generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source_commit_sha": {
+      "type": "string",
+      "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"
+    },
+    "pulled_at": {
+      "description": "Locked to null in offline Phase 8-A. A later remote phase requires separate authorization and schema revision.",
+      "type": "null",
+      "const": null
+    },
+    "task_display_id": {
+      "type": "string",
+      "pattern": "^task_[0-9a-f]{16}$"
+    },
+    "parent_task_display_id": {
+      "type": "string",
+      "pattern": "^parent_[0-9a-f]{16}$"
+    },
+    "phase": {
+      "type": "string",
+      "enum": [
+        "task_draft",
+        "dry_run",
+        "evidence_ready",
+        "approval_ready",
+        "owner_decided",
+        "failed"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "ready", "decided", "failed"]
+    },
+    "execution_class": {
+      "type": "string",
+      "enum": ["AUTO", "OWNER_APPROVAL", "OWNER_MANUAL"]
+    },
+    "safety_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "synthetic_local_only",
+        "mock_only",
+        "dry_run",
+        "owner_review_required",
+        "external_side_effects_allowed",
+        "external_side_effects_occurred",
+        "worker_dispatch_allowed",
+        "openclaw_call_allowed",
+        "hermes_runtime_allowed",
+        "connector_call_allowed"
+      ],
+      "properties": {
+        "synthetic_local_only": {"const": true},
+        "mock_only": {"const": true},
+        "dry_run": {"const": true},
+        "owner_review_required": {"const": true},
+        "external_side_effects_allowed": {"const": false},
+        "external_side_effects_occurred": {"const": false},
+        "worker_dispatch_allowed": {"const": false},
+        "openclaw_call_allowed": {"const": false},
+        "hermes_runtime_allowed": {"const": false},
+        "connector_call_allowed": {"const": false}
+      }
+    },
+    "approval_readiness": {
+      "type": "string",
+      "enum": ["not_ready", "ready_for_owner", "blocked"]
+    },
+    "decision_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["decision", "decision_timestamp"],
+      "properties": {
+        "decision": {
+          "type": ["string", "null"],
+          "enum": ["approve", "edit", "reject", "respond", null]
+        },
+        "decision_timestamp": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        }
+      }
+    },
+    "evidence_bundle_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "stale_after": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {"status": {"const": "decided"}},
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "phase": {"const": "owner_decided"},
+          "decision_summary": {
+            "properties": {
+              "decision": {"enum": ["approve", "edit", "reject", "respond"]},
+              "decision_timestamp": {"type": "string", "format": "date-time"}
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "phase": {"not": {"const": "owner_decided"}},
+          "decision_summary": {
+            "properties": {
+              "decision": {"const": null},
+              "decision_timestamp": {"const": null}
+            }
+          }
+        }
+      }
+    }
+  ]
+}
