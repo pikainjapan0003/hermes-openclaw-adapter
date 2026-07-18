@@ -454,3 +454,12 @@ O1 「計劃級授權」的正式格式未定義——Owner 批准 Hermes 切分
    在定義之前：AUTO 級任務照現行 01 §2/§4 逐字授權規則處理（fail closed）。
 O2 角色化 worker（工程師/測試員/安審…）的角色定義與 prompt 由誰維護、存哪——v1.2 前定。
 ```
+
+### 6.12 Phase 3 施工期裁決（2026-07-18 Owner 親答，L0）
+
+包1（Sol+xhigh 設計稿）觸發 fixture 矛盾 HOLD，Owner 裁決如下：
+
+1. **`safety_flags` 正本＝16 面旗、巢狀 boolean object**：14 個共同鍵（synthetic_local_only／mock_only／dry_run／owner_review_required／external_side_effects_allowed／external_side_effects_occurred／blackboard_write_allowed／queue_write_allowed／audit_trail_write_allowed／worker_dispatch_allowed／openclaw_call_allowed／hermes_runtime_allowed／connector_call_allowed／google_sheets_write_allowed）＋ follow_up_allowed ＋ follow_up_requires_owner_confirmation。
+2. RC-D fixture 的 17 鍵版（多 read_only／follow_up_task_creation_allowed／dashboard_controls_allowed）與 view model 的 `"key=value"` 字串陣列版一律降為**舊 fixture／顯示層投影**：不進新 schema、不改舊檔，validator 只驗新 contract。
+3. 追認包1 設計的兩處泛化：公共欄位加 `message_type`、`created_at`（共 9 個公共欄位）；`role`＝產物作者的功能角色（不限 worker）。
+4. 包2 交付方式：Codex 於 GitHub 開工作 branch＋PR（不碰 master），Fable 5 審＋本地實跑測試，Owner 按 merge。
