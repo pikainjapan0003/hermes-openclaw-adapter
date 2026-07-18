@@ -11,7 +11,7 @@
 
 - 可用 subagent 類型：`general-purpose`（全工具）、`Explore`（唯讀搜索）、`Plan`（架構規劃）、`claude`、`claude-code-guide`、`openclaw-model-fix`（本機自訂）、`statusline-setup`。
 - Agent tool 可指定 model：`sonnet` / `opus` / `haiku` / `fable`。
-- 當時模型 ID：`claude-fable-5`（僅開放至 2026-07-07）、`claude-opus-4-8`、`claude-sonnet-5`、`claude-haiku-4-5-20251001`。
+- 模型 ID（2026-07-18 實測更新）：`claude-fable-5`（曾於 2026-07-07 後短暫失效；**自 2026-07-14 起恢復且為主力模型**，本日 session 即 Fable 5）、`claude-opus-4-8`、`claude-sonnet-5`、`claude-haiku-4-5-20251001`。
 - subagent 可用 MCP Google Drive 工具與 Web 工具（本 session 實測成功）。
 - effort / thinking 參數：**無法確認 effort 設定**——subagent 的 reasoning effort 由 agent 定義檔控制，本 session 無法逐一驗證。不要對外宣稱某 subagent 用了某 effort。
 
@@ -48,7 +48,7 @@ Use cheaper model only after task shape is fully specified.
 
 - 讀取/枚舉/格式轉換 → `haiku`（錯一次立刻升 `sonnet`）。
 - 實作/測試/文件起草 → `sonnet`。
-- 架構取捨、安全審查、最終 review → 可用的最強模型（2026-07 為 `opus`；驗證當下清單見 C0）。
+- 架構取捨、安全審查、最終 review → 可用的最強模型（2026-07-18 驗證為 `fable`＝Fable 5；驗證當下清單見 C0）。
 - 規則：**任務形狀未完全指定前，不用便宜模型**。便宜模型的正確用法是「強模型解出模式後的批次套用」。
 
 ## C4. 回報合約

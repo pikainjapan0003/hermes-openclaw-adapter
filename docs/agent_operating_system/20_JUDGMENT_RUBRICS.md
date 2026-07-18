@@ -114,3 +114,13 @@
 - HOLD：四問任一答不出 → HOLD（fail closed）。
 - 正例：寫 fixtures/local_mock_data/ 下 synthetic fixture，**且該寫入是本輪已授權 phase 任務的必要部分** = 屬任務授權範圍（01 §4 第 5 條），不需逐檔授權句，但必須在回報中列出。與本輪任務無關的寫入，仍需授權。
 - 反例：「只是寫個測試用的 webhook receiver」——receiver 是新 endpoint，要授權。
+
+## R-13 高風險審查的多審查員規則（二次補強，Owner 裁決 2026-07-08；範例 2026-07-18 修訂）
+
+- 判準：高風險產物的審查絕不交給單一 agent 或單一模型（Owner 原話裁決，見 05 §6.0 Q17）。
+- 觸發條件：R-09 的任一觸發條件成立，且產物屬——安全邊界修訂、寫入路徑代碼、執行閘代碼、將供 Owner 簽核的產物。
+- 操作：派 **≥2 個不同模型**的 fresh-context 審查員（例：一個 sonnet + 一個 opus；或本環境模型 + Codex Sol+max 對抗審查——跨模型保險，見 10 C8。原「GPT 審查包經 Owner 搬運」路徑已隨 ChatGPT 審查線退場廢止，2026-07-18 修訂）。兩份回報分歧時：分歧點逐條列出交 Owner，不得自行仲裁後沉默。
+- PASS：兩份獨立審查回報都落檔，分歧已解決或已交 Owner。
+- HOLD：本環境只有單一模型可用 → 標註「單模型審查，不足以作為簽核依據」，等 Owner 決定（改派 Codex 對抗審查或接受降級）。
+- 正例：「audit writer 代碼：sonnet fresh review + opus fresh review 各一份，1 個分歧（檔案鎖）已列給 Owner。」
+- 反例：「我自己又檢查了一遍，沒問題。」（單一模型 + 自驗，雙重違規）

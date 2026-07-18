@@ -38,12 +38,12 @@
 
 ## 5. 已完成／未完成清單（接手者從這裡開始）
 
-已完成（不要重做）：三源環境驗證（HEAD 7a93127e 一致）；Drive 三份報告全文閱讀；8 項開源參考查證；全套 10 份制度檔＋CLAUDE.md 第 12 節路由；fresh-context adversarial review（18 findings 全修，見 90 L-005）；fresh-context read-back 驗證。
+已完成（不要重做）：三源環境驗證（HEAD 7a93127e 一致）；Drive 三份報告全文閱讀；8 項開源參考查證；全套 10 份制度檔＋CLAUDE.md 第 12 節路由；fresh-context adversarial review（18 findings 全修，見 90 L-005）；fresh-context read-back 驗證。**二次補強盤問（2026-07-08）：Owner 親答 20 題，裁決全數落檔於 05 §6——讀 05 時第 6 節優先於第 3 節，不要重新盤問已裁決的題目（重審觸發器見 05 §6.11）。**
 
 未完成，截至 2026-07-07 Fable 5 session 結束：
 
 1. ~~commit/push~~ 已完成（2026-07-07，Owner 指示）：制度與 README 同步均已 push 到 origin。
-2. **Phase 2（v1.0 Definition Freeze）未開始**——這是計劃表指定的下一步，需要 Owner 參與裁決。
+2. **Phase 2（v1.0 Definition Freeze）未開始**——這是計劃表指定的下一步，需要 Owner 參與裁決。（2026-07-08 更新：候選定義與簽核 checklist 已備好，見 05 §6.3/§6.9；Phase 2 只剩帶 Owner 逐條簽核 + 產出 02 文件。2026-07-18 更新：02 草稿已產出並過 read-back，只待 Owner 簽核句。）
 3. ~~Replit 登入後畫面未驗證~~ 已由 Owner 截圖驗證（2026-07-07）：/dashboard/reviews 有既存核准/拒絕按鈕，見 90 L-006。
 4. OWASP Agentic Top 10 全文未讀（只驗證了發布頁），Phase 8 使用前要先讀原文。
 5. `patches/` 目錄未追蹤狀態未處理（既知，Owner 未指示）。

@@ -58,3 +58,12 @@
 - 缺的規則：01/05 描述 dashboard 時應寫明例外：登入牆後有 Owner-only 審核控制（approve/reject 決策記錄），但 decision ≠ dispatch
 - 新增/修改的規則：已補記於 05 §1 與 §2.1/2.2；Phase 6 唯讀硬化測試屆時必須把 reviews 頁的既有審核 POST 列入白名單並驗證其僅寫 decision event、不觸發 dispatch
 - 驗收：Owner 截圖存證；Phase 6 實作時以測試確認 approve 不產生 dispatch
+
+## L-007 二次補強整包只寫入 Drive 鏡像、未進 repo（三次漂移同根因）
+- 日期：2026-07-18（Fable 5 健檢發現；漂移發生於 2026-07-08）
+- 任務：v1.0 定義凍結前制度健檢（全檔 diff 鏡像 vs repo）
+- 症狀：repo 缺 10 C8、05 §6（165 行）、01 §6、20 R-13、README 定位段、99 交接更新——全部只存在於 Desktop\Hermes_OpenClaw_Drive_Upload 鏡像；「GitHub 為王」名存實亡（較新內容在鏡像）
+- 根因：2026-07-08 二次補強 session 直接編輯鏡像資料夾，未改 repo 正本；且無任何規則定義正本/鏡像關係與同步方向
+- 缺的規則：「正本只在 repo、鏡像單向覆蓋、鏡像禁直改」當時不存在
+- 新增/修改的規則：40 F6 鏡像管理（Owner 拍板 2026-07-18）；缺件已全數回填 repo（10 C8 與 05 §6 於本日稍早 commit，01 §6/20 R-13/README/99 隨本筆）
+- 驗收：全 11 檔鏡像 vs repo diff 歸零＋fresh-context read-back
