@@ -6,7 +6,7 @@
 
 - 全系統處於 **read-only / mock / dry-run rehearsal** 狀態（v1.0-RC-R closeout，`HEAD 7a93127e` 時點）。唯一既存例外：`/dashboard/reviews` 有 Owner 核准/拒絕入口（decision ≠ dispatch，見 90 L-006）。
 - 沒有任何 real write / dispatch / call 被授權。授權規則見 01。
-- **Phase 2 已完成（2026-07-18）**：v1.0 定義已凍結於 `02_V1_0_DEFINITION.md`（Owner 逐字簽核）。下一步：`05_VERIFIED_LONG_TERM_PLAN.md` Phase 3（Blackboard Contract Hardening）——實作前仍需 Owner instruction 逐字授權。目前狀態見 05 第 5 節狀態追蹤表。
+- **Phase 2 已完成（2026-07-18）**：v1.0 定義已凍結於 `02_V1_0_DEFINITION.md`（Owner 逐字簽核）。**Phase 3 已完成（2026-07-19）**：9 種 Blackboard schema＋validator＋41 項測試全綠（`docs/schemas/blackboard/`、`app/blackboard_validators.py`、`tests/`）。下一步：Phase 4（Owner Approval Packet）——實作前仍需 Owner instruction 逐字授權。目前狀態見 05 第 5 節狀態追蹤表。
 - **二次補強已完成（2026-07-08）**：Owner 盤問 20 題的裁決在 05 **第 6 節**——讀 05 時第 6 節優先於第 3 節。要點：v1.0 含 Phase 9 N=1 無害查詢、GitHub 為 source of truth、Blackboard＝repo 內 data/ JSON、任務三級分類（01 §6）、高風險審查多模型交叉（20 R-13、10 C8）。
 
 ## 檔案地圖（按用途查）

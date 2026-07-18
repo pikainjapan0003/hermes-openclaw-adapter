@@ -284,7 +284,8 @@
 | 0 | 常態運行 | 2026-07-07 | 本 session 已跑一輪，三源一致 |
 | 1 | 本 session 建立 | 2026-07-07 | 待 Owner 接受 + 首個弱模型 session 磨合 |
 | 2 | **完成** | 2026-07-18 | `02_V1_0_DEFINITION.md` 凍結（Owner 逐字簽核，見該檔 §5；fresh-context read-back 通過） |
-| 3–11 | 未開始 | — | Phase 3（Blackboard Contract Hardening）為下一個建議動作；實作仍需 Owner instruction 逐字授權 |
+| 3 | **完成** | 2026-07-19 | 9 schema＋validator＋pytest 41/41 全綠（Fable 5 於 WSL 乾淨 venv 獨立實跑）；§6.12 裁決全落實（16 面旗封閉、9 公共欄、OWNER_MANUAL 派工路徑結構性拒絕）；Codex Luna+max 施工（commit `f9ae105`）、Fable 5 審查、Owner 核准合併。掛帳：jsonschema/pytest 未入 requirements（白名單禁改依賴檔，另單補） |
+| 4–11 | 未開始 | — | Phase 4（Owner Approval Packet，對 N=1 動作具體設計）為下一個建議動作，Phase 6 可與 4/5 並行；實作仍需 Owner instruction 逐字授權 |
 
 ---
 
