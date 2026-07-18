@@ -5,6 +5,7 @@ pydantic==2.10.4
 python-dotenv==1.0.1
 jinja2==3.1.4
 python-multipart==0.0.32
+jsonschema==4.26.0
 
 # 僅供 Owner 本機 OAuth live consent helper（scripts/oauth_local_consent_helper.py）使用。
 # dry-run 不 import；app/result_sink.py 不 import google；Replit / CI 不跑 live。
