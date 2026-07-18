@@ -1,21 +1,25 @@
-# Blackboard Contract Schemas
+# Contract Schema Index
 
-Status: Phase 3 package 2 contract implementation. These schemas validate data only; they are not connected to routes, queue mutation, Worker dispatch, or runtime execution.
+Status: data-contract inventory through the Owner-approved offline projection.
+These schemas validate or project data only; they do not grant permission for
+queue mutation, Worker dispatch, runtime execution, or remote connectivity.
 
-## Schemas
+## Contract inventory
 
-| `message_type` | File |
-|---|---|
-| `task_draft` | `task_draft.schema.json` |
-| `annotation` | `annotation.schema.json` |
-| `approval_readiness` | `approval_readiness.schema.json` |
-| `owner_decision` | `owner_decision.schema.json` |
-| `worker_dry_run` | `worker_dry_run.schema.json` |
-| `openclaw_command_envelope` | `openclaw_command_envelope.schema.json` |
-| `result_message` | `result_message.schema.json` |
-| `audit_event` | `audit_event.schema.json` |
-| `rollback_event` | `rollback_event.schema.json` |
-| `approval_packet` | `approval_packet.schema.json` |
+| Contract | Purpose | Schema | Positive fixture | Test |
+|---|---|---|---|---|
+| `task_draft` | N=1 task proposal data. | `docs/schemas/blackboard/task_draft.schema.json` | `fixtures/blackboard_contract/task_draft.valid.json` | `tests/test_blackboard_schemas.py` |
+| `annotation` | Safety annotation for a task draft. | `docs/schemas/blackboard/annotation.schema.json` | `fixtures/blackboard_contract/annotation.valid.json` | `tests/test_blackboard_schemas.py` |
+| `approval_readiness` | Readiness preview for Owner review. | `docs/schemas/blackboard/approval_readiness.schema.json` | `fixtures/blackboard_contract/approval_readiness.valid.json` | `tests/test_blackboard_schemas.py` |
+| `owner_decision` | Inert Owner decision record. | `docs/schemas/blackboard/owner_decision.schema.json` | `fixtures/blackboard_contract/owner_decision.valid.json` | `tests/test_blackboard_schemas.py` |
+| `worker_dry_run` | Non-executing single-worker preview. | `docs/schemas/blackboard/worker_dry_run.schema.json` | `fixtures/blackboard_contract/worker_dry_run.valid.json` | `tests/test_blackboard_schemas.py` |
+| `openclaw_command_envelope` | Mock-only command preview envelope. | `docs/schemas/blackboard/openclaw_command_envelope.schema.json` | `fixtures/blackboard_contract/openclaw_command_envelope.valid.json` | `tests/test_blackboard_schemas.py` |
+| `result_message` | Synthetic unexecuted result data. | `docs/schemas/blackboard/result_message.schema.json` | `fixtures/blackboard_contract/result_message.valid.json` | `tests/test_blackboard_schemas.py` |
+| `audit_event` | Non-persisted audit-event preview. | `docs/schemas/blackboard/audit_event.schema.json` | `fixtures/blackboard_contract/audit_event.valid.json` | `tests/test_blackboard_schemas.py` |
+| `rollback_event` | Descriptive rollback preview. | `docs/schemas/blackboard/rollback_event.schema.json` | `fixtures/blackboard_contract/rollback_event.valid.json` | `tests/test_blackboard_schemas.py` |
+| `approval_packet` | Offline Owner review packet. | `docs/schemas/blackboard/approval_packet.schema.json` | `fixtures/blackboard_contract/approval_packet.valid.json` | `tests/test_approval_packet.py` |
+| `evidence_bundle` | Hashed N=1 dry-run evidence. | `docs/schemas/evidence_bundle.json` | `fixtures/local_mock_data/n1_dry_run_evidence_bundle.json` | `tests/test_evidence_bundle.py` |
+| `remote_readonly_projection` | Owner-approved offline display projection; no remote transport. | `docs/schemas/remote_readonly_projection.schema.json` | `fixtures/local_mock_data/remote_readonly_projection.valid.json` | `tests/test_remote_readonly_projection.py` |
 
 ## Phase 4 Owner approval packet
 

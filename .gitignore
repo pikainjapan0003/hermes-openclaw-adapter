@@ -29,3 +29,4 @@ OPENCLAW_INTEGRATION_DIAGNOSIS.md
 
 # OS
 .DS_Store
+*.bak.*
