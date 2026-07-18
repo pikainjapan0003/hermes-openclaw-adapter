@@ -1,0 +1,62 @@
+{
+  "schema_version": "1.0",
+  "bundle_type": "n1_dry_run_evidence",
+  "bundle_id": "evidence-task-phase3-001-cmd-evidence-n1-001",
+  "created_at": "2026-07-19T18:00:00Z",
+  "task": {
+    "task_id": "task-phase3-001",
+    "title": "Read synthetic adapter status",
+    "summary": "Prepare a harmless read-only query for the synthetic adapter status.",
+    "task_type": "query",
+    "target_runtime": "openclaw_mock",
+    "execution_class": "AUTO"
+  },
+  "command_envelope": {
+    "command_id": "cmd-evidence-n1-001",
+    "task_id": "task-phase3-001",
+    "tool_target": "synthetic.adapter.status",
+    "requested_action": "read one synthetic adapter status value",
+    "risk_level": "low",
+    "owner_review_required": true,
+    "execution_mode": "mock_only",
+    "dry_run": true,
+    "mock_only": true,
+    "external_touchpoints": [],
+    "rollback_plan": "no rollback required; nothing is executed",
+    "external_side_effects_allowed": false
+  },
+  "mock_result": {
+    "source": "synthetic_local_only",
+    "accepted": true,
+    "worker_dry_run": true,
+    "worker_loop_started": false,
+    "worker_dispatched": false,
+    "real_openclaw_called": false,
+    "external_side_effects_performed": false,
+    "queue_written": false,
+    "audit_trail_written": false,
+    "mock_gateway_called": true,
+    "gateway_response": {
+      "response_source": "synthetic_local_only",
+      "accepted": true,
+      "mock_gateway": true,
+      "production_gateway": false,
+      "real_openclaw_called": false,
+      "worker_dispatched": false,
+      "external_side_effects_performed": false,
+      "queue_written": false,
+      "audit_trail_written": false,
+      "command_id": "cmd-evidence-n1-001",
+      "task_id": "task-phase3-001",
+      "tool_target": "synthetic.adapter.status",
+      "mock_response_summary": "Synthetic local-only mock acknowledgement of a described command; no real OpenClaw call, no Worker dispatch, and no external side effect occurred."
+    }
+  },
+  "expected_side_effects": [],
+  "diff_preview": {
+    "applicable": false,
+    "summary": "No diff is applicable to a read-only mock query."
+  },
+  "hash_algorithm": "sha256",
+  "bundle_hash": "9ba98d9bcdd8c659b927e7bdd1b10edbdc94f0f15112ddb19e5270c6e802d7aa"
+}

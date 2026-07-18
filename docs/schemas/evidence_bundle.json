@@ -1,0 +1,155 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hermes-openclaw-adapter/schemas/evidence_bundle.json",
+  "title": "N=1 Dry-run Evidence Bundle",
+  "description": "Data-only evidence from one synthetic harmless query rehearsal. It is not execution or dispatch permission.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "bundle_type",
+    "bundle_id",
+    "created_at",
+    "task",
+    "command_envelope",
+    "mock_result",
+    "expected_side_effects",
+    "diff_preview",
+    "hash_algorithm",
+    "bundle_hash"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "bundle_type": {"const": "n1_dry_run_evidence"},
+    "bundle_id": {"type": "string", "minLength": 1},
+    "created_at": {"type": "string", "format": "date-time"},
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["task_id", "title", "summary", "task_type", "target_runtime", "execution_class"],
+      "properties": {
+        "task_id": {"type": "string", "minLength": 1},
+        "title": {"type": "string", "minLength": 1},
+        "summary": {"type": "string", "minLength": 1},
+        "task_type": {"const": "query"},
+        "target_runtime": {"const": "openclaw_mock"},
+        "execution_class": {"const": "AUTO"}
+      }
+    },
+    "command_envelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "command_id",
+        "task_id",
+        "tool_target",
+        "requested_action",
+        "risk_level",
+        "owner_review_required",
+        "execution_mode",
+        "dry_run",
+        "mock_only",
+        "external_touchpoints",
+        "rollback_plan",
+        "external_side_effects_allowed"
+      ],
+      "properties": {
+        "command_id": {"type": "string", "minLength": 1},
+        "task_id": {"type": "string", "minLength": 1},
+        "tool_target": {"type": "string", "minLength": 1},
+        "requested_action": {"type": "string", "minLength": 1},
+        "risk_level": {"const": "low"},
+        "owner_review_required": {"const": true},
+        "execution_mode": {"const": "mock_only"},
+        "dry_run": {"const": true},
+        "mock_only": {"const": true},
+        "external_touchpoints": {"type": "array", "maxItems": 0},
+        "rollback_plan": {"type": "string", "minLength": 1},
+        "external_side_effects_allowed": {"const": false}
+      }
+    },
+    "mock_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "accepted",
+        "worker_dry_run",
+        "worker_loop_started",
+        "worker_dispatched",
+        "real_openclaw_called",
+        "external_side_effects_performed",
+        "queue_written",
+        "audit_trail_written",
+        "mock_gateway_called",
+        "gateway_response"
+      ],
+      "properties": {
+        "source": {"const": "synthetic_local_only"},
+        "accepted": {"const": true},
+        "worker_dry_run": {"const": true},
+        "worker_loop_started": {"const": false},
+        "worker_dispatched": {"const": false},
+        "real_openclaw_called": {"const": false},
+        "external_side_effects_performed": {"const": false},
+        "queue_written": {"const": false},
+        "audit_trail_written": {"const": false},
+        "mock_gateway_called": {"const": true},
+        "gateway_response": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "response_source",
+            "accepted",
+            "mock_gateway",
+            "production_gateway",
+            "real_openclaw_called",
+            "worker_dispatched",
+            "external_side_effects_performed",
+            "queue_written",
+            "audit_trail_written",
+            "command_id",
+            "task_id",
+            "tool_target",
+            "mock_response_summary"
+          ],
+          "properties": {
+            "response_source": {"const": "synthetic_local_only"},
+            "accepted": {"const": true},
+            "mock_gateway": {"const": true},
+            "production_gateway": {"const": false},
+            "real_openclaw_called": {"const": false},
+            "worker_dispatched": {"const": false},
+            "external_side_effects_performed": {"const": false},
+            "queue_written": {"const": false},
+            "audit_trail_written": {"const": false},
+            "command_id": {"type": "string", "minLength": 1},
+            "task_id": {"type": "string", "minLength": 1},
+            "tool_target": {"type": "string", "minLength": 1},
+            "mock_response_summary": {"type": "string", "minLength": 1}
+          }
+        }
+      }
+    },
+    "expected_side_effects": {
+      "type": "array",
+      "maxItems": 0,
+      "description": "Must remain empty for the harmless N=1 query."
+    },
+    "diff_preview": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["applicable", "summary"],
+      "properties": {
+        "applicable": {"const": false},
+        "summary": {"const": "No diff is applicable to a read-only mock query."}
+      }
+    },
+    "hash_algorithm": {"const": "sha256"},
+    "bundle_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "SHA-256 of canonical bundle JSON excluding this field."
+    }
+  }
+}
