@@ -1558,6 +1558,7 @@ def dashboard_login_form(request: Request, error: str | None = None) -> HTMLResp
     if not DASHBOARD_AUTH_ENABLED:
         return RedirectResponse(url="/dashboard", status_code=303)
     return templates.TemplateResponse(
+        request,
         "login.html",
         {"request": request, "title": DASHBOARD_TITLE, "error": error},
     )
@@ -1593,6 +1594,7 @@ def dashboard_home(request: Request) -> HTMLResponse:
         False if EXECUTION_MODE == "background" else Path(QUEUE_DB_PATH).exists()
     )
     return templates.TemplateResponse(
+        request,
         "dashboard.html",
         {
             "request": request,
@@ -1627,6 +1629,7 @@ def dashboard_tasks(
         rows, total = get_queue().list_page(status=status, limit=limit, offset=offset)
         items = [_obs_task_summary(i) for i in rows]
     return templates.TemplateResponse(
+        request,
         "tasks.html",
         {
             "request": request,
@@ -1660,6 +1663,7 @@ def dashboard_task_detail(
     detail = _obs_task_detail(item)
     comments = get_blackboard().list_for_task(task_id)
     return templates.TemplateResponse(
+        request,
         "task_detail.html",
         {
             "request": request,
@@ -1721,6 +1725,7 @@ def dashboard_reviews(
         items = [_review_summary(i) for i in rows]
     approval_packet = build_dashboard_approval_packet_preview()
     return templates.TemplateResponse(
+        request,
         "reviews.html",
         {
             "request": request,
@@ -1956,6 +1961,7 @@ def dashboard_system(request: Request) -> HTMLResponse:
     # OpenClaw、不啟動 Hermes runtime、不呼叫 connector、不新增 Dashboard control。
     full_loop_rehearsal_preview = build_full_loop_rehearsal_preview_model()
     return templates.TemplateResponse(
+        request,
         "system.html",
         {
             "request": request,
