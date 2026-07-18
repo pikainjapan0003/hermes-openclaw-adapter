@@ -1,0 +1,211 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hermes-openclaw-adapter/schemas/blackboard/approval_readiness.schema.json",
+  "title": "Approval Readiness",
+  "description": "Approval Readiness contract for the single-worker Blackboard loop.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "message_type",
+    "created_at",
+    "safety_flags",
+    "prev_entry_hash",
+    "execution_class",
+    "produced_by",
+    "parent_task_id",
+    "role",
+    "readiness_id",
+    "task_id",
+    "annotation_id",
+    "readiness_status",
+    "validation_status",
+    "reasons",
+    "next_step_allowed",
+    "next_step_requires_owner_confirmation",
+    "next_owner_action"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Blackboard contract version."
+    },
+    "message_type": {
+      "const": "approval_readiness",
+      "description": "Schema discriminator."
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 timestamp for this Blackboard entry."
+    },
+    "safety_flags": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "synthetic_local_only",
+        "mock_only",
+        "dry_run",
+        "owner_review_required",
+        "external_side_effects_allowed",
+        "external_side_effects_occurred",
+        "blackboard_write_allowed",
+        "queue_write_allowed",
+        "audit_trail_write_allowed",
+        "worker_dispatch_allowed",
+        "openclaw_call_allowed",
+        "hermes_runtime_allowed",
+        "connector_call_allowed",
+        "google_sheets_write_allowed",
+        "follow_up_allowed",
+        "follow_up_requires_owner_confirmation"
+      ],
+      "properties": {
+        "synthetic_local_only": {
+          "type": "boolean"
+        },
+        "mock_only": {
+          "type": "boolean"
+        },
+        "dry_run": {
+          "type": "boolean"
+        },
+        "owner_review_required": {
+          "type": "boolean"
+        },
+        "external_side_effects_allowed": {
+          "type": "boolean"
+        },
+        "external_side_effects_occurred": {
+          "type": "boolean"
+        },
+        "blackboard_write_allowed": {
+          "type": "boolean"
+        },
+        "queue_write_allowed": {
+          "type": "boolean"
+        },
+        "audit_trail_write_allowed": {
+          "type": "boolean"
+        },
+        "worker_dispatch_allowed": {
+          "type": "boolean"
+        },
+        "openclaw_call_allowed": {
+          "type": "boolean"
+        },
+        "hermes_runtime_allowed": {
+          "type": "boolean"
+        },
+        "connector_call_allowed": {
+          "type": "boolean"
+        },
+        "google_sheets_write_allowed": {
+          "type": "boolean"
+        },
+        "follow_up_allowed": {
+          "type": "boolean"
+        },
+        "follow_up_requires_owner_confirmation": {
+          "type": "boolean"
+        }
+      },
+      "description": "Canonical 16-flag nested boolean object from Owner decision 05 §6.12."
+    },
+    "prev_entry_hash": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Previous entry SHA-256 hash; null is reserved for a genesis entry."
+    },
+    "execution_class": {
+      "type": "string",
+      "enum": [
+        "AUTO",
+        "OWNER_APPROVAL",
+        "OWNER_MANUAL"
+      ],
+      "description": "Execution class inherited from the task."
+    },
+    "produced_by": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Producing model or component; provenance only, never authorization."
+    },
+    "parent_task_id": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Parent task id for future decomposition; null for a root task."
+    },
+    "role": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Functional role of the artifact author; provenance only."
+    },
+    "readiness_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Unique readiness identifier."
+    },
+    "task_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Related task identifier."
+    },
+    "annotation_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Annotation used for this assessment."
+    },
+    "readiness_status": {
+      "type": "string",
+      "enum": [
+        "READY_FOR_OWNER_REVIEW",
+        "HOLD"
+      ]
+    },
+    "validation_status": {
+      "type": "string",
+      "enum": [
+        "validated_preview",
+        "hold"
+      ]
+    },
+    "reasons": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1,
+      "description": "Readiness reasons."
+    },
+    "next_step_allowed": {
+      "type": "boolean",
+      "description": "Allows progression only to Owner decision."
+    },
+    "next_step_requires_owner_confirmation": {
+      "const": true,
+      "description": "Readiness never becomes approval."
+    },
+    "next_owner_action": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Advisory next action for the Owner."
+    }
+  }
+}

@@ -1,0 +1,296 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hermes-openclaw-adapter/schemas/blackboard/result_message.schema.json",
+  "title": "Result Message",
+  "description": "Result Message contract for the single-worker Blackboard loop.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "message_type",
+    "created_at",
+    "safety_flags",
+    "prev_entry_hash",
+    "execution_class",
+    "produced_by",
+    "parent_task_id",
+    "role",
+    "result_id",
+    "callback_id",
+    "task_id",
+    "command_id",
+    "related_dry_run_id",
+    "result_type",
+    "result_status",
+    "execution_mode",
+    "started_at",
+    "completed_at",
+    "summary",
+    "output_preview",
+    "error_summary",
+    "validation_status",
+    "external_side_effects",
+    "rollback_note",
+    "audit_note"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Blackboard contract version."
+    },
+    "message_type": {
+      "const": "result_message",
+      "description": "Schema discriminator."
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 timestamp for this Blackboard entry."
+    },
+    "safety_flags": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "synthetic_local_only",
+        "mock_only",
+        "dry_run",
+        "owner_review_required",
+        "external_side_effects_allowed",
+        "external_side_effects_occurred",
+        "blackboard_write_allowed",
+        "queue_write_allowed",
+        "audit_trail_write_allowed",
+        "worker_dispatch_allowed",
+        "openclaw_call_allowed",
+        "hermes_runtime_allowed",
+        "connector_call_allowed",
+        "google_sheets_write_allowed",
+        "follow_up_allowed",
+        "follow_up_requires_owner_confirmation"
+      ],
+      "properties": {
+        "synthetic_local_only": {
+          "type": "boolean"
+        },
+        "mock_only": {
+          "type": "boolean"
+        },
+        "dry_run": {
+          "type": "boolean"
+        },
+        "owner_review_required": {
+          "type": "boolean"
+        },
+        "external_side_effects_allowed": {
+          "type": "boolean"
+        },
+        "external_side_effects_occurred": {
+          "type": "boolean"
+        },
+        "blackboard_write_allowed": {
+          "type": "boolean"
+        },
+        "queue_write_allowed": {
+          "type": "boolean"
+        },
+        "audit_trail_write_allowed": {
+          "type": "boolean"
+        },
+        "worker_dispatch_allowed": {
+          "type": "boolean"
+        },
+        "openclaw_call_allowed": {
+          "type": "boolean"
+        },
+        "hermes_runtime_allowed": {
+          "type": "boolean"
+        },
+        "connector_call_allowed": {
+          "type": "boolean"
+        },
+        "google_sheets_write_allowed": {
+          "type": "boolean"
+        },
+        "follow_up_allowed": {
+          "type": "boolean"
+        },
+        "follow_up_requires_owner_confirmation": {
+          "type": "boolean"
+        }
+      },
+      "description": "Canonical 16-flag nested boolean object from Owner decision 05 §6.12."
+    },
+    "prev_entry_hash": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Previous entry SHA-256 hash; null is reserved for a genesis entry."
+    },
+    "execution_class": {
+      "type": "string",
+      "enum": [
+        "AUTO",
+        "OWNER_APPROVAL",
+        "OWNER_MANUAL"
+      ],
+      "description": "Execution class inherited from the task."
+    },
+    "produced_by": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Producing model or component; provenance only, never authorization."
+    },
+    "parent_task_id": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Parent task id for future decomposition; null for a root task."
+    },
+    "role": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Functional role of the artifact author; provenance only."
+    },
+    "result_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Unique result identifier."
+    },
+    "callback_id": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Callback correlation id."
+    },
+    "task_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Related task identifier."
+    },
+    "command_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Related command identifier."
+    },
+    "related_dry_run_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Related dry-run identifier."
+    },
+    "result_type": {
+      "const": "result_message"
+    },
+    "result_status": {
+      "type": "string",
+      "enum": [
+        "preview_result_not_executed",
+        "completed",
+        "failed",
+        "cancelled"
+      ]
+    },
+    "execution_mode": {
+      "type": "string",
+      "enum": [
+        "mock_only",
+        "n1_read_only"
+      ]
+    },
+    "started_at": {
+      "oneOf": [
+        {
+          "type": "string",
+          "format": "date-time"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Execution start timestamp."
+    },
+    "completed_at": {
+      "oneOf": [
+        {
+          "type": "string",
+          "format": "date-time"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Execution completion timestamp."
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable result summary."
+    },
+    "output_preview": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Redacted result output preview."
+    },
+    "error_summary": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Non-secret error summary."
+    },
+    "validation_status": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Result validation status."
+    },
+    "external_side_effects": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 0,
+      "description": "Observed external side effects."
+    },
+    "rollback_note": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Rollback requirement summary."
+    },
+    "audit_note": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Audit status summary."
+    }
+  }
+}
