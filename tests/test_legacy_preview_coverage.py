@@ -184,6 +184,32 @@ def test_full_loop_rejects_nested_forbidden_names_and_unsafe_text(
     assert preview["accepted"] is False
 
 
+def test_full_loop_rejects_production_endpoint_but_allows_local_hosts(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    production = _full_loop_record()
+    production["loop_summary"] = "https://example.com/api/status"
+    preview = _build_full_loop_with(monkeypatch, production)
+    assert preview["accepted"] is False
+    assert preview["validation_summary"].startswith("unsafe text content detected")
+
+    localhost = _full_loop_record()
+    localhost["loop_summary"] = "https://localhost/api/status"
+    preview = _build_full_loop_with(monkeypatch, localhost)
+    assert preview["accepted"] is True
+
+    loopback = _full_loop_record()
+    loopback["loop_summary"] = "http://127.0.0.1/api/status"
+    preview = _build_full_loop_with(monkeypatch, loopback)
+    assert preview["accepted"] is True
+
+
+def test_full_loop_webhook_and_secret_guards_remain_active() -> None:
+    assert full_loop._contains_unsafe_text("https://localhost/webhook/callback")
+    assert full_loop._contains_unsafe_text("nested sk-synthetic-secret marker")
+    assert not full_loop._contains_unsafe_text("synthetic local-only preview")
+
+
 def test_result_feedback_loader_rejects_non_object_root(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

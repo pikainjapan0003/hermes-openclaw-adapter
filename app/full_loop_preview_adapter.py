@@ -209,7 +209,11 @@ def _unsafe_global_safety_flags(safety_flags: Any) -> List[str]:
 
 def _contains_unsafe_text(value: Any) -> bool:
     if isinstance(value, str):
-        return bool(_WEBHOOK_URL_PATTERN.search(value)) or bool(_SECRET_LIKE_PATTERN.search(value))
+        return (
+            bool(_WEBHOOK_URL_PATTERN.search(value))
+            or bool(_PRODUCTION_ENDPOINT_PATTERN.search(value))
+            or bool(_SECRET_LIKE_PATTERN.search(value))
+        )
     if isinstance(value, Mapping):
         return any(_contains_unsafe_text(v) for v in value.values())
     if isinstance(value, list):
