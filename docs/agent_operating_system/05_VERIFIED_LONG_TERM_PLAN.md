@@ -285,7 +285,12 @@
 | 1 | 本 session 建立 | 2026-07-07 | 待 Owner 接受 + 首個弱模型 session 磨合 |
 | 2 | **完成** | 2026-07-18 | `02_V1_0_DEFINITION.md` 凍結（Owner 逐字簽核，見該檔 §5；fresh-context read-back 通過） |
 | 3 | **完成** | 2026-07-19 | 9 schema＋validator＋pytest 41/41 全綠（Fable 5 於 WSL 乾淨 venv 獨立實跑）；§6.12 裁決全落實（16 面旗封閉、9 公共欄、OWNER_MANUAL 派工路徑結構性拒絕）；Codex Luna+max 施工（commit `f9ae105`）、Fable 5 審查、Owner 核准合併。掛帳：jsonschema/pytest 未入 requirements（白名單禁改依賴檔，另單補） |
-| 4–11 | 未開始 | — | Phase 4（Owner Approval Packet，對 N=1 動作具體設計）為下一個建議動作，Phase 6 可與 4/5 並行；實作仍需 Owner instruction 逐字授權 |
+| 4 | **完成** | 2026-07-19 | approval packet schema＋純函式 builder＋GET-only 顯示（`d305ff8`）；token const null 三重鎖；雙審查員通過（Fable 5 全項驗收＋Opus fresh-context 對抗審查「packet→execution 零路徑」） |
+| 5 | **完成** | 2026-07-19 | evidence bundle schema＋builder＋hash 重算/篡改/洩漏反向測試（`88bf8b2`，NIGHT-BATCH-1） |
+| 6 | **完成** | 2026-07-19 | 動態 route 盤點＋七條 POST 白名單＋注入 button 必紅＋approve 行為測試（`9f79657`）；queue-claim guard 二版於 NIGHT-BATCH-3 補強（已知風險：approve→queued 後若外部啟動 worker 可被 claim，execution gate 屬 Phase 9） |
+| 8 | **規劃完成** | 2026-07-19 | docs 方案＋OWASP 對照（`3edbc0b`）；離線 projection contract（`51f657f`，超包，Owner 2026-07-19 追認）；遠端接線／remote API 仍未授權 |
+| 7 | 設計已備 | 2026-07-19 | `07_AUDIT_WRITE_DESIGN.md`（NIGHT-BATCH-2）；**實作前置＝Owner 逐字授權句「允許寫入 data/audit_dev.jsonl（local dev append-only）」，未給不得動工** |
+| 9–11 | 未開始 | — | Phase 9 需 Owner 在場；Phase 7 實作＋Phase 9 為 v1.0 最後兩關 |
 
 ---
 
@@ -455,6 +460,13 @@ O1 「計劃級授權」的正式格式未定義——Owner 批准 Hermes 切分
    在定義之前：AUTO 級任務照現行 01 §2/§4 逐字授權規則處理（fail closed）。
 O2 角色化 worker（工程師/測試員/安審…）的角色定義與 prompt 由誰維護、存哪——v1.2 前定。
 ```
+
+### 6.13 夜跑批次治理（2026-07-19 Owner 拍板，L0）
+
+1. 夜跑長批單模式啟用：一單多包、包定義不可由執行者替換或自行加包、卡住標 skipped/HOLD 不硬猜、事後 Fable 5 一批審一次。
+2. **免逐次蓋章**（Owner 2026-07-19 裁決「以後別蓋章、別有授權回覆」）：Fable 5 批審通過後**直接 merge/push、開下一批**，不再等 Owner 逐次確認。
+3. 例外（維持不變，屬凍結計劃內建硬閘，非逐次蓋章）：Phase 7 首次寫入需 Owner 逐字授權句（本檔 Phase 7 節）；Phase 9 需 Owner 在場＋單次 token；v1.1/v1.2 各級解鎖需新的 Owner instruction（§6.8）。
+4. Phase 8a 離線 projection contract 超包：Owner 2026-07-19 追認收下；後續批次禁止再自行加包。
 
 ### 6.12 Phase 3 施工期裁決（2026-07-18 Owner 親答，L0）
 
