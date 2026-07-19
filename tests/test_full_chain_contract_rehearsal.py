@@ -1,8 +1,7 @@
-"""Pure in-memory rehearsal of the complete data-contract chain.
+"""Pure in-memory rehearsal of the complete 12-step data-contract chain.
 
-No step writes, dispatches, executes, or creates a real hash-chain entry.
-Until the Phase 7 canonicalization design is approved for implementation,
-every Blackboard ``prev_entry_hash`` remains the schema-supported null value.
+No step writes, dispatches, executes, or persists a hash-chain entry.  The
+audit-event sequence uses the approved in-memory canonical hash calculation.
 """
 
 from __future__ import annotations
@@ -18,6 +17,8 @@ from jsonschema import Draft202012Validator, FormatChecker
 from app.approval_packet_builder import build_approval_packet
 from app.blackboard_validators import validate_blackboard_message
 from app.evidence_bundle_builder import build_evidence_bundle, verify_bundle_hash
+from app.hash_chain import entry_hash, verify_chain
+from app.rollback_preview_builder import build_rollback_preview
 from app.worker_mock_gateway_dry_run import run_worker_to_mock_gateway_dry_run
 
 
@@ -25,7 +26,7 @@ ROOT = Path(__file__).resolve().parent.parent
 FIXTURE_DIR = ROOT / "fixtures" / "blackboard_contract"
 EVIDENCE_SCHEMA = ROOT / "docs" / "schemas" / "evidence_bundle.json"
 
-BLACKBOARD_ORDER = (
+BLACKBOARD_PREFIX_ORDER = (
     "task_draft",
     "annotation",
     "approval_readiness",
@@ -34,13 +35,13 @@ BLACKBOARD_ORDER = (
     "openclaw_command_envelope",
     "result_message",
     "approval_packet",
-    "audit_event",
-    "rollback_event",
 )
 FULL_CHAIN_ORDER = (
-    *BLACKBOARD_ORDER[:8],
+    *BLACKBOARD_PREFIX_ORDER,
     "evidence_bundle",
-    *BLACKBOARD_ORDER[8:],
+    "audit_event_genesis",
+    "audit_event_linked",
+    "rollback_preview",
 )
 
 
@@ -75,7 +76,7 @@ def _evidence_command(
 def _build_full_chain() -> tuple[dict[str, dict[str, Any]], dict[str, Any]]:
     messages = {
         message_type: _load_valid_fixture(message_type)
-        for message_type in BLACKBOARD_ORDER
+        for message_type in BLACKBOARD_PREFIX_ORDER
         if message_type != "approval_packet"
     }
     for message in messages.values():
@@ -100,6 +101,25 @@ def _build_full_chain() -> tuple[dict[str, dict[str, Any]], dict[str, Any]]:
         [],
         created_at="2026-07-18T10:06:30Z",
     )
+
+    audit_genesis = _load_valid_fixture("audit_event")
+    audit_genesis["prev_entry_hash"] = None
+    audit_linked = copy.deepcopy(audit_genesis)
+    audit_linked.update(
+        {
+            "audit_id": "audit-phase3-002",
+            "event_id": "audit-event-phase3-002",
+            "event_notes": "Linked synthetic preview event; nothing was persisted.",
+            "prev_entry_hash": entry_hash(audit_genesis),
+        }
+    )
+    messages["audit_event_genesis"] = audit_genesis
+    messages["audit_event_linked"] = audit_linked
+    messages["rollback_preview"] = build_rollback_preview(
+        audit_linked,
+        evidence_bundle,
+        messages["result_message"],
+    )
     return messages, evidence_bundle
 
 
@@ -114,8 +134,9 @@ def _assert_reference_chain(
     command = messages["openclaw_command_envelope"]
     result = messages["result_message"]
     packet = messages["approval_packet"]
-    audit = messages["audit_event"]
-    rollback = messages["rollback_event"]
+    audit_genesis = messages["audit_event_genesis"]
+    audit_linked = messages["audit_event_linked"]
+    rollback = messages["rollback_preview"]
 
     task_id = task["task_id"]
     assert annotation["task_id"] == task_id
@@ -152,11 +173,13 @@ def _assert_reference_chain(
         == command["command_id"]
     )
 
-    assert audit["task_id"] == task_id
-    assert audit["related_result_id"] == result["result_id"]
+    assert audit_genesis["task_id"] == task_id
+    assert audit_genesis["related_result_id"] == result["result_id"]
+    assert audit_linked["task_id"] == task_id
+    assert audit_linked["related_result_id"] == result["result_id"]
     assert rollback["task_id"] == task_id
     assert rollback["related_result_id"] == result["result_id"]
-    assert rollback["source_audit_id"] == audit["audit_id"]
+    assert rollback["source_audit_id"] == audit_linked["audit_id"]
 
 
 def _validate_evidence_bundle(bundle: dict[str, Any]) -> list[Any]:
@@ -165,16 +188,36 @@ def _validate_evidence_bundle(bundle: dict[str, Any]) -> list[Any]:
     return sorted(validator.iter_errors(bundle), key=lambda error: list(error.path))
 
 
-def test_complete_eleven_step_contract_chain_is_valid_and_linked() -> None:
+def test_complete_twelve_step_contract_chain_is_valid_linked_and_hashed() -> None:
     messages, evidence_bundle = _build_full_chain()
 
-    assert len(FULL_CHAIN_ORDER) == 11
-    assert set(messages) == set(BLACKBOARD_ORDER)
-    for message_type in BLACKBOARD_ORDER:
+    assert len(FULL_CHAIN_ORDER) == 12
+    assert set(messages) == set(BLACKBOARD_PREFIX_ORDER) | {
+        "audit_event_genesis",
+        "audit_event_linked",
+        "rollback_preview",
+    }
+    for message_type in BLACKBOARD_PREFIX_ORDER:
         message = messages[message_type]
         assert message["prev_entry_hash"] is None
         validation = validate_blackboard_message(message)
         assert validation["valid"] is True, validation["errors"]
+
+    audit_sequence = [
+        messages["audit_event_genesis"],
+        messages["audit_event_linked"],
+    ]
+    assert audit_sequence[0]["prev_entry_hash"] is None
+    assert audit_sequence[1]["prev_entry_hash"] == entry_hash(audit_sequence[0])
+    assert verify_chain(audit_sequence) is True
+    for audit_event in audit_sequence:
+        validation = validate_blackboard_message(audit_event, "audit_event")
+        assert validation["valid"] is True, validation["errors"]
+
+    rollback_validation = validate_blackboard_message(
+        messages["rollback_preview"], "rollback_event"
+    )
+    assert rollback_validation["valid"] is True, rollback_validation["errors"]
 
     assert _validate_evidence_bundle(evidence_bundle) == []
     assert verify_bundle_hash(evidence_bundle) is True
@@ -201,8 +244,8 @@ def _break_rollback_audit(
     messages: dict[str, dict[str, Any]], evidence_bundle: dict[str, Any]
 ) -> tuple[str, dict[str, Any]]:
     del evidence_bundle
-    messages["rollback_event"]["source_audit_id"] = "audit-unrelated"
-    return "rollback_event", messages["rollback_event"]
+    messages["rollback_preview"]["source_audit_id"] = "audit-unrelated"
+    return "rollback_event", messages["rollback_preview"]
 
 
 @pytest.mark.parametrize(
@@ -222,3 +265,14 @@ def test_schema_valid_but_cross_linked_bad_data_is_rejected(
     assert schema_validation["valid"] is True
     with pytest.raises(AssertionError):
         _assert_reference_chain(messages, evidence_bundle)
+
+
+def test_tampering_with_hashed_audit_event_breaks_the_chain() -> None:
+    messages, _ = _build_full_chain()
+    audit_sequence = [
+        copy.deepcopy(messages["audit_event_genesis"]),
+        copy.deepcopy(messages["audit_event_linked"]),
+    ]
+    audit_sequence[0]["event_notes"] = "Tampered after the link was calculated."
+
+    assert verify_chain(audit_sequence) is False
