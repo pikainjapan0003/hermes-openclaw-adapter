@@ -106,6 +106,9 @@ Claude Code 收到指令後，必須先確認：
 Owner instruction format incomplete; stopped before execution.
 ```
 
+唯一的批次例外：已由 Owner 派出的夜跑長批單依
+`docs/agent_operating_system/05_VERIFIED_LONG_TERM_PLAN.md` §6.13 執行。執行者可在該批單明列的包內連續工作、逐包 commit；Fable 5 批審通過後可依常設指示 merge/push 並開下一批，不需逐包重包 Owner instruction。此例外不授權自行加包，也不解除 Phase 7、Phase 9、v1.1、v1.2 的專屬硬閘。
+
 ## 7. Phase lock
 
 Claude Code 必須鎖定當前 phase。
@@ -157,6 +160,9 @@ Claude Code final summary 也不得產生下一階段任務。Claude Code 只能
 
 Claude Code 完成後也必須停止。不得自動開始下一輪。
 
+夜跑長批單只在該批單包界線內例外：依 05 §6.13，卡住的包標
+skipped/HOLD 後可繼續下一包；批審通過後的 merge/push 與開下一批由同節常設指示管理。
+
 ## 11. Claude Code final summary 建議格式
 
 Claude Code 完成任務後，final summary 應使用繁體中文，並包含：
@@ -181,6 +187,8 @@ Claude Code 完成任務後，final summary 應使用繁體中文，並包含：
 
 不得自行生成下一步指令。下一步指令由 ChatGPT / Owner Review 產生。
 
+夜跑批次的下一批由 Fable 5 依 05 §6.13 產生；這不等於執行者可自行從 backlog 取材或擴充批單。
+
 ## 12. Agent Operating System 路由（2026-07-07 Fable 5 建立）
 
 任何 session 執行任務前，先讀：
@@ -202,4 +210,4 @@ docs/agent_operating_system/90_LESSONS_LEARNED.md            踩坑紀錄
 docs/agent_operating_system/99_LETTER_TO_FUTURE_SESSIONS.md  交接信
 ```
 
-優先序：本檔（Loop Format Contract）與 01_SAFETY_BOUNDARIES.md 優先於其他一切文件。授權只存在於 Owner instruction 的逐字句子裡；不確定 → HOLD。
+優先序：本檔（Loop Format Contract）與 01_SAFETY_BOUNDARIES.md 優先於其他一切文件。授權只存在於 Owner instruction 的逐字句子裡；05 §6.13 是 Owner 已拍板的夜跑常設指示，僅適用其明列批次流程；不確定 → HOLD。

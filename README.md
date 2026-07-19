@@ -20,7 +20,7 @@ data/results.jsonl  ──(GET /tasks/{id}/result)──────────
 ## 目前狀態（2026-07-20 更新 — 本節取代下方所有舊版本狀態描述）
 
 - Phase 2（v1.0 Definition Freeze）與 Phase 3–6 已完成；Phase 7 audit write 設計已備但 writer 尚未授權；Phase 8 規劃與離線 projection contract 已完成，remote 接線仍未授權。正確狀態與 commit 證據見 `docs/agent_operating_system/05_VERIFIED_LONG_TERM_PLAN.md` 第 5 節。
-- 目前測試基線為 **493 passed**（NIGHT-BATCH-7 合併後）；mypy 白名單 6 模組全綠。
+- 全套測試與 mypy 白名單目前全綠；實際測試數量以 CI 或當次本機實跑輸出為準，不在本檔寫死浮動數字。
 - v1.0 仍未簽核完成：Phase 7 首次 local audit write 需 05 Phase 7 指定的 Owner 逐字授權；Phase 9 N=1 需 Owner 在場與另案 token/gate。仍然無 Worker dispatch、無 real OpenClaw call、無 Hermes runtime activation、無 connector call、無外部副作用。
 - 治理制度與長期路線圖已建立於 **`docs/agent_operating_system/`**：
   - 入口索引：`README.md`｜安全邊界正本：`01_SAFETY_BOUNDARIES.md`｜Phase 0–11 計劃表：`05_VERIFIED_LONG_TERM_PLAN.md`

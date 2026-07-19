@@ -93,7 +93,7 @@ sonnet 級同一子任務連錯兩次 → 帶完整失敗軌跡（原 prompt、�
 
 ## C8. 三層模型分工與跨廠牌升級路徑（二次補強 2026-07-08；5.6 世代修訂 2026-07-18，Owner 核准）
 
-> 沿革：本節 2026-07-08 版原只存在於 Drive 上傳鏡像（`Desktop\Hermes_OpenClaw_Drive_Upload`），未同步回 repo；2026-07-18 補進 repo 時一併更新為 GPT-5.6 世代。建造層施工路由的權威正本＝`Desktop\Dream-system\03_MODEL_ROUTING_RULES.md`（老闆拍板「全生態通用」），本節只留摘要，衝突時以該檔為準。
+> 沿革：本節 2026-07-08 版原只存在於 Drive 上傳鏡像（`Desktop\Hermes_OpenClaw_Drive_Upload`），未同步回 repo；2026-07-18 補進 repo 時一併更新為 GPT-5.6 世代。跨環境可執行的路由摘要以本節為準；`Desktop\Dream-system\03_MODEL_ROUTING_RULES.md` 是 Owner 拍板的全生態來源檔，但在本 repo 僅供溯源引用。外部檔不可讀或版本不明時不得覆蓋本節，也不得自行把外部差異解讀成新授權。
 
 系統實際有三層模型，職責不互換：
 

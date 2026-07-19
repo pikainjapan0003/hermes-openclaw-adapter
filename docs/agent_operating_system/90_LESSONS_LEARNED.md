@@ -56,8 +56,8 @@
 - 症狀：`/dashboard/reviews` 存在「核准 Approve」「拒絕 Reject」按鈕與拒絕原因輸入框——登入後的 dashboard 並非純 display，含 Owner 審核控制（v0.7.x 時期建立，早於本制度）。頁面同時標示 `dispatch_allowed = False`、`execution_permission = False`、「Owner 核准不等於 Worker 執行」
 - 根因：v0.7 系列曾授權建立 Owner 審核面板；後續文件慣用「dashboard 是 read-only display」的簡化說法，未區分「queue 資料唯讀」與「有審核決策入口」
 - 缺的規則：01/05 描述 dashboard 時應寫明例外：登入牆後有 Owner-only 審核控制（approve/reject 決策記錄），但 decision ≠ dispatch
-- 新增/修改的規則：已補記於 05 §1 與 §2.1/2.2；Phase 6 唯讀硬化測試屆時必須把 reviews 頁的既有審核 POST 列入白名單並驗證其僅寫 decision event、不觸發 dispatch
-- 驗收：Owner 截圖存證；Phase 6 實作時以測試確認 approve 不產生 dispatch
+- 新增/修改的規則：已補記於 05 §1 與 §2.1/2.2；Phase 6 唯讀硬化已把 reviews 頁的既有審核 POST 列入白名單，並以測試驗證其僅寫 decision event、不觸發 dispatch
+- 驗收：Owner 截圖存證；Phase 6 測試已確認 approve 不產生 dispatch（完成狀態見 05 §5）
 
 ## L-007 二次補強整包只寫入 Drive 鏡像、未進 repo（三次漂移同根因）
 - 日期：2026-07-18（Fable 5 健檢發現；漂移發生於 2026-07-08）
