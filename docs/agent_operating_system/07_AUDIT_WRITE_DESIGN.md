@@ -100,6 +100,12 @@ audit-event schema. It rejects:
 - duplicate keys in decoded JSON input;
 - additional fields rejected by the audit-event schema.
 
+The future audit writer must decode every JSON record with
+`json.loads(..., object_pairs_hook=...)` using a hook that rejects duplicate keys
+before constructing a dictionary. The in-memory `hash_chain` module cannot recover
+duplicate-key information after ordinary decoding, so writer-side rejection is
+mandatory and must be tested before audit persistence is authorized.
+
 The current audit-event schema needs strings, Booleans, null, arrays, objects, and may
 use integers only if a later schema revision explicitly adds them. Floating-point
 numbers remain forbidden until a separately reviewed canonical-number rule exists.
@@ -184,31 +190,28 @@ trusted caller for comparison, but it must not persist that anchor itself in Pha
 
 ## 6. Rollback preview builder design
 
-**2026-07-19 Fable 5 批審裁決，HOLD 解除。** Canonical 第二輸入＝A
-（`evidence_bundle`）。依據：05 Phase 7 輸入欄明寫「Phase 3 audit/rollback
-schema、Phase 5 bundle」，本節同；派工單的 `result_message` 是筆誤，以 05
-為正本。
+**2026-07-19 二次裁決（B 案）定案；implementation 本批實作。**
 
 The rollback preview builder is a pure function. It accepts a validated `audit_event`
-and the related validated N=1 `evidence_bundle`, then produces one object conforming
-to `rollback_event.schema.json`.
+and the related validated N=1 `evidence_bundle` plus validated `result_message`, then
+produces one object conforming to `rollback_event.schema.json`.
 
-### 6.1 18 欄精確規格
+### 6.1 19 欄精確規格
 
 | 欄位 | 來源／const |
 |---|---|
-| `schema_version` | 抄 `audit_event`；必須 == bundle 的 `schema_version` |
+| `schema_version` | 抄 `audit_event`；必須 == `result_message.schema_version`（不與 bundle 比對，bundle 屬 evidence contract 版本空間） |
 | `message_type` | const `rollback_event` |
 | `created_at` | 抄 `audit_event.created_at`（確定性，禁取當下時間） |
-| `safety_flags` | 抄 `audit_event`；必須逐鍵 == bundle 之旗 == 16 鍵安全 profile |
+| `safety_flags` | 抄 `audit_event`；必須逐鍵 == `result_message.safety_flags` == 16 鍵安全 profile |
 | `prev_entry_hash` | const null（07 §4 hash-chain 實裝前） |
-| `execution_class` | 抄 `audit_event`；必須 == `AUTO` |
+| `execution_class` | 抄 `audit_event`；必須 == `result_message.execution_class` == `evidence_bundle.task.execution_class` == `AUTO` |
 | `produced_by` | const `rollback-preview-builder` |
-| `parent_task_id` | 抄 `audit_event`；必須 == bundle 對應值 |
+| `parent_task_id` | 抄 `audit_event`；必須 == `result_message.parent_task_id` |
 | `role` | const `rollback_reviewer` |
 | `rollback_id` | 確定性組字 `rollback-{source_audit_id}-{related_result_id}` |
-| `task_id` | 抄 `audit_event`；必須 == `bundle.task_id` |
-| `related_result_id` | 抄 `audit_event`；必須 == bundle 的 `result_id` |
+| `task_id` | 抄 `audit_event`；必須 == `result_message.task_id` == `evidence_bundle.task.task_id` |
+| `related_result_id` | 抄 `audit_event`；必須 == `result_message.result_id` |
 | `source_audit_id` | 抄 `audit_event.audit_id` |
 | `rollback_status` | const `NOT_REQUIRED` |
 | `rollback_required` | const false |
@@ -219,12 +222,17 @@ to `rollback_event.schema.json`.
 
 ### 6.2 Fail-closed 規則
 
-- 兩輸入 message/bundle 標識檢查；
+- 三輸入 message/bundle 標識檢查；
 - `audit_event.preview_only` 必 true、`audit_status == preview_audit_not_persisted`、
   `persistence_target == none`；
 - `verify_bundle_hash` 必過；
-- bundle 預期副作用與 result 實際副作用任一非空 → 直接 raise（v1.0 無
-  寫入型動作，遇到＝輸入不合法，不做 required 分支）；
+- 副作用三重檢查：`result_message.external_side_effects == []`、
+  `evidence_bundle.expected_side_effects == []`、
+  `evidence_bundle.mock_result.external_side_effects_performed == false`；
+- `evidence_bundle.mock_result.worker_dispatched`、`real_openclaw_called`、
+  `queue_written`、`audit_trail_written` 四旗皆 false；
+- result 三態檢查：`result_status == preview_result_not_executed`、
+  `execution_mode == mock_only`、副作用空；
 - task/result/audit 三方 id 鏈一致；
 - 缺欄、型別錯、旗不符 → raise；
 - 禁 mutate 輸入；
