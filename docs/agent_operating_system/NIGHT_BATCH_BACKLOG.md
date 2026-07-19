@@ -40,7 +40,7 @@
 | 信任事故自動掃描：repo 內「越權模式」靜態掃描器（新 POST/writer/token 變更即紅）做成常備測試 | 【夜跑可做】 |
 | Phase 0 三源檢查腳本化（local/GitHub hash 對照，read-only） | 【夜跑可做】 |
 | 制度檔季度健檢（40 F4 精簡門檻、規則衝突掃描、90 教訓回歸） | 【夜跑可做】週期性重複排批 |
-| mock_e2e 舊件與新 contract 的一致性遷移評估 | 【夜跑可做】評估報告先行 |
+| mock_e2e 舊件與新 contract 的一致性遷移評估 | 【已完成】NB-7 評估；NB-8 包3 依 Fable 5 裁決落為「保留並凍結」，Owner 可翻案 |
 
 ## E. 審查發現待修（來自批審 findings，優先消化）
 
@@ -53,3 +53,5 @@
 
 - NB-1～NB-5：Phase 3/4/5/6/8 規劃、hash-chain、rollback builder、coverage/mypy/fuzz/全鏈 rehearsal（詳 05 §5 與各批 commit）。
 - NB-6：A2（07 對抗審查）、A3（preflight 閘門）、B1（v1.1 設計）、B4=O1 提案、B5=O2 提案（含三 role prompt 草稿）、D1 第一輪（legacy 覆蓋 74/72→99/100）、D2（信任掃描器）。
+- NB-7：mock_e2e 舊件與新 contract 的一致性遷移評估完成；建議 Option A「保留並凍結」。
+- NB-8 包3：Fable 5 於 2026-07-20 裁決採 Option A，落檔於 05 §6.14；Owner 保留翻案權。

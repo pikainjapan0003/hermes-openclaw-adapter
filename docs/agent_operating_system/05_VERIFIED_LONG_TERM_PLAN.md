@@ -468,6 +468,10 @@ O2 角色化 worker（工程師/測試員/安審…）的角色定義與 prompt 
 3. 例外（維持不變，屬凍結計劃內建硬閘，非逐次蓋章）：Phase 7 首次寫入需 Owner 逐字授權句（本檔 Phase 7 節）；Phase 9 需 Owner 在場＋單次 token；v1.1/v1.2 各級解鎖需新的 Owner instruction（§6.8）。
 4. Phase 8a 離線 projection contract 超包：Owner 2026-07-19 追認收下；後續批次禁止再自行加包。
 
+### 6.14 `mock_e2e_v0_7` 保留並凍結（2026-07-20 Fable 5 裁決，Owner 可翻案）
+
+`app/mock_e2e_v0_7.py` 保留為凍結的 v0.7 legacy rehearsal；其輸出不是 Blackboard contract artifact，不得被解讀為 queue／approval／execution authority，也不得在原檔內改造成新 contract。後續只可用測試鎖住既有行為；若要建立單向 migration adapter 或退役舊件，須另案取得明確欄位政策與 Owner 裁決。本決策可由 Owner 明示翻案。
+
 ### 6.12 Phase 3 施工期裁決（2026-07-18 Owner 親答，L0）
 
 包1（Sol+xhigh 設計稿）觸發 fixture 矛盾 HOLD，Owner 裁決如下：

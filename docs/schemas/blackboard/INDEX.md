@@ -71,3 +71,12 @@ The general enum is `AUTO | OWNER_APPROVAL | OWNER_MANUAL`. `worker_dry_run` and
 ## Validation boundary
 
 `app/blackboard_validators.py` loads only these allowlisted schemas and returns structured errors. It is intentionally not imported by `app/main.py` and performs no writes or runtime actions.
+
+## Frozen v0.7 mock boundary
+
+`app/mock_e2e_v0_7.py` is retained as a frozen legacy rehearsal under 05 §6.14.
+Its TaskEnvelope, CallbackEvent, queue states, and output are not Blackboard
+contract artifacts and grant no queue, approval, execution, or dispatch authority.
+The legacy file may receive regression tests, but migration or retirement requires
+a separate Owner decision; it must not be retrofitted into the contracts indexed
+above.
