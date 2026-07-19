@@ -33,8 +33,15 @@ The future implementation may consume only already-validated values from:
 
 1. `docs/schemas/blackboard/audit_event.schema.json`;
 2. `docs/schemas/blackboard/rollback_event.schema.json`;
-3. `docs/schemas/evidence_bundle.json`;
-4. the corresponding validated N=1 fixture or in-memory builder result.
+3. `docs/schemas/blackboard/result_message.schema.json`;
+4. `docs/schemas/evidence_bundle.json`;
+5. the corresponding validated N=1 fixture or in-memory builder result.
+
+“Already validated” is a caller precondition, not a guarantee produced by either
+`hash_chain` or `rollback_preview_builder`. The caller must run the complete applicable
+schema validator before invoking those pure helpers. The helpers enforce their own
+N=1 safety-critical invariants, but those partial checks do not replace full schema
+validation.
 
 The audit writer must not accept a caller-provided output path. Its persistence target
 is a constant resolved inside the repository to `data/audit_dev.jsonl`. The writer must
@@ -85,8 +92,9 @@ offer update, delete, replace, rotate, repair, import, bulk append, or path para
 
 ## 4. Canonical JSON specification
 
-This section is the formal Phase 3 hash-canonicalization completion required before
-the hash chain can be implemented.
+This section is the formal Phase 3 hash-canonicalization specification implemented by
+the existing pure in-memory `hash_chain` helper. File-backed verification and the audit
+writer remain unimplemented and unauthorized.
 
 ### 4.1 Input domain
 
@@ -190,7 +198,8 @@ trusted caller for comparison, but it must not persist that anchor itself in Pha
 
 ## 6. Rollback preview builder design
 
-**2026-07-19 二次裁決（B 案）定案；implementation 本批實作。**
+**2026-07-19 二次裁決（B 案）定案；pure rollback builder 已實作。Audit writer
+仍未實作且未授權。**
 
 The rollback preview builder is a pure function. It accepts a validated `audit_event`
 and the related validated N=1 `evidence_bundle` plus validated `result_message`, then
@@ -204,7 +213,7 @@ produces one object conforming to `rollback_event.schema.json`.
 | `message_type` | const `rollback_event` |
 | `created_at` | 抄 `audit_event.created_at`（確定性，禁取當下時間） |
 | `safety_flags` | 抄 `audit_event`；必須逐鍵 == `result_message.safety_flags` == 16 鍵安全 profile |
-| `prev_entry_hash` | const null（07 §4 hash-chain 實裝前） |
+| `prev_entry_hash` | const null（本產物是未持久化 preview；既有 in-memory `hash_chain` 不會替 preview 建立持久化鏈結，audit writer 仍未授權） |
 | `execution_class` | 抄 `audit_event`；必須 == `result_message.execution_class` == `evidence_bundle.task.execution_class` == `AUTO` |
 | `produced_by` | const `rollback-preview-builder` |
 | `parent_task_id` | 抄 `audit_event`；必須 == `result_message.parent_task_id` |
@@ -222,6 +231,9 @@ produces one object conforming to `rollback_event.schema.json`.
 
 ### 6.2 Fail-closed 規則
 
+- caller 必須先以完整 `audit_event`、`result_message`、`evidence_bundle` contract
+  驗證三份輸入；builder 自身只做下列 N=1 safety-critical checks，不取代完整 schema
+  validator；
 - 三輸入 message/bundle 標識檢查；
 - `audit_event.preview_only` 必 true、`audit_status == preview_audit_not_persisted`、
   `persistence_target == none`；
@@ -260,13 +272,14 @@ HOLD，不得自行補 schema 或 fixture。
 這份清單只證明欄位存在，不取代 schema 驗證、bundle hash 驗證或 §6.2 的
 交叉一致性檢查。
 
-## 7. Proposed implementation boundaries
+## 7. Current and proposed implementation boundaries
 
-The future implementation package described by the governing plan may add only:
+The pure in-memory `app/hash_chain.py` and `app/rollback_preview_builder.py` already
+exist. They perform no persistence and do not imply authorization for the remaining
+writer. A future separately authorized persistence package may add only:
 
 - `app/audit_writer_local.py`;
-- `app/rollback_preview_builder.py`;
-- tests and synthetic fixtures explicitly scoped to Phase 7;
+- writer-specific tests and synthetic fixtures explicitly scoped to Phase 7;
 - the one runtime data file `data/audit_dev.jsonl`, but only after the exact Owner
   authorization and only as an observed test artifact for Owner inspection.
 
