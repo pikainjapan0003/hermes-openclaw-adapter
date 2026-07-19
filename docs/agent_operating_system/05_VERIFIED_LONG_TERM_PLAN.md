@@ -464,7 +464,7 @@ O2 角色化 worker（工程師/測試員/安審…）的角色定義與 prompt 
 ### 6.13 夜跑批次治理（2026-07-19 Owner 拍板，L0）
 
 1. 夜跑長批單模式啟用：一單多包、包定義不可由執行者替換或自行加包、卡住標 skipped/HOLD 不硬猜、事後 Fable 5 一批審一次。
-2. **免逐次蓋章**（Owner 2026-07-19 裁決「以後別蓋章、別有授權回覆」）：Fable 5 批審通過後**直接 merge/push、開下一批**，不再等 Owner 逐次確認。
+2. **先審後合**：夜跑產物一律 **Fable 5 批審通過 → Owner 蓋章 → 才 merge/push**（Owner 拍板 2026-07-19）；未取得該批 Owner 蓋章前不得合併或推送。
 3. 例外（維持不變，屬凍結計劃內建硬閘，非逐次蓋章）：Phase 7 首次寫入需 Owner 逐字授權句（本檔 Phase 7 節）；Phase 9 需 Owner 在場＋單次 token；v1.1/v1.2 各級解鎖需新的 Owner instruction（§6.8）。
 4. Phase 8a 離線 projection contract 超包：Owner 2026-07-19 追認收下；後續批次禁止再自行加包。
 

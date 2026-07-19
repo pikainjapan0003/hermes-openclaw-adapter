@@ -40,14 +40,16 @@
 
 已完成（不要重做）：三源環境驗證（HEAD 7a93127e 一致）；Drive 三份報告全文閱讀；8 項開源參考查證；全套 10 份制度檔＋CLAUDE.md 第 12 節路由；fresh-context adversarial review（18 findings 全修，見 90 L-005）；fresh-context read-back 驗證。**二次補強盤問（2026-07-08）：Owner 親答 20 題，裁決全數落檔於 05 §6——讀 05 時第 6 節優先於第 3 節，不要重新盤問已裁決的題目（重審觸發器見 05 §6.11）。**
 
-未完成，截至 2026-07-07 Fable 5 session 結束：
+未完成清單同步至 2026-07-19：
 
 1. ~~commit/push~~ 已完成（2026-07-07，Owner 指示）：制度與 README 同步均已 push 到 origin。
-2. ~~Phase 2（v1.0 Definition Freeze）~~ **已完成（2026-07-18）**：02_V1_0_DEFINITION.md 凍結，Owner 逐字簽核（該檔 §5）。下一步＝Phase 3（Blackboard Contract Hardening），實作需 Owner instruction 逐字授權。
+2. ~~Phase 2–6~~ **已完成（2026-07-19）**：v1.0 定義凍結、Blackboard contract、Owner approval packet、dry-run evidence bundle、Dashboard 唯讀防呆均已落地；queue-claim guard 二版由 NIGHT-BATCH-3 `0d3be1f` 補強。
 3. ~~Replit 登入後畫面未驗證~~ 已由 Owner 截圖驗證（2026-07-07）：/dashboard/reviews 有既存核准/拒絕按鈕，見 90 L-006。
-4. OWASP Agentic Top 10 全文未讀（只驗證了發布頁），Phase 8 使用前要先讀原文。
+4. ~~Phase 8 規劃與 OWASP 對照~~ **規劃完成（2026-07-19）**：`08_REMOTE_READONLY_PLAN.md`＋離線 projection contract 已完成；遠端 API、webhook、receiver 與 runtime 接線仍未授權。
 5. ~~`patches/` 目錄未追蹤狀態未處理~~ **已結案（2026-07-18，Owner 指示歸檔）**：內容為早已入庫的 v0.7.2-UI-B 舊補丁（commit 820ec62），已移出 repo 至 `~/projects/hermes-openclaw-adapter-patches-bak-20260718/`。
-6. Drive 資料夾中 v0.8.x 歷史報告未全文讀取（對現況非必要）。
+6. **Phase 7 未完成**：設計稿已備；audit writer 動工前仍需 Owner 逐字授權「允許寫入 data/audit_dev.jsonl（local dev append-only）」，rollback preview builder 的輸入與必要欄位生成規則仍待設計裁決。
+7. **Phase 9 未開始**：需 Owner 在場、單次 token 與已完成的 Phase 7 audit 基線。
+8. Drive 資料夾中 v0.8.x 歷史報告未全文讀取（對現況非必要）。
 
 ## 6. 下一個 session 的第一步建議
 
