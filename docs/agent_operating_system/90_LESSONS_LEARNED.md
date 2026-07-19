@@ -67,3 +67,12 @@
 - 缺的規則：「正本只在 repo、鏡像單向覆蓋、鏡像禁直改」當時不存在
 - 新增/修改的規則：40 F6 鏡像管理（Owner 拍板 2026-07-18）；缺件已全數回填 repo（10 C8 與 05 §6 於本日稍早 commit，01 §6/20 R-13/README/99 隨本筆）
 - 驗收：全 11 檔鏡像 vs repo diff 歸零＋fresh-context read-back
+
+## L-008 rollback E 規格與 bundle contract 脫節
+- 日期：2026-07-19
+- 任務：Phase 7 rollback preview builder 的跨 contract 輸入與欄位來源設計
+- 症狀：初版設計要求從 evidence bundle 比對 `safety_flags`、`parent_task_id`、`result_id`，但實際 evidence bundle schema 與正例 fixture 均無這些欄位，規格因此無法機械驗證並觸發 HOLD
+- 根因：設計裁決引用了不存在的欄位，未先 dump／grep 實際 schema 與 fixture，便從相鄰 Blackboard contract 推定 bundle 也有同名欄位
+- 缺的規則：跨 contract 欄位比對的設計，落筆前必須逐欄位 grep 實際 schema／fixture，並在設計文件附欄位存在性清單
+- 新增/修改的規則：已寫入 07 §6.3；欄位不存在或來源矛盾時必須 HOLD，不得自行補 schema／fixture
+- 驗收：NIGHT-BATCH-5 包1完成 B 案三輸入設計與存在性清單；包2完成純函式 builder，正例過 `rollback_event` schema 且 fail-closed 反例全綠

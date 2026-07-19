@@ -47,7 +47,7 @@
 3. ~~Replit 登入後畫面未驗證~~ 已由 Owner 截圖驗證（2026-07-07）：/dashboard/reviews 有既存核准/拒絕按鈕，見 90 L-006。
 4. ~~Phase 8 規劃與 OWASP 對照~~ **規劃完成（2026-07-19）**：`08_REMOTE_READONLY_PLAN.md`＋離線 projection contract 已完成；遠端 API、webhook、receiver 與 runtime 接線仍未授權。
 5. ~~`patches/` 目錄未追蹤狀態未處理~~ **已結案（2026-07-18，Owner 指示歸檔）**：內容為早已入庫的 v0.7.2-UI-B 舊補丁（commit 820ec62），已移出 repo 至 `~/projects/hermes-openclaw-adapter-patches-bak-20260718/`。
-6. **Phase 7 未完成**：設計稿已備；audit writer 動工前仍需 Owner 逐字授權「允許寫入 data/audit_dev.jsonl（local dev append-only）」，rollback preview builder 的輸入與必要欄位生成規則仍待設計裁決。
+6. **Phase 7 部分完成（2026-07-19）**：hash-chain 計算層與三輸入 rollback preview builder 已完成，B 案欄位裁決及存在性清單見 07 §6；剩餘 audit writer 動工前仍需 Owner 逐字授權「允許寫入 data/audit_dev.jsonl（local dev append-only）」。現有記憶體內 hash 計算與 preview 不構成寫入授權。
 7. **Phase 9 未開始**：需 Owner 在場、單次 token 與已完成的 Phase 7 audit 基線。
 8. Drive 資料夾中 v0.8.x 歷史報告未全文讀取（對現況非必要）。
 

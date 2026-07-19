@@ -242,6 +242,24 @@ The builder must not import the audit writer, queue, worker, OpenClaw, Hermes,
 connector, subprocess, HTTP client, filesystem, or runtime modules. A rollback
 preview is data for Owner review and never a callable rollback plan.
 
+### 6.3 跨 contract 欄位存在性閘門（L-008）
+
+任何跨 contract 欄位比對的設計，在落筆與裁決前都必須逐欄位檢查實際
+schema 與正例 fixture，並把欄位存在性清單留在設計文件；不得從欄位名稱、
+上一版報告或相鄰 contract 推定欄位存在。欄位不存在或來源互相矛盾時必須
+HOLD，不得自行補 schema 或 fixture。
+
+本次 B 案於 2026-07-19 依下列實際來源重新核對：
+
+| 輸入 | 已確認存在並被本設計引用的欄位路徑 | 實際 schema／正例 fixture |
+|---|---|---|
+| `audit_event` | `message_type`、`schema_version`、`created_at`、`safety_flags`、`execution_class`、`parent_task_id`、`audit_id`、`task_id`、`related_result_id`、`preview_only`、`audit_status`、`persistence_target` | `docs/schemas/blackboard/audit_event.schema.json`／`fixtures/blackboard_contract/audit_event.valid.json` |
+| `result_message` | `message_type`、`schema_version`、`safety_flags`、`execution_class`、`parent_task_id`、`task_id`、`result_id`、`result_status`、`execution_mode`、`external_side_effects` | `docs/schemas/blackboard/result_message.schema.json`／`fixtures/blackboard_contract/result_message.valid.json` |
+| `evidence_bundle` | `bundle_type`、`bundle_hash`、`task.task_id`、`task.execution_class`、`expected_side_effects`、`mock_result.external_side_effects_performed`、`mock_result.worker_dispatched`、`mock_result.real_openclaw_called`、`mock_result.queue_written`、`mock_result.audit_trail_written` | `docs/schemas/evidence_bundle.json`／`fixtures/local_mock_data/n1_dry_run_evidence_bundle.json` |
+
+這份清單只證明欄位存在，不取代 schema 驗證、bundle hash 驗證或 §6.2 的
+交叉一致性檢查。
+
 ## 7. Proposed implementation boundaries
 
 The future implementation package described by the governing plan may add only:
