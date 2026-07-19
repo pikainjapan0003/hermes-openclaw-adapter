@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parent.parent
 INDEX_PATH = ROOT / "docs" / "schemas" / "blackboard" / "INDEX.md"
 ROW_PATTERN = re.compile(
     r"^\| `(?P<contract>[^`]+)` \| (?P<purpose>[^|]+) "
-    r"\| `(?P<schema>[^`]+)` \| `(?P<fixture>[^`]+)` "
+    r"\| `(?P<artifact>[^`]+)` \| `(?P<reference>[^`]+)` "
     r"\| `(?P<test>[^`]+)` \|$",
     re.MULTILINE,
 )
@@ -28,6 +28,9 @@ EXPECTED_CONTRACTS = {
     "approval_packet",
     "evidence_bundle",
     "remote_readonly_projection",
+    "rollback_preview_builder",
+    "hash_chain",
+    "n1_preflight_runbook",
 }
 
 
@@ -35,12 +38,12 @@ def test_contract_index_inventory_and_all_referenced_paths_exist() -> None:
     index_text = INDEX_PATH.read_text(encoding="utf-8")
     rows = [match.groupdict() for match in ROW_PATTERN.finditer(index_text)]
 
-    assert len(rows) == 12
+    assert len(rows) == 15
     assert {row["contract"] for row in rows} == EXPECTED_CONTRACTS
-    assert len({row["schema"] for row in rows}) == 12
+    assert len({row["artifact"] for row in rows}) == 15
     for row in rows:
         assert row["purpose"].strip().endswith(".")
-        for path_field in ("schema", "fixture", "test"):
+        for path_field in ("artifact", "reference", "test"):
             referenced_path = ROOT / row[path_field]
             assert referenced_path.is_file(), (
                 f"{row['contract']} references missing {path_field}: "

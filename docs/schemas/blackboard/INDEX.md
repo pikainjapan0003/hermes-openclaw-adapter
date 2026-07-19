@@ -6,7 +6,7 @@ queue mutation, Worker dispatch, runtime execution, or remote connectivity.
 
 ## Contract inventory
 
-| Contract | Purpose | Schema | Positive fixture | Test |
+| Contract/component | Purpose | Artifact | Reference input | Test |
 |---|---|---|---|---|
 | `task_draft` | N=1 task proposal data. | `docs/schemas/blackboard/task_draft.schema.json` | `fixtures/blackboard_contract/task_draft.valid.json` | `tests/test_blackboard_schemas.py` |
 | `annotation` | Safety annotation for a task draft. | `docs/schemas/blackboard/annotation.schema.json` | `fixtures/blackboard_contract/annotation.valid.json` | `tests/test_blackboard_schemas.py` |
@@ -20,6 +20,9 @@ queue mutation, Worker dispatch, runtime execution, or remote connectivity.
 | `approval_packet` | Offline Owner review packet. | `docs/schemas/blackboard/approval_packet.schema.json` | `fixtures/blackboard_contract/approval_packet.valid.json` | `tests/test_approval_packet.py` |
 | `evidence_bundle` | Hashed N=1 dry-run evidence. | `docs/schemas/evidence_bundle.json` | `fixtures/local_mock_data/n1_dry_run_evidence_bundle.json` | `tests/test_evidence_bundle.py` |
 | `remote_readonly_projection` | Owner-approved offline display projection; no remote transport. | `docs/schemas/remote_readonly_projection.schema.json` | `fixtures/local_mock_data/remote_readonly_projection.valid.json` | `tests/test_remote_readonly_projection.py` |
+| `rollback_preview_builder` | Pure three-contract descriptive rollback preview. | `app/rollback_preview_builder.py` | `fixtures/local_mock_data/n1_dry_run_evidence_bundle.json` | `tests/test_rollback_preview_builder.py` |
+| `hash_chain` | In-memory canonical JSON and audit-chain verification. | `app/hash_chain.py` | `fixtures/blackboard_contract/audit_event.valid.json` | `tests/test_hash_chain.py` |
+| `n1_preflight_runbook` | Planning-only Phase 9 single-query checklist. | `docs/agent_operating_system/09_N1_PREFLIGHT_RUNBOOK.md` | `docs/agent_operating_system/05_VERIFIED_LONG_TERM_PLAN.md` | `tests/test_contract_index.py` |
 
 ## Phase 4 Owner approval packet
 
