@@ -184,29 +184,55 @@ trusted caller for comparison, but it must not persist that anchor itself in Pha
 
 ## 6. Rollback preview builder design
 
-The rollback preview builder is a pure function. It accepts a validated audit event and
-the related validated N=1 evidence bundle and produces one object conforming to
-`rollback_event.schema.json`.
+**2026-07-19 Fable 5 批審裁決，HOLD 解除。** Canonical 第二輸入＝A
+（`evidence_bundle`）。依據：05 Phase 7 輸入欄明寫「Phase 3 audit/rollback
+schema、Phase 5 bundle」，本節同；派工單的 `result_message` 是筆誤，以 05
+為正本。
 
-For the current harmless mock query:
+The rollback preview builder is a pure function. It accepts a validated `audit_event`
+and the related validated N=1 `evidence_bundle`, then produces one object conforming
+to `rollback_event.schema.json`.
 
-- `task_id` and `related_result_id` match the source audit event;
-- `source_audit_id` matches the source `audit_id`;
-- `rollback_status` is `NOT_REQUIRED`;
-- `rollback_required` is false;
-- `preview_only` is always true;
-- `rollback_path` is null;
-- the note and reason state that no execution or external side effect occurred;
-- all execution, dispatch, connector, runtime, queue, and Blackboard safety flags
-  remain false.
+### 6.1 18 欄精確規格
 
-If evidence reports a real side effect, dispatch, real OpenClaw call, queue write, or
-audit write inconsistent with the authorized input, the builder fails closed. It does
-not invent a command or mark a rollback ready.
+| 欄位 | 來源／const |
+|---|---|
+| `schema_version` | 抄 `audit_event`；必須 == bundle 的 `schema_version` |
+| `message_type` | const `rollback_event` |
+| `created_at` | 抄 `audit_event.created_at`（確定性，禁取當下時間） |
+| `safety_flags` | 抄 `audit_event`；必須逐鍵 == bundle 之旗 == 16 鍵安全 profile |
+| `prev_entry_hash` | const null（07 §4 hash-chain 實裝前） |
+| `execution_class` | 抄 `audit_event`；必須 == `AUTO` |
+| `produced_by` | const `rollback-preview-builder` |
+| `parent_task_id` | 抄 `audit_event`；必須 == bundle 對應值 |
+| `role` | const `rollback_reviewer` |
+| `rollback_id` | 確定性組字 `rollback-{source_audit_id}-{related_result_id}` |
+| `task_id` | 抄 `audit_event`；必須 == `bundle.task_id` |
+| `related_result_id` | 抄 `audit_event`；必須 == bundle 的 `result_id` |
+| `source_audit_id` | 抄 `audit_event.audit_id` |
+| `rollback_status` | const `NOT_REQUIRED` |
+| `rollback_required` | const false |
+| `preview_only` | const true |
+| `rollback_note` | const `No rollback is needed because no execution or side effect occurred.` |
+| `rollback_path` | const null |
+| `reason` | 確定性組句 `Audit {source_audit_id} recorded a preview-only result with no external side effects.` |
 
-The builder must not import the audit writer, queue, worker, OpenClaw, Hermes, connector,
-subprocess, HTTP client, filesystem, or runtime modules. A rollback preview is data for
-Owner review and never a callable rollback plan.
+### 6.2 Fail-closed 規則
+
+- 兩輸入 message/bundle 標識檢查；
+- `audit_event.preview_only` 必 true、`audit_status == preview_audit_not_persisted`、
+  `persistence_target == none`；
+- `verify_bundle_hash` 必過；
+- bundle 預期副作用與 result 實際副作用任一非空 → 直接 raise（v1.0 無
+  寫入型動作，遇到＝輸入不合法，不做 required 分支）；
+- task/result/audit 三方 id 鏈一致；
+- 缺欄、型別錯、旗不符 → raise；
+- 禁 mutate 輸入；
+- builder 不得提供 token 或任何執行欄位。
+
+The builder must not import the audit writer, queue, worker, OpenClaw, Hermes,
+connector, subprocess, HTTP client, filesystem, or runtime modules. A rollback
+preview is data for Owner review and never a callable rollback plan.
 
 ## 7. Proposed implementation boundaries
 
