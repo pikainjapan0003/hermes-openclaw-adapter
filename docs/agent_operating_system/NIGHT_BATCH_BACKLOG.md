@@ -42,6 +42,14 @@
 | 制度檔季度健檢（40 F4 精簡門檻、規則衝突掃描、90 教訓回歸） | 【夜跑可做】週期性重複排批 |
 | mock_e2e 舊件與新 contract 的一致性遷移評估 | 【夜跑可做】評估報告先行 |
 
+## E. 審查發現待修（來自批審 findings，優先消化）
+
+| 項 | 來源 | 性質 |
+|---|---|---|
+| 07 設計修正：輸入 allowlist 補 result_message（F-01 P2）＋生命週期措辭過期（F-02/F-03 P3）＋caller precondition 明確化（F-04） | NB-6 包1 對抗審查報告 | 【夜跑可做】docs |
+| full_loop_preview_adapter：`_PRODUCTION_ENDPOINT_PATTERN` 定義未接進 `_contains_unsafe_text`（宣稱擋 production endpoint 實際沒擋，P2 真 bug，Fable 5 2026-07-20 裁決） | NB-6 包3 疑點 | 【夜跑可做】小修＋回歸測試 |
+
 ## 已消耗
 
 - NB-1～NB-5：Phase 3/4/5/6/8 規劃、hash-chain、rollback builder、coverage/mypy/fuzz/全鏈 rehearsal（詳 05 §5 與各批 commit）。
+- NB-6：A2（07 對抗審查）、A3（preflight 閘門）、B1（v1.1 設計）、B4=O1 提案、B5=O2 提案（含三 role prompt 草稿）、D1 第一輪（legacy 覆蓋 74/72→99/100）、D2（信任掃描器）。
