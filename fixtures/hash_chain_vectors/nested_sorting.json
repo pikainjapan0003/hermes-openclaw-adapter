@@ -1,0 +1,6 @@
+{
+  "name": "nested_sorting",
+  "input": {"z": {"b": 2, "a": 1}, "a": [{"d": 4, "c": 3}, "é"]},
+  "canonical_hex": "7b2261223a5b7b2263223a332c2264223a347d2c22c3a9225d2c227a223a7b2261223a312c2262223a327d7d",
+  "sha256": "7ad1342b850e08c1f02bbd94df68c62b2736f487a8227bf928bd7064fdc692f3"
+}

@@ -1,0 +1,6 @@
+{
+  "name": "escaped_text",
+  "input": {"controls": "line\nquote\"slash\\", "prev_entry_hash": null},
+  "canonical_hex": "7b22636f6e74726f6c73223a226c696e655c6e71756f74655c22736c6173685c5c222c22707265765f656e7472795f68617368223a6e756c6c7d",
+  "sha256": "a8ed019109660f784a52353dcc4332d8a9e44db1f9b147d17b319a5580d6b203"
+}

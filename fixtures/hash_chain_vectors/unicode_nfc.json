@@ -1,0 +1,6 @@
+{
+  "name": "unicode_nfc",
+  "input": {"text": "café", "鍵": "值"},
+  "canonical_hex": "7b2274657874223a22636166c3a9222c22e98db5223a22e580bc227d",
+  "sha256": "033f609a4eed29b732853548f1593277e5f89a3249718fa1e3cebdeb508b34ff"
+}

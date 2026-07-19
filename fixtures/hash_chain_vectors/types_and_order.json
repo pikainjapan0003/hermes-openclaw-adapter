@@ -1,0 +1,6 @@
+{
+  "name": "types_and_order",
+  "input": {"z": null, "a": true, "m": false, "n": -7},
+  "canonical_hex": "7b2261223a747275652c226d223a66616c73652c226e223a2d372c227a223a6e756c6c7d",
+  "sha256": "ca331e2ab5410c24eab35380b38d4e632f1f55671bc32547cdba121daaaae635"
+}

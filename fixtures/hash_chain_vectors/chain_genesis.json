@@ -1,0 +1,10 @@
+{
+  "name": "chain_genesis",
+  "input": {
+    "event_id": "golden-genesis",
+    "event_notes": "Genesis preview.",
+    "prev_entry_hash": null
+  },
+  "canonical_hex": "7b226576656e745f6964223a22676f6c64656e2d67656e65736973222c226576656e745f6e6f746573223a2247656e6573697320707265766965772e222c22707265765f656e7472795f68617368223a6e756c6c7d",
+  "sha256": "f095b905b0c3ea9e57871d6840409e91843255dd4a790f57d09101605fd4d8c1"
+}
