@@ -6,7 +6,7 @@
 
 - 全系統處於 **read-only / mock / dry-run rehearsal** 狀態（v1.0-RC-R closeout，`HEAD 7a93127e` 時點）。唯一既存例外：`/dashboard/reviews` 有 Owner 核准/拒絕入口（decision ≠ dispatch，見 90 L-006）。
 - 沒有任何 real write / dispatch / call 被授權。授權規則見 01。
-- **Phase 2/3/4/5/6 已完成、Phase 8 規劃完成（至 2026-07-19；master `7d2123f`，queue-claim guard 二版 `0d3be1f`）**：v1.0 定義凍結（02）、Blackboard 10 schema＋validator、approval packet、evidence bundle、dashboard 唯讀防呆、遠端唯讀規劃＋離線 projection contract；測試 106 項全綠。**剩 v1.0 最後兩關**：Phase 7 實作（設計已備於 `07_AUDIT_WRITE_DESIGN.md`，動工需 Owner 逐字授權句）與 Phase 9 N=1（需 Owner 在場）。夜跑批次治理見 05 §6.13（Fable 5 批審通過→Owner 蓋章→才 merge/push）。目前狀態見 05 第 5 節。
+- **Phase 2/3/4/5/6 已完成、Phase 8 規劃完成（至 2026-07-19；master `7d2123f`，queue-claim guard 二版 `0d3be1f`）**：v1.0 定義凍結（02）、Blackboard 10 schema＋validator、approval packet、evidence bundle、dashboard 唯讀防呆、遠端唯讀規劃＋離線 projection contract；測試 106 項全綠。**剩 v1.0 最後兩關**：Phase 7 實作（設計已備於 `07_AUDIT_WRITE_DESIGN.md`，動工需 Owner 逐字授權句）與 Phase 9 N=1（需 Owner 在場）。夜跑批次治理見 05 §6.13（批審通過即合，免逐次蓋章）。目前狀態見 05 第 5 節。
 - **二次補強已完成（2026-07-08）**：Owner 盤問 20 題的裁決在 05 **第 6 節**——讀 05 時第 6 節優先於第 3 節。要點：v1.0 含 Phase 9 N=1 無害查詢、GitHub 為 source of truth、Blackboard＝repo 內 data/ JSON、任務三級分類（01 §6）、高風險審查多模型交叉（20 R-13、10 C8）。
 
 ## 檔案地圖（按用途查）
