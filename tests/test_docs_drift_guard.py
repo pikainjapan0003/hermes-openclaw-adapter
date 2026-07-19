@@ -64,14 +64,21 @@ def test_governance_repo_paths_exist_or_match_exact_absent_design_inventory() ->
             if not any(marker in path for marker in ("<", ">", "*")):
                 referenced.add(path)
 
-    missing = {path for path in referenced if not (ROOT / path).exists()}
+    def _repo_state_exists(path: str) -> bool:
+        # data/ holds gitignored runtime artifacts; their presence on a given
+        # machine must not change the documented repo-state inventory.
+        if path.startswith("data/"):
+            return False
+        return (ROOT / path).exists()
+
+    missing = {path for path in referenced if not _repo_state_exists(path)}
     assert missing == set(INTENTIONALLY_ABSENT_PATH_REFERENCES), (
         "governance path inventory drifted; every new absent path must be fixed, "
         f"not silently exempted: {sorted(missing)}"
     )
     for path, reason in INTENTIONALLY_ABSENT_PATH_REFERENCES.items():
         assert path in referenced
-        assert not (ROOT / path).exists()
+        assert not _repo_state_exists(path)
         assert reason
 
 
