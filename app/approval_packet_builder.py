@@ -208,7 +208,7 @@ def build_approval_packet(
 def build_dashboard_approval_packet_preview() -> dict[str, Any]:
     """Return deterministic synthetic packet data for GET-only display."""
 
-    worker_dry_run = {
+    worker_dry_run: dict[str, Any] = {
         "schema_version": "1.0",
         "message_type": "worker_dry_run",
         "created_at": "2026-07-18T10:04:00Z",
@@ -248,7 +248,7 @@ def build_dashboard_approval_packet_preview() -> dict[str, Any]:
             "remote_blackboard_api_runtime_created": False,
         },
     }
-    result_message = {
+    result_message: dict[str, Any] = {
         "schema_version": "1.0",
         "message_type": "result_message",
         "created_at": "2026-07-18T10:06:00Z",

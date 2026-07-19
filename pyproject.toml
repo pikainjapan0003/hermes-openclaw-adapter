@@ -16,3 +16,15 @@ dependencies = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 filterwarnings = ["error::DeprecationWarning"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+files = [
+  "app/blackboard_validators.py",
+  "app/approval_packet_builder.py",
+  "app/evidence_bundle_builder.py",
+  "app/remote_readonly_projection.py",
+  "app/hash_chain.py",
+  "app/rollback_preview_builder.py",
+]
