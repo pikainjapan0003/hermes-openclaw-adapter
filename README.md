@@ -17,15 +17,16 @@ data/results.jsonl  ──(GET /tasks/{id}/result)──────────
 
 ---
 
-## 目前狀態（2026-07-07 更新 — 本節取代下方所有舊版本狀態描述）
+## 目前狀態（2026-07-20 更新 — 本節取代下方所有舊版本狀態描述）
 
-- 開發已推進至 **v1.0-RC-R closeout**：Full Blackboard Loop 已完成 read-only / mock / dry-run 全流程彩排（`docs/HERMES_FULL_BLACKBOARD_LOOP_REHEARSAL_CLOSEOUT_V1_0_RC_R.md`）。
-- **尚未進入 v1.0 implementation**。仍然：無 Worker dispatch、無 real OpenClaw call、無 Hermes runtime activation、無 connector call、無外部副作用。
+- Phase 2（v1.0 Definition Freeze）與 Phase 3–6 已完成；Phase 7 audit write 設計已備但 writer 尚未授權；Phase 8 規劃與離線 projection contract 已完成，remote 接線仍未授權。正確狀態與 commit 證據見 `docs/agent_operating_system/05_VERIFIED_LONG_TERM_PLAN.md` 第 5 節。
+- 目前測試基線為 **493 passed**（NIGHT-BATCH-7 合併後）；mypy 白名單 6 模組全綠。
+- v1.0 仍未簽核完成：Phase 7 首次 local audit write 需 05 Phase 7 指定的 Owner 逐字授權；Phase 9 N=1 需 Owner 在場與另案 token/gate。仍然無 Worker dispatch、無 real OpenClaw call、無 Hermes runtime activation、無 connector call、無外部副作用。
 - 治理制度與長期路線圖已建立於 **`docs/agent_operating_system/`**：
   - 入口索引：`README.md`｜安全邊界正本：`01_SAFETY_BOUNDARIES.md`｜Phase 0–11 計劃表：`05_VERIFIED_LONG_TERM_PLAN.md`
   - 任何 AI session 開工前，先讀 `CLAUDE.md` 第 12 節路由。
 - 現況的唯一權威鏈：`CLAUDE.md` §12 → `docs/agent_operating_system/README.md` → `05_VERIFIED_LONG_TERM_PLAN.md` 第 5 節狀態表。**本檔以下章節與其他 166 份 docs 均為歷史紀錄**，與現況不符處以上述權威鏈為準。
-- 下一步：Phase 2（v1.0 Definition Freeze，需 Owner 裁決）。
+- 下一步：Phase 7 audit writer 仍停在 Owner 逐字授權閘；未授權前只可繼續唯讀、測試與規劃工作。
 
 ---
 

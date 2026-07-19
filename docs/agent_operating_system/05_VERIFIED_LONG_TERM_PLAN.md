@@ -103,12 +103,12 @@
 
 ### Phase 0：Current State Verification（每 session 例行）
 
-- 為什麼現在：一切決策的地基。三源（local/GitHub/Replit）漂移時做的所有工作都可能作廢（D-12）。做完代表：本 session 的事實基礎成立。沒做會卡住：後續每一步。
-- 目標：確認 local HEAD == origin master == 預期狀態，Replit 可載入且仍為唯讀。
+- 為什麼現在：一切決策的地基。local/GitHub 漂移或 Replit 不可達時，針對錯誤狀態做的所有工作都可能作廢（D-12）。做完代表：本 session 的事實基礎成立。沒做會卡住：後續每一步。
+- 目標：確認 local HEAD == origin master == 預期狀態，並確認 Replit HTTP 可達且仍為唯讀；本檢查不驗證 Replit deployed hash。
 - 輸入：無（任何 session 可直接執行）。
 - 輸出：回報中一段三源狀態（三個 hash/狀態 + 一致與否）。不產生檔案，除非發現漂移（則記入 90_LESSONS_LEARNED.md）。
 - 安全邊界：純讀取。禁止為「修復不一致」而擅自 push/pull/reset/redeploy。
-- 驗收條件：回報含 local HEAD hash、ls-remote hash、Replit HTTP 可達性三項，且為實跑結果（引用命令輸出）。
+- 驗收條件：回報含 local HEAD hash、ls-remote hash、Replit HTTP 可達性三項，且為實跑結果（引用命令輸出）；不得把 HTTP 可達性寫成 Replit revision 已與 GitHub 對齊。
 - 最易出錯：假設 origin 與本機一致而不實查；用舊 session 記憶的 hash 充數。
 - HOLD 條件：三源任兩者不一致 → 回報差異，等 Owner 決定同步方向。
 - 模型與流程：Haiku 級即可；無需 subagent；命令直接抄 00_QUICK_DIAGNOSIS.md D-12。

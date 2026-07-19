@@ -71,7 +71,7 @@ typo、格式、失效連結修復
 1. 讀目標檔全文（不要只讀要改的段落）。
 2. 改。
 3. 自查：是否誤觸 F2 清單？
-4. commit：**僅在 Owner 指示 commit 時執行**；message 格式 `docs(aos): <改了什麼> [F1]`（或 `[F2 approved: <Owner 授權引用>]`）。未獲指示 → 留在工作區並回報待 commit。
+4. commit：**僅在 Owner 指示 commit 時執行**；message 格式 `docs(aos): <改了什麼> [F1]`（或 `[F2 approved: <Owner 授權引用>]`）。未獲指示 → 留在工作區並回報待 commit。例外：夜跑批次產物依 05 §6.13 常設指示（Owner 2026-07-19 拍板）於 Fable 5 批審通過後 merge/push。
 5. 若是規則變更：90 記一筆。
 ```
 
@@ -81,6 +81,7 @@ typo、格式、失效連結修復
 正本唯一：repo 的 docs/agent_operating_system/（GitHub 為王，05 §6.5）。
 鏡像：Desktop\Hermes_OpenClaw_Drive_Upload（供 Owner 手機/Drive 隨時翻閱）。
 修改流程固定：改 repo → commit → 把改動檔整檔單向覆蓋到鏡像。三步缺一不可。
+同步時點＝merge 進 master 後；夜跑分支工作期間鏡像可暫時落後。
 鏡像禁止直接修改。直改鏡像 = 事故，記 90 並以 repo 為準處理。
 發現鏡像內容超前 repo（歷史漂移）→ 事故：回報 Owner，經裁決後回填 repo，不得沉默同步。
 Phase 0 開工檢查可抽查 diff（任一檔鏡像 vs repo 應為 0 差異）。

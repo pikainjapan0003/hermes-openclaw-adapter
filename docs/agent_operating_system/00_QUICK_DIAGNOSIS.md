@@ -87,7 +87,7 @@
 ### D-04 docs/ 無索引摘要層
 
 - 症狀：README 21KB、既有 docs 166 份平鋪，弱模型找現況要靠檔名猜，常讀到過期版本文件當成現況。
-- 修法：`docs/agent_operating_system/README.md`（本資料夾索引，已建立）作為入口；現況只認兩份：`05_VERIFIED_LONG_TERM_PLAN.md`（未來）與最新的 closeout 文件（過去，目前是 `docs/HERMES_FULL_BLACKBOARD_LOOP_REHEARSAL_CLOSEOUT_V1_0_RC_R.md`）。其餘既有 docs 一律視為歷史紀錄，除非被指名，不要主動讀。
+- 修法：`docs/agent_operating_system/README.md`（本資料夾索引，已建立）作為入口；現況只認 `05_VERIFIED_LONG_TERM_PLAN.md` 第 5 節狀態表。最新正式 closeout 文件仍是 `docs/HERMES_FULL_BLACKBOARD_LOOP_REHEARSAL_CLOSEOUT_V1_0_RC_R.md`，但它只代表過去 closeout，不覆蓋其後已落入 05 第 5 節的 Phase 實況。其餘既有 docs 一律視為歷史紀錄，除非被指名，不要主動讀。
 - 弱模型檢查法：開工前只讀三份：CLAUDE.md → agent_operating_system/README.md → 計劃表對應 Phase。讀第四份前先問自己「指令有指名它嗎」。
 - 正例：被要求了解現況 → 讀計劃表 Phase 0 的「目前系統狀態」節，5 分鐘完成。
 - 反例：把 docs/ 下 167 份全部 glob 出來逐一略讀「以求完整」。
@@ -156,7 +156,7 @@
   ```bash
   wsl.exe -e bash -c "cd /home/lnovo/projects/hermes-openclaw-adapter && git status --short && git log --oneline -1 && git ls-remote origin master"
   ```
-  比對本機 HEAD 與 `ls-remote` hash；再開 `https://hermes-openclaw-adapter.replit.app/dashboard/system` 確認可載入。三者一致才開工。
+  比對本機 HEAD 與 `ls-remote` hash；再開 `https://hermes-openclaw-adapter.replit.app/dashboard/system` 確認 HTTP 可達。此檢查不取得 Replit deployed hash，故只能證明 local/GitHub hash 是否一致及 Replit 是否可達，不得宣稱三個 revision 一致。
 - 正例：發現本機 ahead 2 commits → 回報「local ahead of origin by 2, HOLD for push decision」。
 - 反例：假設 origin 一定和本機一樣，直接在計劃裡引用本機才有的檔案路徑要 Replit 讀。
 
