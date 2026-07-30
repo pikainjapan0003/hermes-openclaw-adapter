@@ -22,6 +22,10 @@ queue mutation, Worker dispatch, runtime execution, or remote connectivity.
 | `remote_readonly_projection` | Owner-approved offline display projection; no remote transport. | `docs/schemas/remote_readonly_projection.schema.json` | `fixtures/local_mock_data/remote_readonly_projection.valid.json` | `tests/test_remote_readonly_projection.py` |
 | `rollback_preview_builder` | Pure three-contract descriptive rollback preview. | `app/rollback_preview_builder.py` | `fixtures/local_mock_data/n1_dry_run_evidence_bundle.json` | `tests/test_rollback_preview_builder.py` |
 | `hash_chain` | In-memory canonical JSON and audit-chain verification. | `app/hash_chain.py` | `fixtures/blackboard_contract/audit_event.valid.json` | `tests/test_hash_chain.py` |
+| `hash_chain_vectors` | Golden canonical-byte and linked-hash vectors. | `fixtures/hash_chain_vectors` | `docs/agent_operating_system/07_AUDIT_WRITE_DESIGN.md` | `tests/test_hash_chain_vectors.py` |
+| `blackboard_board_reader` | Read-only N=1 board-directory loader and contract validator. | `app/blackboard_board_reader.py` | `docs/agent_operating_system/12_BLACKBOARD_DATA_LAYOUT.md` | `tests/test_blackboard_board_reader.py` |
+| `mirror_drift_readonly` | Four-state read-only governance mirror comparison. | `scripts/check_mirror_drift_readonly.py` | `docs/agent_operating_system/40_MAINTENANCE_PROTOCOL.md` | `tests/test_check_mirror_drift_readonly.py` |
+| `three_source_readonly` | Read-only local, origin, and deployment-source comparison. | `scripts/check_three_source_readonly.py` | `docs/agent_operating_system/00_QUICK_DIAGNOSIS.md` | `tests/test_three_source_readonly.py` |
 | `n1_preflight_runbook` | Planning-only Phase 9 single-query checklist. | `docs/agent_operating_system/09_N1_PREFLIGHT_RUNBOOK.md` | `docs/agent_operating_system/05_VERIFIED_LONG_TERM_PLAN.md` | `tests/test_contract_index.py` |
 
 ## Phase 4 Owner approval packet
