@@ -75,6 +75,29 @@ from response style.
 functional role, while `produced_by` names the actual brain/source. Neither authenticates
 the caller or authorizes an action.
 
+### 4.1 `produced_by` allowlist 的 schema 位置（未裁決）
+
+Status: **PLANNING ONLY, NOT AUTHORIZED**
+
+現有十份 Blackboard schema 對 `produced_by` 只要求非空字串；上述三個 canonical
+值目前是 policy，不是 schema 保證。候選方案：
+
+| 方案 | 做法 | 風險與弱模型誤讀面 |
+|---|---|---|
+| A：精確 enum | 在 Hermes 會產生的 message schema 中列出三個完整值 | 最容易機械拒絕拼錯或冒名；但 provider 改名需升版 schema，且不可把「列在 enum」誤讀為已通過身分驗證或取得權限 |
+| B：namespace pattern | schema 只接受例如 `^hermes:[a-z0-9][a-z0-9.-]*$`，實際名稱另由 adapter registry allowlist | 可容納版本變動；但 pattern 只證明字形，不證明來源，弱模型可能自造 `hermes:trusted` 並誤以為合法 |
+| C：保留非空字串 | schema 不變，由 trusted adapter 精確比對 allowlist | contract 改動最少；但任何未走 adapter 的 producer 都可通過 schema，弱模型只做 schema validation 時無法拒絕未知來源 |
+
+**建議案：A（限 N=1 Hermes 產生的 `task_draft`／`annotation`）。** 這最符合
+「弱模型只拒絕格式錯誤」的目標；同時 schema description 與測試必須明寫 provenance
+enum 不是 authentication、approval 或 execution permission。其他非 Hermes producer
+不得被這個局部 enum 意外排除，因此正式變更前仍需逐 schema 盤點。
+
+**Owner 裁決（留白）：** ______________________________
+
+未有裁決時維持現況並 fail closed：future adapter 必須在 schema validation 之外比對
+三值 allowlist；本節不修改任何 schema。
+
 ## 5. Trusted envelope versus untrusted advisory
 
 The future adapter must construct these fields from trusted local envelope data rather
@@ -145,6 +168,35 @@ is supplied separately. The annotation maps as follows:
 Mandatory forbidden behaviors include Worker dispatch, real OpenClaw/Hermes calls,
 queue/Blackboard/audit writes, connectors, remote callbacks, follow-up creation, token
 issuance, and treating advice as approval.
+
+### 7.1 Hermes task/annotation 到 remote read-only projection 的逐欄映射
+
+`app/remote_readonly_projection.py` 的 builder 不直接接受 Blackboard message；它
+要求一個恰含十欄的 trusted aggregate source。下表定義未來 aggregator 的資料來源，
+不是 runtime 接線或 remote 傳輸授權：
+
+| Projection source 欄位 | `task_draft`／`annotation` 來源 | Fail-closed 規則 |
+|---|---|---|
+| `task_id` | `task_draft.task_id`；必須等於 `annotation.task_id` | 不同即 HOLD，不修 id |
+| `parent_task_id` | 兩筆 common `parent_task_id` | 必須完全相等；root 的 `null` 目前不能直接送入要求字串的 projection builder，需先裁決顯示規則 |
+| `phase` | 不能由 advisory 文字提供 | 僅 trusted lifecycle aggregator 可選既有 enum；只有 task/annotation 時不得假稱 `evidence_ready` 或 `approval_ready` |
+| `status` | 兩筆均無此欄 | 只能由 trusted lifecycle state 提供；不能從 `annotation_status` 推成全鏈 `ready` |
+| `execution_class` | 兩筆 common `execution_class` | 必須相等；模型不得升降級 |
+| `safety_flags` | 兩筆完整 16-key object | 必須逐鍵相等；builder 只投影其中十鍵，不得補值或放寬 |
+| `approval_readiness` | 兩筆均無此欄 | 必須來自已驗證的 `approval_readiness` message；task/annotation 階段不能自行填 `ready_for_owner` |
+| `decision` | 兩筆均無此欄 | 未有已驗證 `owner_decision` 時只能為 `null` |
+| `decision_timestamp` | 兩筆均無此欄 | 與 `decision` 同步為 `null`；不得用 annotation 時間代替 |
+| `evidence_bundle_hash` | 兩筆均無此欄 | 現行 projection schema 要求 64 位 hex；未產生並驗證 evidence bundle 前必須 HOLD，禁止假 hash |
+
+Projection envelope 的 `data_generated_at`、`source_commit_sha` 與 `stale_after` 也都
+必須來自 trusted local context。`task_display_id` 與 `parent_task_display_id` 由 builder
+做不可逆顯示雜湊；`produced_by`、advisory 文字與完整 16 flags 不在 projection schema
+內，不能塞進其他欄位繞過封閉 contract。
+
+**結論：只有 `task_draft`＋`annotation` 時，現行 projection 所需的 readiness、
+decision lifecycle 與 evidence hash 不完整，所以不能直接呼叫 projection builder。**
+必須等對應已驗證 contract 與 evidence bundle 齊全，再由未來另經 Owner 授權的 trusted
+aggregator 建 source；不得為了讓 schema 過關而發明 placeholder。
 
 ## 8. Frequency and duplicate policy
 
