@@ -104,6 +104,35 @@ def test_reader_rejects_malformed_and_unexpected_entries(tmp_path: Path) -> None
     assert result["entries"] == []
 
 
+def test_reader_rejects_duplicate_json_keys_without_payload_leak(
+    tmp_path: Path,
+) -> None:
+    message = _fixture("task_draft")
+    serialized = json.dumps(message, ensure_ascii=False, sort_keys=True)
+    task_id_pair = json.dumps("task_id") + ": " + json.dumps(message["task_id"])
+    marker = "DUPLICATE-KEY-RAW-PAYLOAD-MUST-NOT-LEAK"
+    duplicated = serialized.replace(
+        task_id_pair,
+        json.dumps("task_id") + ": " + json.dumps(marker) + ", " + task_id_pair,
+        1,
+    )
+    (tmp_path / "0001_task_draft.json").write_text(duplicated, encoding="utf-8")
+
+    result = read_blackboard_board(tmp_path)
+
+    assert result["valid"] is False
+    assert result["entry_count"] == 0
+    assert result["entries"] == []
+    assert result["errors"] == [
+        {
+            "filename": "0001_task_draft.json",
+            "code": "json_read_failed",
+            "message": "entry could not be decoded: _DuplicateObjectKeyError",
+        }
+    ]
+    assert marker not in json.dumps(result, ensure_ascii=False)
+
+
 def test_missing_directory_returns_structured_error(tmp_path: Path) -> None:
     missing = tmp_path / "not-created"
 

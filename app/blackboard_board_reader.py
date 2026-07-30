@@ -26,6 +26,21 @@ _ENTRY_FILENAME = re.compile(
 )
 
 
+class _DuplicateObjectKeyError(ValueError):
+    """Internal payload-free signal for a repeated JSON object key."""
+
+
+def _reject_duplicate_object_keys(
+    pairs: list[tuple[str, Any]],
+) -> dict[str, Any]:
+    decoded: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in decoded:
+            raise _DuplicateObjectKeyError("duplicate JSON object key")
+        decoded[key] = value
+    return decoded
+
+
 def _error(
     code: str,
     message: str,
@@ -128,8 +143,16 @@ def read_blackboard_board(directory: str | Path) -> dict[str, Any]:
         seen_types.add(message_type)
 
         try:
-            decoded = json.loads(child.read_text(encoding="utf-8"))
-        except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+            decoded = json.loads(
+                child.read_text(encoding="utf-8"),
+                object_pairs_hook=_reject_duplicate_object_keys,
+            )
+        except (
+            OSError,
+            UnicodeError,
+            json.JSONDecodeError,
+            _DuplicateObjectKeyError,
+        ) as exc:
             errors.append(
                 _error(
                     "json_read_failed",

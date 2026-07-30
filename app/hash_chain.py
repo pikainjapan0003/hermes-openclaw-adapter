@@ -46,7 +46,8 @@ def _validate_value(value: Any, location: str = "$") -> None:
 def canonical_json(value: Mapping[str, Any]) -> bytes:
     """Return Phase 7 canonical UTF-8 JSON bytes with no trailing newline.
 
-    Duplicate object keys must be rejected by the caller's JSON decoder,
+    The Blackboard board reader rejects duplicate object keys during decoding.
+    Other callers that decode raw JSON remain responsible for the same check,
     because a Python mapping cannot retain duplicate-key information.
     """
 
