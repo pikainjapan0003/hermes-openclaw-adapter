@@ -42,13 +42,13 @@ def _case_bytes(category: str, index: int, marker: str) -> bytes:
         depth = 128 + index * 3
         return (("[" * depth) + json.dumps(marker) + ("]" * depth)).encode("utf-8")
     if category == "long_key":
-        key = f"{marker}-" + ("k" * (4096 + index * 17))
-        return json.dumps([{key: 1}]).encode("utf-8")
+        key = "k" * (4096 + index * 17)
+        return json.dumps({key: marker}).encode("utf-8")
     if category == "duplicate_key":
         return (
-            '[{"duplicate":'
+            '{"duplicate":'
             + json.dumps(marker)
-            + ',"duplicate":"second"}]'
+            + ',"duplicate":"second"}'
         ).encode("utf-8")
     if category == "array_root":
         return json.dumps([marker, rng.randrange(10_000)]).encode("utf-8")
@@ -110,3 +110,52 @@ def test_bad_board_file_is_structurally_rejected_without_payload_leak_or_good_fi
     assert good_entry["valid"] is True
     assert good_entry["message"] == good
     assert all("message" not in entry for entry in result["entries"] if not entry["valid"])
+
+
+def _rejection_signature(result: dict, filename: str) -> tuple[str, tuple[str, ...]]:
+    """Return a payload-free signature for either schema- or reader-level refusal."""
+
+    entry = next(
+        (item for item in result["entries"] if item["filename"] == filename),
+        None,
+    )
+    if entry is not None:
+        validators = tuple(
+            sorted({error["validator"] for error in entry["errors"]})
+        )
+        return ("schema", validators)
+    codes = tuple(
+        sorted(
+            {
+                error["code"]
+                for error in result["errors"]
+                if error["filename"] == filename
+            }
+        )
+    )
+    return ("reader", codes)
+
+
+def test_named_object_root_boundaries_differ_from_array_root_rejection(
+    tmp_path: Path,
+) -> None:
+    filename = "0002_annotation.json"
+    signatures: dict[str, tuple[str, tuple[str, ...]]] = {}
+
+    for offset, category in enumerate(
+        ("duplicate_key", "long_key", "array_root"),
+        start=1,
+    ):
+        board = tmp_path / category
+        board.mkdir()
+        _write_good_task(board)
+        raw = _case_bytes(category, offset, f"BOUNDARY-{category}")
+        (board / filename).write_bytes(raw)
+        result = read_blackboard_board(board)
+
+        assert raw.lstrip().startswith(b"{" if category != "array_root" else b"[")
+        signatures[category] = _rejection_signature(result, filename)
+
+    assert signatures["duplicate_key"] != signatures["array_root"]
+    assert signatures["long_key"] != signatures["array_root"]
+    assert signatures["array_root"] == ("schema", ("schema_selection",))
