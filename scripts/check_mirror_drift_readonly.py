@@ -16,6 +16,7 @@ from pathlib import Path
 SAME = "SAME"
 BEHIND = "BEHIND"
 AHEAD = "AHEAD"
+DIFFERS = "DIFFERS"
 
 
 @dataclass(frozen=True)
@@ -46,10 +47,10 @@ def _digest(path: Path) -> str:
 def compare_mirror(repo_docs: Path, mirror_docs: Path) -> tuple[DriftEntry, ...]:
     """Return deterministic per-file states without changing either tree.
 
-    A repo-only path or a hash mismatch means the downstream mirror is behind the
-    authoritative repo.  A mirror-only path is an unambiguous ahead/incident case.
-    Content ancestry cannot be inferred from two snapshots, so mismatches are never
-    silently classified as ahead.
+    A repo-only path means the downstream mirror is behind the authoritative repo.
+    A mirror-only path is an unambiguous ahead/incident case.  When both paths exist
+    but their hashes differ, ancestry cannot be inferred from two snapshots, so the
+    entry is classified as DIFFERS and requires human review.
     """
 
     repo_files = _files(repo_docs)
@@ -71,7 +72,11 @@ def compare_mirror(repo_docs: Path, mirror_docs: Path) -> tuple[DriftEntry, ...]
             entries.append(DriftEntry(relative_path, SAME, "sha256 equal"))
         else:
             entries.append(
-                DriftEntry(relative_path, BEHIND, "content differs from repo authority")
+                DriftEntry(
+                    relative_path,
+                    DIFFERS,
+                    "content differs; ancestry unknown, human review required",
+                )
             )
 
     return tuple(entries)
@@ -85,9 +90,18 @@ def render_report(entries: tuple[DriftEntry, ...]) -> str:
             "INCIDENT: mirror is ahead of repo; stop and report under "
             "40_MAINTENANCE_PROTOCOL.md F6."
         )
-    counts = {state: sum(entry.status == state for entry in entries) for state in (SAME, BEHIND, AHEAD)}
+    if any(entry.status == DIFFERS for entry in entries):
+        rows.append(
+            "DIFFERS: human decision required; do not overwrite either copy "
+            "(L-007 scenario)."
+        )
+    counts = {
+        state: sum(entry.status == state for entry in entries)
+        for state in (SAME, BEHIND, AHEAD, DIFFERS)
+    }
     rows.append(
-        f"SUMMARY: SAME={counts[SAME]} BEHIND={counts[BEHIND]} AHEAD={counts[AHEAD]}"
+        f"SUMMARY: SAME={counts[SAME]} BEHIND={counts[BEHIND]} "
+        f"AHEAD={counts[AHEAD]} DIFFERS={counts[DIFFERS]}"
     )
     return "\n".join(rows)
 
@@ -103,6 +117,8 @@ def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     entries = compare_mirror(args.repo_docs.resolve(), args.mirror_docs.resolve())
     print(render_report(entries))
+    if any(entry.status == DIFFERS for entry in entries):
+        return 3
     if any(entry.status == AHEAD for entry in entries):
         return 2
     if any(entry.status == BEHIND for entry in entries):
