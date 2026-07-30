@@ -173,6 +173,40 @@ token、檔案內容、環境值或完整測試輸出：
 
 未有裁決時一律 HOLD；現有 `event_notes` 不得被宣稱為已解決 v1.1 結構化 audit。
 
+### 5.2 rollback 綁定真實 Git 目標方案（未裁決）
+
+Status: **PLANNING ONLY, NOT AUTHORIZED**
+
+現有 `rollback_event.schema.json` 鎖定 `preview_only: true`，且只有描述性的
+`rollback_path`、`rollback_note` 與 `reason`。它無法結構化證明「要 revert 的正是
+那次 write commit」，也不能記錄實際 revert 結果。未裁決前，任何 rollback preview
+都不得被當成 `git revert` 的參數來源。
+
+未來 contract 至少要封閉定義：
+
+| 欄位 | 語義與檢查 |
+|---|---|
+| `write_commit` | 已審批寫入產生的完整 commit hash；必須由 write record 與 repo 共同驗證 |
+| `write_commit_parent` | `write_commit` 的唯一 parent；防止 HEAD 漂移或模型另選 target |
+| `target_hash` | packet 綁定 target 的 post-write content SHA-256；不得用路徑文字或 Git hash 代替 |
+| `revert_outcome` | 封閉 enum：`not_attempted`、`succeeded`、`failed`、`ambiguous`；只有完成 repo 與測試驗證後才能為 `succeeded` |
+
+| 方案 | 做法 | 優點 | 風險與弱模型誤讀面 |
+|---|---|---|---|
+| A：升版 `rollback_event` | 擴充既有 schema，加入四欄並以 preview/result 狀態做條件式 required | 單一 rollback contract、與現有 builder 名稱一致 | 現有 `preview_only: true` 必須改版；弱模型可能把 preview 中的 commit 當已授權命令，或把 `PREVIEW_READY` 誤讀成可執行 |
+| B：新增 `v1_1_rollback_record` | 保留現有 preview contract，新增不可執行的 closed record，分開記 target binding 與 outcome；真正命令仍只來自 Owner-supervised gate | preview 與真實 repository outcome 邊界最清楚；可對四欄設 required、pattern 與狀態條件 | 增加 contract/fixture/validator 成本；若消費者把 record 的存在當執行授權，仍會形成捷徑，故必須有反向測試 |
+| C：內嵌在候選 `v1_1_write_record` | 把 rollback object 放進 §5.1 方案 B 的 write record | 一個 record 可串 write/revert 證據 | write record 原應不可變；revert 後回填會破壞既有 digest/hash-chain，預先填值又會混淆「預期」與「實際」；弱模型容易覆寫歷史 |
+
+**建議案：B。** 以獨立、append-only 語義的 rollback record 引用 immutable
+`write_commit` 與其 write-record id/hash；它只記錄證據，不持有自由命令字串，也不
+自行呼叫 Git。若 Owner 選 B，schema 與 cross-record invariants 必須先由獨立設計包
+拍板，之後才可談任何 rehearsal 實作。
+
+**Owner 裁決（留白）：** ______________________________
+
+未有裁決時一律 HOLD；不得從 branch HEAD、最近 commit、文字摘要或模型回答猜
+`write_commit`、parent、target hash 或 outcome。
+
 ## 6. Rehearsal 全鏈順序
 
 ### 6.1 寫入前
