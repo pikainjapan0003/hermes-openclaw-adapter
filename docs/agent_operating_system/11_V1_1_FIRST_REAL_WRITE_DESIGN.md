@@ -139,6 +139,40 @@ Phase 7 必須先完成，且實際 audit file 已由 Owner 檢視。v1.1 不另
 若 audit append 自己失敗，主動作不得開始；主動作後的 audit 失敗則立即凍結，保留
 worktree 證據並交 Owner，不得以「補寫 audit」名義自動繼續。
 
+### 5.1 v1.1 寫入 audit 結構化欄位方案（未裁決）
+
+Status: **PLANNING ONLY, NOT AUTHORIZED**
+
+現有 `audit_event.schema.json` 是 `additionalProperties: false` 的封閉 contract，
+業務欄位只有識別資訊、`event_type`、自由文字 `event_notes` 與持久化狀態；它沒有
+可機械驗證的 action/evidence digest、寫入 precondition、Git commit 或測試結果欄位。
+因此 §5 表中的六類 v1.1 event 目前只是語義需求，不能假稱已由既有 schema 完整表達。
+
+三個候選方案都必須表達下列最小資料，且只記 digest、狀態與非秘密摘要，不記 raw
+token、檔案內容、環境值或完整測試輸出：
+
+| 欄位群 | 最小語義 |
+|---|---|
+| Digest | packet digest、action digest、evidence bundle digest、token id/digest metadata |
+| Preconditions | repo/base commit、target identity、target-absent、clean worktree 與 chain-tail 檢查結果 |
+| Commit | write commit 或明確的 `null`/未建立原因；不得由模型猜測 |
+| Tests | 指定測試集識別、exit status、摘要 digest 與 pass/fail/ambiguous |
+
+| 方案 | 做法 | 優點 | 風險與弱模型誤讀面 |
+|---|---|---|---|
+| A：擴充 `audit_event` | 升版既有 schema，加入封閉的 `write_evidence` object，依 `event_type` 用條件式 required | 沿用 Phase 7 writer、同一 hash-chain、查詢面最少 | 會改動既有 10-message contract；弱模型可能把 optional 欄位亂填，或把 v1.0 preview 誤當 v1.1 write record；需要版本遷移與全部舊 fixture 重驗 |
+| B：新增 `v1_1_write_record` | 建立專用、封閉的新 message type，欄位直接對應 digest/precondition/commit/tests；Phase 7 audit 只引用其 record id/hash | v1.0 audit 與真實寫入證據分離最清楚；可讓 commit/tests 條件成為 schema 必填；弱模型只需拒絕格式錯誤 | contract inventory 由 10 增加為 11，validator、fixtures、INDEX 與全鏈測試都要獨立包更新；若錯把 record 本身當授權或執行命令，會形成新誤讀面 |
+| C：塞入 `event_notes` 結構化字串 | 把固定鍵值序列化成 `event_notes` 字串，不改 schema | 表面改動最少 | schema 只驗「非空字串」，無法機械拒絕缺欄、錯型、重複鍵或偽造狀態；canonicalization 會把 opaque 字串當整體，弱模型也容易把人類文字當結構化證據 |
+
+**建議案：B。** 真實 repository write 的證據應有獨立、封閉、可版本化的 contract，
+而不是放寬 v1.0 `audit_event` 或把安全關鍵資料藏進自由文字。若 Owner 選 B，後續必須
+先開一個「schema 設計＋fixture＋validator 測試」包，再另開 writer 實作包；此建議不
+新增 message type、不授權 writer，也不改變目前 10-schema inventory。
+
+**Owner 裁決（留白）：** ______________________________
+
+未有裁決時一律 HOLD；現有 `event_notes` 不得被宣稱為已解決 v1.1 結構化 audit。
+
 ## 6. Rehearsal 全鏈順序
 
 ### 6.1 寫入前
