@@ -83,11 +83,6 @@
 
 | 條目 | 來源 | 邊界 |
 |---|---|---|
-| onboarding 舊報告補 resolution metadata | Round 4 R4-01 | docs only；只標 O-01～O-05 已由 NB-12 包3處置，不重寫歷史 findings |
-| error-surface 報告同步現況 | Round 4 R4-02 | docs only；E-01 標「設計已備、Owner 未選、validator 未改」；E-02 另列 remote projection companion design 尚缺 |
-| remote projection schema-error redaction companion design | E-02／R4-02 | docs only；不得改 projection validator 或接 remote/runtime |
-| compaction crosswalk 快照措辭修正 | Round 4 R4-03 | docs only；把 ≤440 明標為 NB-11 package-3 時點，現況仍受 F4 500 行上限 |
-| `main.py` coverage 包規格重整 | NB-12 包5 HOLD | 先由 Fable 5 精確裁定 coverage denominator 與允許的 helper 範圍；現行「只 GET/display」安全上限實測 67%，不得靠 POST/dispatch/command helper 湊 75% |
 | fixture inventory 定期複核 | NB-12 包12 | review only；目前 50 檔、零 byte-identical duplicate、零確認 orphan，不得機械刪除 |
 | board reader capacity 趨勢重跑 | NB-12 包7 | measurement only；無 CI 門檻，T3 未觸發前不得據此升級介質 |
 
@@ -113,3 +108,52 @@
 - 500-message reader 容量量測、十 schema renderer 演習、Round 4、
   compaction crosswalk guard、三源 JSON 模式、fixture inventory 均已完成。
 - 包5為 HOLD、無 commit、無殘留變更；不得把它列為 coverage 75% 完成。
+
+## NIGHT-BATCH-13 補貨（2026-07-25）
+
+以下為本批後的目前存貨。歷史報告保留原 finding，不代表 finding 仍未處置。
+
+### 【夜跑可做】
+
+| 條目 | 來源 | 邊界 |
+|---|---|---|
+| fixture inventory coverage 敘述校正 | Round 5 R5-02 | docs only；區分「pytest 覆蓋」與「歷史 script 引用」，不得據此刪除三個 legacy fixture |
+| Round 4 resolution annotation | Round 5 R5-03 | docs only；R4-01/R4-02 加已由 NB-13 包4處置的 metadata，不重寫原 finding |
+| redaction implementation checklist 補 E-02 marker | Round 5 R5-04 | docs/design only；只補未來驗收條目，不改 validator、不把 Owner 空白欄視為裁決 |
+| fixture conventions 與 inventory 定期交叉複核 | NB-13 包9／Round 5 | review/test only；新增 fixture 仍須另有授權 |
+| test layer profile 定期重跑 | NB-13 包11 | measurement only；marker 是組織層，不是安全等級 |
+| Phase 11 research 目錄趨勢 | NB-13 包14 | measurement/proposal only；未拍板門檻前不得自動歸檔 |
+
+### Owner 四組選案中心
+
+Owner 可一次回覆四組，例如：
+`redaction=C；v1.1 audit=B；rollback=B；produced_by=A`。
+字母仍以各提案原檔方案為準；本表不替 Owner 預選。
+
+| 待裁決組 | 可選方案 | 未裁決前狀態 |
+|---|---|---|
+| Redaction contract | A validator 端／B exposure 端／C 雙層（文件建議 C） | 十 schema xfail 維持；Blackboard 與 projection validator 均不改 |
+| v1.1 audit record | A 擴充 `audit_event`／B 新增 `v1_1_write_record`／C 結構化 `event_notes` | 不改 schema、不實作 writer |
+| Rollback Git binding | 11 設計稿 A／B／C 三案 | 不改 schema、不執行 Git rollback |
+| `produced_by` policy | A enum／B pattern／C policy-only | 維持現行 policy-only provenance |
+
+### 其他專屬硬閘
+
+| 項目 | 未解條件 |
+|---|---|
+| root `parent_task_id: null` projection | Owner 決定 root 顯示映射或拒絕規則；不得填 placeholder |
+| Phase 7 audit writer | 仍需 Owner 逐字授權句；夜跑不得實作 |
+| Phase 9 N=1 | 仍需 Phase 7 完成、Owner 同步在場及另行 gate/token 裁決 |
+
+### 本批已消耗，不再重開
+
+- `main.py` 修正版純-helper 包達 69%（原 65%，目標 68%）；禁用的
+  command/dispatch/callback helper 與所有 POST 均未觸及。
+- E-02 remote projection redaction 專節、05/crosswalk 數字校正、
+  onboarding/error-surface resolution metadata 已完成（包2–4）。
+- 十 schema xfail 精確 inventory guard、三個 legacy 模組 100% coverage、
+  reader concurrency、三源 stdout schema 已完成（包5–8）。
+- fixture conventions、Round 5、exactly-one test-layer meta guard、v1.0
+  readiness evidence index已完成（包9–12）。
+- Round 5 R5-01 的雙 marker finding 已由包11修正並由完整 collection
+  機械守護；不得重開為未解 finding。
