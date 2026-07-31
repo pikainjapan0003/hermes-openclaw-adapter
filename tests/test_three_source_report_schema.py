@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import copy
 from pathlib import Path
 
 import pytest
@@ -142,3 +143,66 @@ def test_schema_rejects_missing_or_claimed_replit_hash_state() -> None:
         }
     )
     assert list(validator.iter_errors(claimed))
+
+
+def _assert_closed_shape_bidirectionally_locked(
+    instance: object,
+    schema: dict[str, object],
+    root_schema: dict[str, object],
+) -> None:
+    if "$ref" in schema:
+        reference = schema["$ref"]
+        assert isinstance(reference, str) and reference.startswith("#/$defs/")
+        definition_name = reference.rsplit("/", 1)[-1]
+        definitions = root_schema["$defs"]
+        assert isinstance(definitions, dict)
+        target = definitions[definition_name]
+        assert isinstance(target, dict)
+        _assert_closed_shape_bidirectionally_locked(instance, target, root_schema)
+        return
+
+    if schema.get("type") != "object":
+        return
+    assert isinstance(instance, dict)
+    properties = schema.get("properties")
+    required = schema.get("required")
+    assert isinstance(properties, dict)
+    assert isinstance(required, list)
+
+    emitted = set(instance)
+    allowed = set(properties)
+    required_fields = set(required)
+    assert required_fields <= emitted, "schema required field missing from script output"
+    assert emitted <= allowed, "script output field missing from closed schema"
+
+    for field, value in instance.items():
+        child_schema = properties[field]
+        assert isinstance(child_schema, dict)
+        _assert_closed_shape_bidirectionally_locked(value, child_schema, root_schema)
+
+
+def test_real_script_output_and_schema_fields_are_bidirectionally_locked() -> None:
+    schema = _schema()
+    for verdict in ("ALIGNED", "DRIFT", "INCOMPLETE"):
+        payload = _valid_payload(verdict)
+        Draft202012Validator(schema).validate(payload)
+        _assert_closed_shape_bidirectionally_locked(payload, schema, schema)
+
+
+def test_future_required_schema_field_without_script_output_turns_red() -> None:
+    evolved_schema = copy.deepcopy(_schema())
+    evolved_schema["required"].append("future_required_field")
+    evolved_schema["properties"]["future_required_field"] = {"type": "string"}
+
+    errors = list(
+        Draft202012Validator(evolved_schema).iter_errors(_valid_payload("ALIGNED"))
+    )
+    assert any(error.validator == "required" for error in errors)
+
+
+def test_future_script_field_without_closed_schema_permission_turns_red() -> None:
+    evolved_output = _valid_payload("ALIGNED")
+    evolved_output["future_script_field"] = "not-in-schema"
+
+    errors = list(Draft202012Validator(_schema()).iter_errors(evolved_output))
+    assert any(error.validator == "additionalProperties" for error in errors)
