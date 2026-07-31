@@ -13,7 +13,7 @@ python -m pytest -p no:cacheprovider -m <layer> -q --durations=15
 
 ## Layer results
 
-| Layer | Current outcomes | Runtime | 2026-07-23 outcomes | Outcome growth | Runtime change |
+| Layer | Snapshot outcomes (measured 2026-07-26) | Runtime | 2026-07-23 outcomes | Outcome growth | Runtime change |
 |---|---:|---:|---:|---:|---:|
 | contract | 334 (`324 passed, 10 xfailed`) | 70.18 s | 333 | +1 (+0.30%) | +15.10 s (+27.41%) |
 | governance | 52 passed | 33.59 s | 52 | 0 (0.00%) | +5.39 s (+19.11%) |
@@ -21,7 +21,8 @@ python -m pytest -p no:cacheprovider -m <layer> -q --durations=15
 | fuzz | 271 passed | 35.49 s | 271 | 0 (0.00%) | +6.95 s (+24.35%) |
 | **Total** | **931 outcomes** | — | **925 outcomes** | **+6 (+0.65%)** | — |
 
-The four outcome counts sum exactly to the current 931-test collection.
+The four outcome counts sum exactly to the 931-test collection measured for
+this 2026-07-26 snapshot; they are not the current repository test count.
 Per-layer runtimes are not additive substitutes for one full-suite timing:
 collection is repeated four times and mounted-filesystem/cache variance is
 material. Outcome growth is stable; runtime percentage changes are diagnostic

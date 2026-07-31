@@ -2,6 +2,12 @@
 
 Status: **REVIEW ONLY — FINDINGS RECORDED, NOTHING FIXED OR AUTHORIZED**
 
+Resolution metadata (added after the review; original findings below remain
+unchanged): GQ-01 through GQ-05 were addressed by NIGHT-BATCH-15 package 4,
+commit `a569980` (`night-batch-15-pkg4-quarterly-governance-fixes`). This note
+records later disposition only; it does not retroactively change the review or
+authorize any gated capability.
+
 Scope: F4 size thresholds, cross-rule consistency among
 `01_SAFETY_BOUNDARIES.md`, `05_VERIFIED_LONG_TERM_PLAN.md`,
 `10_MODEL_ORCHESTRATION.md`, `20_JUDGMENT_RUBRICS.md`,

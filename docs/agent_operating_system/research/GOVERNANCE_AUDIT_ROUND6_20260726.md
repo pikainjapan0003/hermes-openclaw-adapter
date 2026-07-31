@@ -2,6 +2,18 @@
 
 Status: **REVIEW ONLY — FINDINGS RECORDED, NOTHING FIXED OR AUTHORIZED**
 
+Resolution metadata (added after the review; original findings below remain
+unchanged):
+
+| Finding | Resolution | Commit |
+|---|---|---|
+| R6-01 | Resolved by registering `three_source_report` in the contract index and both path guards. | `34708e4` (`night-batch-15-pkg1-three-source-index`) |
+| R6-02 | Resolved by documenting the separate pytest-loader and executable-source-mention guarantees without overstating either. | `4df9df6` (`night-batch-15-pkg2-fixture-convention-scope`) |
+| R6-03 | Resolved by defining facts/`UNKNOWN`/verdict/exit-code semantics and testing the report contract accordingly. | `68b6bb2` (`night-batch-15-pkg3-three-source-semantics`) |
+
+These notes record later disposition only; they do not rewrite the historical
+findings or authorize any gated capability.
+
 Scope: fresh-context review of the NIGHT-BATCH-13 artifacts and their direct
 contract/index/test relationships: three-source report schema, fixture
 conventions and inventory, v1.0 readiness assessment, schema-error redaction
