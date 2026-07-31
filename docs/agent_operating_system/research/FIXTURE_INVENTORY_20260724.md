@@ -14,7 +14,7 @@ byte-identical content.
 | `fixtures/blackboard_contract/` | 30 | Ten Blackboard message contracts × valid, missing-common, and extra-safety-flag cases | `tests/test_blackboard_schemas.py` exact inventory and parameterized load |
 | `fixtures/builder_golden_vectors/` | 2 | Deterministic approval/evidence builder input-output vectors | `tests/test_builder_golden_vectors.py` |
 | `fixtures/hash_chain_vectors/` | 8 | Canonical JSON bytes/hash and three-entry chain vectors | `tests/test_hash_chain_vectors.py` directory inventory |
-| `fixtures/local_mock_data/` | 10 | Frozen preview/rehearsal evidence and remote-projection cases | Dedicated and transitive loader tests listed below |
+| `fixtures/local_mock_data/` | 10 | Frozen preview/rehearsal evidence and remote-projection cases | Pytest coverage or historical script references, distinguished below |
 | **Total** | **50** |  |  |
 
 ## Complete file-to-test map
@@ -85,12 +85,12 @@ because their basename is absent from source text.
 
 ### Local mock and projection data
 
-| File | Purpose | Primary test or exercised loader |
+| File | Purpose | Verified reference status |
 |---|---|---|
 | `local_mock_data/hermes_full_blackboard_loop_rehearsal_v1_0_rc_d.json` | Frozen full-loop read-only rehearsal | `tests/test_legacy_preview_coverage.py` through `app/full_loop_preview_adapter.py` |
-| `local_mock_data/hermes_openclaw_local_mock_messages_v0_8_1.json` | Legacy local mock preview source | `tests/test_main_get_routes_coverage.py` and `test_dashboard_readonly.py` through the dashboard preview loader |
-| `local_mock_data/hermes_openclaw_worker_dry_run_preview_v0_8_3_b.json` | Legacy worker dry-run preview | main/dashboard GET tests through `worker_dry_run_preview_boundary_v0_8_3_b.py` |
-| `local_mock_data/hermes_openclaw_worker_dry_run_result_audit_trail_v0_8_4_b.json` | Legacy dry-run result/audit display fixture | main/dashboard GET tests through `worker_dry_run_result_audit_trail_boundary_v0_8_4_b.py` |
+| `local_mock_data/hermes_openclaw_local_mock_messages_v0_8_1.json` | Legacy local mock preview source | **Historical script reference, not pytest coverage:** referenced by `scripts/load_local_mock_fixture_preview_v0_8_1.py` and related frozen check scripts; its basename is absent from `app/**/*.py` and `tests/**/*.py` |
+| `local_mock_data/hermes_openclaw_worker_dry_run_preview_v0_8_3_b.json` | Legacy worker dry-run preview | **Historical script reference, not pytest coverage:** referenced by `scripts/check_hermes_openclaw_worker_dry_run_preview_boundary_implementation_v0_8_3_b.py` and related frozen check scripts; its basename is absent from `app/**/*.py` and `tests/**/*.py` |
+| `local_mock_data/hermes_openclaw_worker_dry_run_result_audit_trail_v0_8_4_b.json` | Legacy dry-run result/audit display fixture | **Historical script reference, not pytest coverage:** referenced by `scripts/check_hermes_openclaw_worker_dry_run_result_audit_trail_boundary_implementation_v0_8_4_b.py` and related frozen check scripts; its basename is absent from `app/**/*.py` and `tests/**/*.py` |
 | `local_mock_data/hermes_result_feedback_preview_v0_9_6_d.json` | Frozen result-feedback preview | `tests/test_legacy_preview_coverage.py` through `app/result_feedback_preview.py` |
 | `local_mock_data/n1_dry_run_evidence_bundle.json` | Phase 5 evidence-bundle golden record | `tests/test_evidence_bundle.py`; reused by rollback/full-chain/preflight tests |
 | `local_mock_data/remote_readonly_projection.valid.json` | Valid offline remote projection | `tests/test_remote_readonly_projection.py` |
@@ -116,11 +116,13 @@ failure locality and requires a separate authorized proposal.
 
 ## Orphan result
 
-**No confirmed orphan fixture.** All 50 files are covered by an exact inventory,
-directory glob, direct test reference, or a fixture-path loader exercised by
-the named tests. Basename-only search produced apparent false orphans for
-parameterized Blackboard cases and glob-loaded hash vectors; tracing the load
-pattern resolves them.
+**No confirmed orphan fixture.** The 47 pytest-covered fixtures and the three
+legacy fixtures referenced by historical executable scripts account for all 50
+files. Script reference is not test coverage and does not prove current runtime
+use; it only prevents the three legacy artifacts from being silently labelled
+unreferenced or deleted. Basename-only search produced apparent false orphans
+for parameterized Blackboard cases and glob-loaded hash vectors; tracing the
+load pattern resolves them.
 
 This conclusion does not authorize deletion if future reference counts change.
 
