@@ -199,25 +199,26 @@ schema、依賴、runtime、持久化或 Owner-gated 變更。
 | README 移除過期 `HEAD 7a93127e`，並保留 05 §5 為唯一狀態權威 | Onboarding O2-01 | docs only；不得以新 hash 取代舊 hash |
 | 05 Phase 3 備註移除「jsonschema/pytest 未入 requirements」過期掛帳 | Onboarding O2-02 | docs only；不改依賴檔或 Phase 完成裁決 |
 | README §6.13「批審通過即合」補同句封閉範圍 | Onboarding O2-03 | docs only；只 cross-reference CLAUDE/05，不能擴張常設授權 |
-| RED 一頁表 A/B 標籤對回 redaction source design | Round 7 R7-01 | docs only；只修摘要一致性，Owner choice 保持空白 |
-| ROOT 提案來源補齊：將 R 方案寫成正式 planning-only 比較稿，或把一頁表降為新提案 | Round 7 R7-02 | docs only；不得把 R 當 Owner 已選，不改 projection schema/builder |
-| Quarterly 與 Round 6 加 later-resolution metadata | Round 7 R7-03/R7-04 | docs only；歷史 finding 原文不重寫 |
-| 2026-07-26 layer profile 補 package checkpoint 註記 | Round 7 R7-05 | docs only；不把量測數變成 CI 門檻 |
 | legacy enum／mock E2E／preview-loader error exposure 修正方案 | Error audit ES2-01/02/03 | 先做 docs/test 設計；產品錯誤格式需另包明文授權，E-01/E-02 xfail 不動 |
 | test-layer profile 與 board-reader stress 趨勢重跑 | NB-15 包8/17 | measurement only；不設效能門檻、不以 marker 跳過最終全測 |
 | dependency declaration baseline 定期複核 | NB-15 包11 | tests/report only；Owner 未裁決 authority 前不得改三份依賴宣告 |
 
-上述十項足以供下一批取材，夜跑存貨未枯竭。執行者仍不得自行從本表加包。
+執行者仍不得自行從本表加包。
 
 ### 【Owner 閘】（五組選案維持未裁決）
 
 | 選案 | 目前狀態 | 未裁決前行為 |
 |---|---|---|
-| RED — schema error redaction | **空白**；R7-01 指出一頁表 A/B 對調，先修文件再請 Owner 選 | E-01/E-02 xfail 維持；不得 export raw validator error |
+| RED — schema error redaction | **空白**；一頁表已校正為 A=validator、B=exposure、C=double-layer（建議 C） | E-01/E-02 xfail 維持；不得 export raw validator error |
 | AUD — v1.1 audit record | **空白**；A/B/C 提案與 B 建議仍只是設計 | 不改 schema、不實作 writer |
 | RB — rollback Git binding | **空白**；A/B/C 提案與 B 建議仍只是設計 | 不改 schema、不執行或猜測 Git rollback |
 | PB — Hermes `produced_by` | **空白**；A/B/C 提案與 A 建議仍只是設計 | schema 維持非空字串；future adapter 另行 fail closed |
-| ROOT — `parent_task_id: null` projection | **空白**；R7-02 指出 R 建議缺完整來源提案 | root projection 維持 HOLD，不填 placeholder |
+| ROOT — `parent_task_id: null` projection | **空白**；一頁表已校正為「尚無正式標號方案」，suggested direction 不是選項 | root projection 維持 HOLD，不填 placeholder；ROOT 不可回選案字母 |
+
+`OWNER_DECISION_ONE_PAGER_20260726.md` 已於 NIGHT-BATCH-16 包1校正，現在可
+安全閱讀與回覆其中四組已有正式來源選項的選案：RED／AUD／RB／PB。ROOT
+仍是第五組空白 Owner gate，但在正式比較稿完成前只能維持空白。任何回覆都
+只是設計裁決，不是 schema、writer、runtime、execution 或 dispatch 授權。
 
 Phase 7 audit writer、Phase 9 Owner-present N=1、v1.1/v1.2 instruction 與
 Replit/runtime 接線仍是各自獨立硬閘，不因上表或夜跑常設流程解鎖。
@@ -235,3 +236,49 @@ Replit/runtime 接線仍是各自獨立硬閘，不因上表或夜跑常設流�
   全量演習、Phase 9 all-of preflight 反向測試完成。
 - 包14–18：v1.0 readiness 二版、onboarding/治理 review、test-layer 新檔 guard、
   1,206-outcome profile、golden vector 獨立 hash 驗證完成。
+- NIGHT-BATCH-16 包1–3：Owner 一頁表 RED 標籤與 ROOT 身分已校正並由
+  consistency guard 鎖定；Quarterly、Round 6 與 2026-07-26 profile 的
+  resolution/checkpoint metadata 已補齊。Round 7 歷史原文尚待補 disposition。
+
+## NIGHT-BATCH-16 補貨（2026-07-28）
+
+以下條目吸收本批實測、Round 8、research 治理提案與 delegation template
+複核。列入本檔不授權執行者自行開包或擴大修正範圍。
+
+### 【夜跑可做】
+
+| 條目 | 來源 | 邊界 |
+|---|---|---|
+| Round 7 加 later-resolution metadata，記錄 R7-01～R7-05 已由 NB-16 包1/3處置 | Round 8 R8-02 | docs only；歷史 finding 原文不重寫、不宣稱 Owner 已選案 |
+| README/05 onboarding 三項過期文字校正 | Onboarding O2-01/02/03 | docs only；不得用新 HEAD 取代舊 HEAD；§6.13 封閉範圍不得放寬 |
+| 非 contract 唯讀工具 error-surface 遮罩設計 | ES3-01～ES3-04 | 先做 docs/tests；現有四個 xfail 維持，未有明文產品包不得改 script output contract |
+| delegation templates 加 current routing/night-batch overlays | TREV-01/03 | docs only；只同步 05 §6.13 與 10 C8，不新增授權或自動派工 |
+| T-07 補 R-13 雙模型 fresh-context 硬閘 | TREV-02 | docs only；不得把單模型 review 升格為高風險簽核 |
+| T-04/T-08/T-09/T-10 capability 與 Replit UNKNOWN 語義更新 | TREV-04/05 | docs only；不得建立 remote 接線、登入、deploy 或 deployed-hash 推測 |
+| board-wide `schema_version` 一致性設計評估 | NB-16 包11 | docs/tests only；現況為逐筆保留版本標記且可混版，不改既有 schema/reader |
+| `main.py` GET-only coverage 後續僅在新增安全表面時重估 | NB-16 包4 HOLD／包5 | 目前完整套件 raw 70.507%（顯示 71%）；POST/control/execution/callback 永不為 coverage 觸及 |
+| 唯讀 script coverage 輪替與 renderer union 顯示評估 | NB-16 包10 | tests/docs only；不為 coverage 改工具行為 |
+| board-reader symlink 惡意路徑在可建立 symlink 的 WSL 環境重跑 | NB-16 包7 | test-only；Windows 無權限 skip 不算通過該場景，不得建立 repo 正式 board |
+
+### 【Owner 閘】
+
+| 待裁決組 | 目前狀態 | 未裁決前行為 |
+|---|---|---|
+| RED／AUD／RB／PB／ROOT 五組既有選案 | **全部空白**；校正後一頁表可安全回覆四組正式選案，ROOT 無正式選項 | 不改 schema、validator、writer、projection 或 runtime；ROOT 保持 HOLD |
+| `research/` 目錄治理 | `RESEARCH_DIR_GOVERNANCE.md` A/B/C 三案（建議 B），Owner 欄空白 | 不建 archive、不搬檔、不改名、不壓縮、不刪檔 |
+| Phase 7 audit writer | 實作包規格草案已備，但仍只屬 PLANNING ONLY | 仍需 Owner 在實作 turn 給逐字授權句；不得建立 writer/正式 `data/` |
+| Phase 9 N=1 | 12-condition truth table 與 preflight 仍 fail closed | 等 Phase 7 完成、Owner 同步在場及另行 token/gate 裁決 |
+
+### 本批已消耗，不再重開
+
+- 包1–3、16：一頁表校正、機械 guard、Round 6/Quarterly/profile metadata 與
+  Round 8 review 完成；Round 8 R8-01 已由本 backlog 同步處置。
+- 包4 HOLD：安全 GET/display 表面不足以把 `main.py` 提升至 72%，零 edit、
+  零 commit；不得以 coverage 名義觸及 POST/control/execution/callback。
+- 包5–13：納管 coverage residual 分類、120 案 cross-message mutation、board
+  惡意路徑、hash 極端輸入、唯讀 script error/coverage、版本演化、全鏈 v4、
+  12-condition truth table 均已完成。Defensive/unreachable 分支不得為數字刪除。
+- 包14–15：v1.0 readiness 三版與 Phase 7 implementation package 草案已備；
+  引用逐字授權句不等於取得該授權。
+- 包17–18：research 目錄治理三案與 T-01～T-12 現況複核已完成；兩者皆為
+  planning/review，未實際歸檔、搬檔、刪檔或修改 delegation templates。
