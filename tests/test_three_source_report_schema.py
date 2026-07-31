@@ -25,6 +25,23 @@ def _schema() -> dict[str, object]:
     return loaded
 
 
+def _valid_payload(verdict: str) -> dict[str, object]:
+    github = {
+        "ALIGNED": LOCAL_HASH,
+        "DRIFT": "b" * 40,
+        "INCOMPLETE": "UNREACHABLE",
+    }[verdict]
+    replit = "UNREACHABLE" if verdict == "INCOMPLETE" else "REACHABLE"
+    return checker.report_as_json(
+        checker.ThreeSourceReport(
+            checker.SourceState("local", LOCAL_HASH, "local"),
+            checker.SourceState("github", github, "github"),
+            checker.SourceState("replit", replit, "HTTP status"),
+            verdict,
+        )
+    )
+
+
 @pytest.mark.parametrize(
     ("verdict", "local", "github", "replit", "exit_code"),
     [
@@ -61,6 +78,39 @@ def test_real_json_stdout_conforms_for_every_verdict(
     assert payload["sources"]["replit"]["deployed_hash"] is None
     assert payload["sources"]["replit"]["deployed_hash_status"] == "UNKNOWN"
     assert payload["sources"]["replit"]["deployed_hash_verified"] is False
+
+
+@pytest.mark.parametrize("verdict", ["ALIGNED", "DRIFT", "INCOMPLETE"])
+def test_schema_accepts_each_closed_verdict_state(verdict: str) -> None:
+    Draft202012Validator(_schema()).validate(_valid_payload(verdict))
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        "missing_deployed_hash",
+        "non_null_deployed_hash",
+        "status_not_unknown",
+        "verified_true",
+        "extra_replit_field",
+    ],
+)
+def test_schema_rejects_each_forbidden_replit_hash_claim(case: str) -> None:
+    payload = _valid_payload("ALIGNED")
+    replit = payload["sources"]["replit"]
+
+    if case == "missing_deployed_hash":
+        del replit["deployed_hash"]
+    elif case == "non_null_deployed_hash":
+        replit["deployed_hash"] = LOCAL_HASH
+    elif case == "status_not_unknown":
+        replit["deployed_hash_status"] = "VERIFIED"
+    elif case == "verified_true":
+        replit["deployed_hash_verified"] = True
+    else:
+        replit["unexpected"] = "not allowed"
+
+    assert list(Draft202012Validator(_schema()).iter_errors(payload)), case
 
 
 def test_schema_rejects_missing_or_claimed_replit_hash_state() -> None:
