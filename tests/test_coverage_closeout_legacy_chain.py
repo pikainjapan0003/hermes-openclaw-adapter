@@ -207,6 +207,23 @@ def test_mock_e2e_frozen_dry_run_paths() -> None:
     assert failed["final_status"] == "failed"
 
 
+def test_mock_e2e_nonterminal_callback_does_not_mark_terminal(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        mock_e2e,
+        "mock_worker_process_task",
+        lambda task: {
+            "event_id": "evt-cancelled",
+            "task_id": task["task_id"],
+            "status": "cancelled",
+        },
+    )
+    outcome = mock_e2e.run_mock_e2e_dry_run(_request())
+    assert outcome["final_status"] == "cancelled"
+    assert outcome["events"][-1] == "task.cancelled"
+
+
 def test_mock_e2e_unexpected_status_and_empty_claim_fail_closed(monkeypatch) -> None:
     monkeypatch.setattr(
         mock_e2e,

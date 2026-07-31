@@ -92,6 +92,9 @@ def test_health_metadata_decode_failures_are_empty(tmp_path: Path) -> None:
     store.record("not-map", metadata_json="[]")
     assert store.get("bad-json")["metadata"] == {}
     assert store.get("not-map")["metadata"] == {}
+    assert health_store.HealthStore._row_to_dict({"metadata_json": None})[
+        "metadata"
+    ] == {}
 
 
 def test_queue_store_lifecycle_queries_and_transitions(tmp_path: Path) -> None:
