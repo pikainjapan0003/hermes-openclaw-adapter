@@ -95,7 +95,9 @@ The helper:
 1. verifies that the supplied path already exists and is a directory;
 2. enumerates only immediate children in deterministic filename order;
 3. rejects symlinks and unexpected entries;
-4. decodes UTF-8 JSON with `json.loads`;
+4. decodes UTF-8 JSON with `json.loads(object_pairs_hook=...)` and rejects every
+   duplicate object key before schema selection, as implemented by
+   `app/blackboard_board_reader.py`;
 5. selects the expected contract from the filename allowlist;
 6. calls `validate_blackboard_message` for every decoded entry;
 7. returns structured data in memory.

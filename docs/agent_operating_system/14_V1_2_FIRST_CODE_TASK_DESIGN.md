@@ -132,6 +132,11 @@ model records the limitation and stops rather than claiming success.
 
 ## 6. Git rollback design
 
+This section depends on an explicit Owner decision among the rollback-contract options
+in `11_V1_1_FIRST_REAL_WRITE_DESIGN.md` §5.2 and on the resulting closed contract.
+Until that decision and contract exist, this section is planning-only and must not be
+implemented; the current N=1 rollback preview cannot carry a real Git target.
+
 Git is the code rollback boundary. The accepted task should form one reviewable code
 commit whose parent is the reviewed candidate state. Its rollback target is that exact
 commit, not a branch name, moving HEAD, guessed hash, or broad file checkout.
