@@ -117,9 +117,6 @@
 
 | 條目 | 來源 | 邊界 |
 |---|---|---|
-| fixture inventory coverage 敘述校正 | Round 5 R5-02 | docs only；區分「pytest 覆蓋」與「歷史 script 引用」，不得據此刪除三個 legacy fixture |
-| Round 4 resolution annotation | Round 5 R5-03 | docs only；R4-01/R4-02 加已由 NB-13 包4處置的 metadata，不重寫原 finding |
-| redaction implementation checklist 補 E-02 marker | Round 5 R5-04 | docs/design only；只補未來驗收條目，不改 validator、不把 Owner 空白欄視為裁決 |
 | fixture conventions 與 inventory 定期交叉複核 | NB-13 包9／Round 5 | review/test only；新增 fixture 仍須另有授權 |
 | test layer profile 定期重跑 | NB-13 包11 | measurement only；marker 是組織層，不是安全等級 |
 | Phase 11 research 目錄趨勢 | NB-13 包14 | measurement/proposal only；未拍板門檻前不得自動歸檔 |
@@ -157,3 +154,43 @@ Owner 可一次回覆四組，例如：
   readiness evidence index已完成（包9–12）。
 - Round 5 R5-01 的雙 marker finding 已由包11修正並由完整 collection
   機械守護；不得重開為未解 finding。
+
+## NIGHT-BATCH-14 補貨（2026-07-26）
+
+以下 finding 只進存貨，不因列在本檔而取得修正或實作授權。
+
+### 【夜跑可做】
+
+| 條目 | 來源 | 邊界 |
+|---|---|---|
+| Desktop／WSL 工作副本權威與交接方向提案 | Quarterly GQ-01 | docs proposal only；不得改 Git authority 或自動同步 |
+| C5/C8 模型路由與 R-01 cross-reference 校正 | Quarterly GQ-02 | docs only；不得自行換模型或放寬 escalation |
+| Phase 11 health report 落點措辭校正 | Quarterly GQ-03 | docs only；不得把例行量測追加進 90 |
+| L-001 host-shell quoting 與 L-002 UTF-8 一般讀檔教訓補強 | Quarterly GQ-04/GQ-05 | docs only；保留原事故史，不能用新文字掩蓋 recurrence |
+| three-source schema 納入 INDEX/path guard | Round 6 R6-01 | docs/test only；不得藉此修改 schema |
+| fixture convention 與機械 guard 強度對齊 | Round 6 R6-02 | docs/test only；不得刪除三個 script-referenced legacy fixtures |
+| three-source `verdict` 語意耦合設計 | Round 6 R6-03 | design/test proposal only；schema 變更需另包明文授權 |
+| `main.py` GET/display coverage 可達性再評估 | NB-14 包7 HOLD | 現有允許面理論上限 70.40%，低於 72%；不得靠 POST/execution/callback 補數字 |
+
+### 【Owner 閘】（位置確認，未移入夜跑）
+
+| 項目 | 未裁決前狀態 |
+|---|---|
+| 四組選案：redaction／v1.1 audit／rollback binding／`produced_by` | `OWNER_DECISION_ONE_PAGER_20260726.md` 裁決欄全空；不得實作任何選案 |
+| root `parent_task_id: null` projection | 等 Owner 決定；不得填 placeholder 或直接呼叫現行 builder |
+| Phase 7 audit writer | 等逐字授權句；禁止 writer、正式 `data/` 與持久化 |
+| Phase 9 N=1 | 等 Phase 7 完成、Owner 同步在場及另行 token/gate 裁決 |
+| Replit 單向同步 | remote/runtime 接線未授權；不得把三源 HTTP 可達當 deployed hash 已驗證 |
+
+### 本批已消耗，不再重開
+
+- Round 5 R5-02/R5-03/R5-04 已分別由包2 `e5af141`、包3
+  `45e0df3`、包4 `2529883` 校正或補 metadata/checklist；歷史 finding
+  保留，不得把它們列回未處置。
+- auto policy、remote projection、queue store、queue intake bridge、
+  blackboard store 覆蓋已由包5/6補強；rollback preview 唯一剩餘分支為
+  exact-profile 前置後邏輯不可達的縱深防禦，不得為 coverage 刪除。
+- 包7依硬條款 HOLD、無 commit、無產品修改；不能宣稱 `main.py` 已達 72%。
+- dependency authority/lock 方案、test-layer profile、board-reader capacity、
+  fixture inventory、季度治理、Round 6、Owner 一頁摘要與 three-source
+  Replit unknown schema 演習已完成；提案與 findings 不等於 Owner 裁決。
