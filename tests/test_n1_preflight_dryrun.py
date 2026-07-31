@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import ast
 import json
-from dataclasses import dataclass
+import sys
+from dataclasses import dataclass, replace
 from pathlib import Path
+
+import pytest
 
 from app.blackboard_validators import validate_blackboard_message
 from app.evidence_bundle_builder import verify_bundle_hash
@@ -18,6 +21,15 @@ APPROVAL_SCHEMA = (
 )
 AUDIT_WRITER = ROOT / "app" / "audit_writer_local.py"
 EXECUTION_GATE = ROOT / "app" / "n1_execution_gate.py"
+BLOCKER_NAMES = (
+    "token_schema_allows_live_token",
+    "packet_contains_live_token",
+    "phase7_writer_exists",
+    "phase9_gate_exists",
+    "owner_synchronously_present",
+    "fresh_owner_token_supplied",
+    "runtime_rehearsal_authorized",
+)
 
 
 @dataclass(frozen=True)
@@ -109,6 +121,64 @@ def test_runbook_sequence_is_complete_but_never_entered() -> None:
     report = render_preflight_report(evaluate_preflight())
     assert "FINAL | BLOCKED" in report
     assert "ALLOW exactly one approved query attempt" in text
+
+
+@pytest.mark.parametrize("satisfied_blocker", BLOCKER_NAMES)
+def test_one_hypothetically_satisfied_blocker_still_cannot_make_ready(
+    satisfied_blocker: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A test-only single-condition change cannot bypass the all-of gate."""
+
+    current = evaluate_preflight()
+    simulated = [
+        replace(check, passed=True)
+        if check.name == satisfied_blocker
+        else check
+        for check in current
+    ]
+    monkeypatch.setattr(
+        sys.modules[__name__],
+        "evaluate_preflight",
+        lambda: simulated,
+    )
+
+    report = render_preflight_report(evaluate_preflight())
+    assert f"{satisfied_blocker} | PASS | BLOCK" in report
+    assert report.endswith("FINAL | BLOCKED")
+    assert "FINAL | READY" not in report
+    assert any(
+        not check.passed
+        for check in simulated
+        if check.name in BLOCKER_NAMES and check.name != satisfied_blocker
+    )
+
+
+def test_only_test_memory_can_render_the_all_conditions_true_counterfactual(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Prove AND semantics without creating a repository path that can unlock it."""
+
+    current = evaluate_preflight()
+    assert render_preflight_report(current).endswith("FINAL | BLOCKED")
+    assert all(
+        not check.passed for check in current if check.name in BLOCKER_NAMES
+    )
+
+    counterfactual = [replace(check, passed=True) for check in current]
+    monkeypatch.setattr(
+        sys.modules[__name__],
+        "evaluate_preflight",
+        lambda: counterfactual,
+    )
+    assert render_preflight_report(evaluate_preflight()).endswith("FINAL | READY")
+
+    monkeypatch.undo()
+    restored = evaluate_preflight()
+    assert render_preflight_report(restored).endswith("FINAL | BLOCKED")
+    assert all(
+        not check.passed for check in restored if check.name in BLOCKER_NAMES
+    )
 
 
 def test_preflight_test_contains_no_unlock_or_execution_calls() -> None:
