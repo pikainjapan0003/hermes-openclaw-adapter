@@ -89,3 +89,53 @@ def test_inspector_accepts_an_empty_existing_board(tmp_path: Path) -> None:
     assert summary["entry_count"] == 0
     assert summary["message_type_counts"] == {}
     assert summary["id_chain"] == []
+
+
+def test_identifier_overview_ignores_non_identifier_and_wrong_typed_values() -> None:
+    message = {
+        7: "non-string-key",
+        "bad_id": 123,
+        "nested": {
+            "good_id": "synthetic-id",
+            "none_id": None,
+            "ignored": ["not-recursed"],
+        },
+    }
+
+    assert inspector._identifier_overview(message) == {
+        "nested.good_id": "synthetic-id",
+        "nested.none_id": None,
+    }
+
+
+def test_summary_structurally_handles_malformed_reader_result_shapes() -> None:
+    summary = inspector.summarize_board_result(
+        {
+            "board_name": "synthetic-malformed",
+            "valid": False,
+            "entry_count": "not-an-integer",
+            "entries": [
+                "not-a-mapping",
+                {"filename": 7, "message_type": 8, "valid": True, "message": {}},
+                {"filename": "failed.json", "message_type": None, "valid": False},
+                {"filename": "passed.json", "message_type": 9, "valid": True},
+            ],
+            "errors": [
+                "not-a-mapping",
+                {"filename": 11, "code": 12},
+                {"filename": "error.json", "code": 13},
+            ],
+        }
+    )
+
+    assert summary["valid"] is False
+    assert summary["message_type_counts"] == {}
+    assert summary["validation"] == {
+        "passed": ["passed.json"],
+        "failed": ["error.json", "failed.json"],
+        "errors": [
+            {"filename": None, "code": "unknown_error"},
+            {"filename": "error.json", "code": "unknown_error"},
+        ],
+    }
+    assert summary["id_chain"] == []
