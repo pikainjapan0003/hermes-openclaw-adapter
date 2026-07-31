@@ -8,6 +8,10 @@ from typing import Any
 import pytest
 
 
+LAYER_MARKERS = frozenset({"contract", "governance", "legacy", "fuzz"})
+COLLECTED_LAYER_ASSIGNMENTS: dict[str, tuple[str, ...]] = {}
+COLLECTED_ITEM_COUNT = 0
+
 FUZZ_FILES = {
     "test_board_reader_file_fuzz.py",
     "test_builder_input_fuzz.py",
@@ -23,6 +27,7 @@ GOVERNANCE_FILES = {
     "test_n1_preflight_gate.py",
     "test_queue_claim_guard.py",
     "test_three_source_readonly.py",
+    "test_test_layer_markers.py",
     "test_trust_violation_scan.py",
     "test_worker_structure_contract.py",
 }
@@ -46,6 +51,25 @@ def _layer_for(path: Path) -> str:
 def pytest_collection_modifyitems(items: list[pytest.Item], config: Any) -> None:
     """Assign exactly one declared layer marker using the source test filename."""
 
+    global COLLECTED_ITEM_COUNT
     del config
+    COLLECTED_ITEM_COUNT = len(items)
+    COLLECTED_LAYER_ASSIGNMENTS.clear()
     for item in items:
-        item.add_marker(getattr(pytest.mark, _layer_for(Path(str(item.path)))))
+        explicit_layers = {
+            marker.name
+            for marker in item.iter_markers()
+            if marker.name in LAYER_MARKERS
+        }
+        if not explicit_layers:
+            item.add_marker(getattr(pytest.mark, _layer_for(Path(str(item.path)))))
+        assigned_layers = tuple(
+            sorted(
+                {
+                    marker.name
+                    for marker in item.iter_markers()
+                    if marker.name in LAYER_MARKERS
+                }
+            )
+        )
+        COLLECTED_LAYER_ASSIGNMENTS[item.nodeid] = assigned_layers
