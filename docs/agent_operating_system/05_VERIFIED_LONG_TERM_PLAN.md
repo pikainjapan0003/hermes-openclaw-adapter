@@ -279,6 +279,11 @@
 
 ## 5. 狀態追蹤（每次 phase closeout 後更新本節）
 
+弱模型入口摘要：**可做**＝Owner 明列工作與 §6.13 已派夜跑包；
+**不可做**＝未獲逐字授權的 Phase 7 寫入、未有 Owner 同步在場的 Phase 9、
+未另行解鎖的 v1.1/v1.2；**主線下一步**＝先滿足 Phase 7 專屬授權，再由
+Owner 在場進行 Phase 9 N=1。表格按 Phase 數字排列，不以列序推導授權。
+
 | Phase | 狀態 | 最後更新 | 備註 |
 |---|---|---|---|
 | 0 | 常態運行 | 2026-07-07 | 本 session 已跑一輪，三源一致 |
@@ -288,9 +293,9 @@
 | 4 | **完成** | 2026-07-19 | approval packet schema＋純函式 builder＋GET-only 顯示（`d305ff8`）；token const null 三重鎖；雙審查員通過（Fable 5 全項驗收＋Opus fresh-context 對抗審查「packet→execution 零路徑」） |
 | 5 | **完成** | 2026-07-19 | evidence bundle schema＋builder＋hash 重算/篡改/洩漏反向測試（`88bf8b2`，NIGHT-BATCH-1） |
 | 6 | **完成** | 2026-07-19 | 動態 route 盤點＋七條 POST 白名單＋注入 button 必紅＋approve 行為測試（`9f79657`）；queue-claim guard 二版於 NIGHT-BATCH-3 補強（已知風險：approve→queued 後若外部啟動 worker 可被 claim，execution gate 屬 Phase 9） |
-| 8 | **規劃完成** | 2026-07-19 | docs 方案＋OWASP 對照（`3edbc0b`）；離線 projection contract（`51f657f`，超包，Owner 2026-07-19 追認）；遠端接線／remote API 仍未授權 |
 | 7 | 設計已備 | 2026-07-19 | `07_AUDIT_WRITE_DESIGN.md`（NIGHT-BATCH-2）；**實作前置＝Owner 逐字授權句「允許寫入 data/audit_dev.jsonl（local dev append-only）」，未給不得動工** |
-| 9–11 | 未開始 | — | Phase 9 需 Owner 在場；Phase 7 實作＋Phase 9 為 v1.0 最後兩關 |
+| 8 | **規劃完成** | 2026-07-19 | docs 方案＋OWASP 對照（`3edbc0b`）；離線 projection contract（`51f657f`，超包，Owner 2026-07-19 追認）；遠端接線／remote API 仍未授權 |
+| 9–11 | 未開始 | — | 本列僅為表格壓縮：Phase 9 需 Owner 同步在場，且與 Phase 7 實作構成 v1.0 最後兩關；Phase 10 的 scope 研究與 Phase 11 的健康報告都不構成實作解鎖 |
 
 ---
 

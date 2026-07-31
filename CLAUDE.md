@@ -1,5 +1,20 @@
 # ChatGPT / Claude Code Loop Format Contract
 
+## 先看這裡：目前可做／不可做／下一步
+
+- **目前狀態正本**：先讀
+  `docs/agent_operating_system/README.md` 的「現在系統在哪」，再以
+  `docs/agent_operating_system/05_VERIFIED_LONG_TERM_PLAN.md` §5 核對。
+- **現在可做**：只做 Owner 明列的工作；夜跑僅限 05 §6.13 已派出的包，
+  逐包 commit，Fable 5 批審通過後才可依常設指示 merge/push。
+- **現在不可做**：不得把夜跑例外外推到新包；Phase 7 寫入、Phase 9、
+  v1.1、v1.2 各自硬閘仍有效，未取得各自明示條件前一律 fail closed。
+- **主線下一步**：Phase 7 audit writer 仍等 Owner 逐字授權；Phase 9
+  N=1 仍需 Owner 同步在場。這兩項不是一般夜跑授權。
+
+以下第 1–11 節是既有 loop 格式契約；它們規範交接格式，不取代上述
+狀態正本與安全邊界。
+
 目的：讓每次 Claude Code final summary 貼回 ChatGPT 後，ChatGPT 下一則回覆能穩定產生「下一步指令」，避免跑題、廢話、抓錯 phase、或無法 loop。
 
 ## 1. ChatGPT 下一步指令格式
