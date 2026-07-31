@@ -301,7 +301,6 @@
 - 修改權限：本節記錄 Owner 裁決，屬 40 F2——修改任何一條裁決都必須先問 Owner。
 
 ### 6.0 決策紀錄（Q1–Q20 速查）
-
 | Q | 主題 | Owner 裁決 |
 |---|---|---|
 | 1 | 終局形態 | 傳話中樞（留言板）。權力全在 Owner；Hermes 監工調度、OpenClaw 做事；**刻意保持簡單** |
@@ -326,36 +325,20 @@
 | 20 | 腦降級規則 | 三腦同權，不縮權限、不加降級標記 |
 
 ### 6.1 Owner Goal Profile
-
-- **終局**：一個刻意簡單的傳話中樞。Blackboard 是留言板＝多 agent 並行協作的協調介質；使用權力永遠在 Owner。
-- **真實痛點**（原話大意）：做專案時，一個 AI agent 從計劃、施作、監工到審查用到底，又難又花時間。
-- **願景場景**：Hermes 把計劃切成細小任務 → 丟給多個角色化 OpenClaw（工程師、UI 設計師、PM、測試員、安全審查員…）並行施工 → Owner 只看哪個報錯。
-- **服務順序**：系統自身 → （未來另行決定）Vault / pika。
-- **節奏**：每週 5+ 小時、v1.0 目標 2–3 個月、無砍點。
-- **成功指標**：信任感。反向指標＝信任事故（越權、謊報、假驗收）；Phase 11 健檢必查「本期間有無信任事故」。
-- **弱模型設計裁決規則**：任何提案先過一問——「這會不會讓傳話層變複雜？」會 → 預設否決，除非 Owner 明示要。
+- **終局／痛點／願景／順序**：刻意簡單、權力永遠在 Owner 的 Blackboard 傳話中樞，解決單一 AI 包辦計劃至審查的高難度與高耗時；Hermes 拆任務、角色化 OpenClaw 並行、Owner 只看報錯；先服務系統自身，Vault／pika 待另決。
+- **節奏／成功**：每週 5+ 小時、v1.0 目標 2–3 個月、無砍點；成功＝信任感，反向指標＝越權／謊報／假驗收，Phase 11 必查本期間信任事故。
+- **弱模型裁決**：提案若會讓傳話層變複雜，預設否決，除非 Owner 明示要。
 
 ### 6.2 Loop Engineering Definition
-
 - 「長期穩定運行的 loop」＝ **Hermes 留言 → Blackboard → OpenClaw 執行 → Result 回貼 → Hermes readback** 這條全鏈路。
 - 可機械判定的「穩定」定義：連續 3 次完整 rehearsal（屆時為真實 run）**無人工介入**跑完全鏈路，且每次 audit 記錄完整、schema 驗證全過。
 - 長期形態：同一條 loop 橫向擴成多 worker 並行（角色化），錯誤狀態上浮給 Owner；並行擴張屬 v1.2 之後，本計劃表內不實作。
 
 ### 6.3 v1.0 Definition Candidate（供 Phase 2 正式凍結）
-
-```text
-v1.0 = Owner-supervised Full-chain Baseline
-     = Phase 3–7 全部完成
-     + Phase 9 的 N=1：一次無害查詢型 openclaw agent 真實調用成功
-```
-
-- 包含：本機 Blackboard 讀寫（schema 驗證）、approval packet 流程、dry-run evidence、audit 檔 local write、rollback preview、**一次真實全鏈路查詢調用（零寫入）**。
-- 不包含：任何真實寫入型執行（→ v1.1）、真實代碼任務（→ v1.2）、connector read/write（Phase 10，無限期規劃）、production DB、remote API runtime、Dashboard 新控制項。
-- 與第一輪定義（Drive 報告建議版）的差異：**Phase 9 N=1 併入 v1.0**（Owner Q4=C）；理由：「傳話中樞的 v1.0」必須證明真的能傳話。
-- 本候選仍需 Phase 2 正式簽核（見 6.9），簽核前不得宣稱 v1.0 定義已凍結。
+Phase 2 已完成；凍結正本＝`02_V1_0_DEFINITION.md`。本候選、包含／不包含、
+Q4 差異與簽核前措辭的歷史原文存於 `research/05_COMPACTION_RULE_CROSSWALK_20260723.md` §2，現況不得回退成候選。
 
 ### 6.4 Risk Tolerance Matrix
-
 | 風險 | Owner 容忍度 | 防禦配置（弱模型照做） |
 |---|---|---|
 | 越權動作（未授權的寫/發/叫） | **零容忍，最怕** | 01 禁令牆 + 四問 + adversarial review，防禦資源最厚；發生即最高優先回報 |
@@ -367,20 +350,14 @@ v1.0 = Owner-supervised Full-chain Baseline
 | 手機審批入口被冒用 | 接受（Q19=A，現有登入牆） | Owner 已知悉；重審觸發器見 6.11 |
 
 ### 6.5 Tool Role Map
-
-| 角色 | 定位 | 規則 |
-|---|---|---|
-| 本機 WSL repo | 開發工作區 | 一切開發在此發生 |
-| GitHub master | **source of truth** | 漂移裁決一律以 GitHub master 為準；同步方向固定：本機 → GitHub → Replit。push 仍需 Owner 指示 |
-| Replit | 部署/展示層；**完成態的手機主介面** | 從 GitHub 拉取部署；不得直接在 Replit 上改代碼；顯示須帶資料時間戳（新鮮度標示） |
-| Claude Code | 施工介面（建造 Hermes 的工人） | 不是 Hermes 本人 |
-| ChatGPT 5.5 | 規劃/審查/檢查顧問 | 經 Owner 搬運（export bundle → Drive → GPT），異步 |
-| 手機 | 完成態使用介面 | 看狀態、批任務；門檻＝Replit 登入牆（Q19） |
-
-- Phase 0 漂移處理修訂：三源不一致 → 回報差異 + **按「GitHub 為準」提出同步提案**（不再只是空等），實際同步動作仍需 Owner 指示。
+- **本機 WSL repo**：開發工作區，一切開發在此發生。
+- **GitHub master**：source of truth；三源漂移須回報並依 GitHub 提同步提案；固定流向本機→GitHub→Replit，實際同步／push 仍需 Owner 指示。
+- **Replit**：部署、展示與完成態手機主介面；只從 GitHub 拉取，不直接改碼，顯示須帶資料時間戳。
+- **Claude Code**：建造 Hermes 的施工介面，不是 Hermes 本人。
+- **ChatGPT 5.5**：由 Owner 搬運資料、異步提供規劃／審查／檢查。
+- **手機**：看狀態、批任務；門檻＝Replit 登入牆（Q19）。
 
 ### 6.6 Model Use Policy（三層分工）
-
 1. **建造層（Claude Code session）**：寫代碼/測試/文件 → Sonnet；Opus 選配（Owner 極少用）。「升最強模型」的實際含義：先升環境內最強試一次；制度性/架構性問題 → **打包審查包（問題+失敗軌跡+選項）等 Owner 搬給 ChatGPT 5.5**，異步取回裁決。細則見 10 C8。
 2. **Hermes 腦（runtime）**：GPT-5.5 → Minimax M3 → Deepseek v4 Pro，用量耗盡右移；**三腦同權**（Q20=A），不加降級規則。Blackboard 訊息記 `produced_by`（純來源記錄，不掛任何規則）。
 3. **OpenClaw worker（執行層）**：做事的手；未來角色化多開（工程師/測試員/安審…），v1.2 後才擴。
@@ -388,14 +365,8 @@ v1.0 = Owner-supervised Full-chain Baseline
 - 高風險審查硬規則（Q17）：安全邊界/寫入路徑/執行閘/Owner 簽核前產物 → **≥2 個不同模型的審查員交叉審**，絕不指派單一 agent 或單一模型。見 20 R-13。
 
 ### 6.7 Blackboard Storage Decision（決策樹已走完）
-
-```text
-留言板存哪？→ repo 內 data/ 下 JSON 檔，隨 git 走（Q13=A）
-  好處：一條管道（本機→GitHub→Replit）、git 歷史免費、Replit 拉取即更新
-  代價：手機看到的 = 最後一次 push（顯示須帶時間戳）
-升級條件（唯一）：多 worker 並行寫入頻繁衝突 → 屆時重問 Owner 是否升 SQLite（6.11）
-在那之前：任何人提議換介質 → 預設否決（違反 Q1「保持簡單」）
-```
+- 正本＝repo `data/` JSON 隨 git 走（Q13=A）；單向本機→GitHub→Replit、git 留歷史，手機只見最後 push 且須顯示時間戳。
+- 唯一升級條件＝多 worker 並行寫入頻繁衝突時依 6.11 重問是否升 SQLite；此前換介質提案預設否決。
 
 ### 6.8 First Real Write Gate（真實動作解鎖階梯）
 
@@ -416,17 +387,8 @@ OWNER_MANUAL   高風險（花錢/不可逆） 不進派工佇列；Hermes 在�
 
 ### 6.9 Phase 2 Owner Decision Checklist（弱模型帶著 Owner 逐條簽）
 
-Phase 2 執行時，向 Owner 逐條取得逐字簽核，全部完成才得產出 `02_V1_0_DEFINITION.md` 並宣告凍結：
-
-```text
-[ ] 1. v1.0 候選定義（6.3 全文）逐字接受？（含 Phase 9 併入 v1.0）
-[ ] 2. 「包含」六項，各自的驗收方式逐項接受？
-[ ] 3. 「不包含」各項的推遲去向（v1.1/v1.2/Phase 10）接受？
-[ ] 4. 任務三級分類寫入 01 §6 接受？
-[ ] 5. 02 文件內記錄簽核行：Owner approved on <date>, instruction quote: <逐字>
-```
-
-- 已預裁決（盤問時 Owner 口頭已答，Phase 2 只需正式化，不必重問）：Q4/Q5/Q8 的內容。若 Owner 在簽核時改主意，以新裁決為準並更新本節 6.0 表。
+Phase 2 已完成；簽核結果與逐字正本見 `02_V1_0_DEFINITION.md`。歷史 checklist
+及 Q4/Q5/Q8 預裁決規則原文存於 `research/05_COMPACTION_RULE_CROSSWALK_20260723.md` §3。
 
 ### 6.10 Phase 3–11 Adjustment Notes（對第 3 節的修訂，衝突時以本節為準）
 
@@ -474,9 +436,5 @@ O2 角色化 worker（工程師/測試員/安審…）的角色定義與 prompt 
 
 ### 6.12 Phase 3 施工期裁決（2026-07-18 Owner 親答，L0）
 
-包1（Sol+xhigh 設計稿）觸發 fixture 矛盾 HOLD，Owner 裁決如下：
-
-1. **`safety_flags` 正本＝16 面旗、巢狀 boolean object**：14 個共同鍵（synthetic_local_only／mock_only／dry_run／owner_review_required／external_side_effects_allowed／external_side_effects_occurred／blackboard_write_allowed／queue_write_allowed／audit_trail_write_allowed／worker_dispatch_allowed／openclaw_call_allowed／hermes_runtime_allowed／connector_call_allowed／google_sheets_write_allowed）＋ follow_up_allowed ＋ follow_up_requires_owner_confirmation。
-2. RC-D fixture 的 17 鍵版（多 read_only／follow_up_task_creation_allowed／dashboard_controls_allowed）與 view model 的 `"key=value"` 字串陣列版一律降為**舊 fixture／顯示層投影**：不進新 schema、不改舊檔，validator 只驗新 contract。
-3. 追認包1 設計的兩處泛化：公共欄位加 `message_type`、`created_at`（共 9 個公共欄位）；`role`＝產物作者的功能角色（不限 worker）。
-4. 包2 交付方式：Codex 於 GitHub 開工作 branch＋PR（不碰 master），Fable 5 審＋本地實跑測試，Owner 按 merge。
+Phase 3 已完成；四項 Owner 原話（16 面旗、舊投影、9 公共欄／role、歷史交付法）
+逐字存於 `research/05_COMPACTION_RULE_CROSSWALK_20260723.md` §4；schema 正本見 §6.10 與 INDEX。
