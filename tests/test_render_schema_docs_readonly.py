@@ -6,6 +6,8 @@ import ast
 import json
 from pathlib import Path
 
+import pytest
+
 from scripts.render_schema_docs_readonly import (
     main,
     render_schema_markdown,
@@ -97,3 +99,58 @@ def test_renderer_source_has_no_write_calls() -> None:
         if name in {"open", "write", "write_text", "write_bytes", "mkdir", "touch"}:
             forbidden.append((node.lineno, name))
     assert forbidden == []
+
+
+def test_renderer_covers_closed_type_and_constraint_edges() -> None:
+    rendered = render_schema_markdown(
+        {
+            "type": "object",
+            "required": "not-a-required-sequence",
+            "properties": {
+                "union": {
+                    "type": ["string", "null"],
+                    "format": "date-time",
+                    "pattern": "safe|preview",
+                    "minimum": 0,
+                    "maximum": 9,
+                    "minLength": 1,
+                    "maxLength": 10,
+                    "description": "left|right",
+                },
+                "constant": {"const": None},
+                "untyped": {},
+                "malformed": "not-an-object",
+            },
+        },
+        "edge.schema.json",
+    )
+
+    assert "`union` | string | null | no" in rendered
+    assert "format=date-time" in rendered
+    assert "pattern=safe\\|preview" in rendered
+    assert "minimum=0; maximum=9; minLength=1; maxLength=10" in rendered
+    assert "left\\|right" in rendered
+    assert "`constant` | NoneType | no | const=null" in rendered
+    assert "`untyped` | unspecified | no | —" in rendered
+    assert "`malformed` | unspecified | no | —" in rendered
+    assert "Closed object: no/unspecified" in rendered
+
+
+def test_tree_empty_and_non_object_root_edges(tmp_path: Path) -> None:
+    empty = tmp_path / "empty"
+    empty.mkdir()
+    assert "_No JSON schema files found._" in render_schema_tree(empty)
+
+    invalid = tmp_path / "invalid"
+    invalid.mkdir()
+    (invalid / "array.json").write_text("[]", encoding="utf-8")
+    with pytest.raises(ValueError, match="schema root must be an object"):
+        render_schema_tree(invalid)
+
+
+def test_non_mapping_properties_render_as_empty_table() -> None:
+    rendered = render_schema_markdown(
+        {"title": "Bad Properties", "properties": []},
+        "bad-properties.json",
+    )
+    assert "No object properties declared." in rendered
