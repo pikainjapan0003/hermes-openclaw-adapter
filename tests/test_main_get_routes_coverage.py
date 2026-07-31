@@ -147,7 +147,32 @@ def test_background_mode_get_branches_are_read_only(get_only_harness, monkeypatc
     ):
         assert client.get(path).status_code == 200, path
     assert client.get("/queue/tasks/task-get-queued").status_code == 404
+    assert client.get("/tasks/task-get-queued/result").status_code == 404
     assert client.get("/dashboard/tasks/task-get-queued").status_code == 404
+
+
+def test_get_result_and_dashboard_detail_read_existing_tmp_evidence(
+    get_only_harness,
+) -> None:
+    main, client, _queue = get_only_harness
+    main.RESULTS_PATH.write_text(
+        '{"task_id":"task-get-queued","status":"completed",'
+        '"result_text":"synthetic result","finished_at":"2026-07-27T00:00:00Z"}\n',
+        encoding="utf-8",
+    )
+    main.TASKS_PATH.write_text(
+        '{"task_id":"task-get-queued","status":"running",'
+        '"ts":"2026-07-27T00:00:00Z"}\n',
+        encoding="utf-8",
+    )
+
+    result = client.get("/tasks/task-get-queued/result")
+    assert result.status_code == 200
+    assert result.json()["result"]["result_text"] == "synthetic result"
+
+    detail = client.get("/dashboard/tasks/task-get-queued")
+    assert detail.status_code == 200
+    assert "2026-07-27T00:00:00Z" in detail.text
 
 
 def test_display_helpers_and_fail_closed_read_helpers(get_only_harness, monkeypatch) -> None:

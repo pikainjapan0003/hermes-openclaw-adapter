@@ -123,3 +123,33 @@ def test_require_token_accepts_disabled_and_exact_token_and_rejects_other(
         main.require_token("wrong-token")
     assert captured.value.status_code == 401
     assert captured.value.detail == "Invalid or missing X-Adapter-Token"
+
+
+def test_explicitly_allowed_init_result_and_env_helpers(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("NB15_BOOL", " yes ")
+    assert main._env_bool("NB15_BOOL", False) is True
+    monkeypatch.setenv("NB15_BOOL", "disabled")
+    assert main._env_bool("NB15_BOOL", True) is False
+
+    error = main.OpenClawCliError("synthetic", "safe message", retryable=False)
+    assert str(error) == "safe message"
+    assert (error.code, error.message, error.retryable) == (
+        "synthetic",
+        "safe message",
+        False,
+    )
+
+    common = {
+        "task_id": "task-synthetic",
+        "correlation_id": "corr-synthetic",
+        "title": "Synthetic",
+        "goal": "Read only",
+        "result_text": "No side effect",
+        "error": None,
+    }
+    completed = main.build_task_result(status="completed", **common)
+    failed = main.build_task_result(status="failed", **common)
+    assert completed["summary"] == "OpenClaw 已完成任務。"
+    assert failed["summary"] == "OpenClaw 執行失敗。"
