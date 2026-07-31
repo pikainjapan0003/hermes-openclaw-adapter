@@ -54,13 +54,8 @@
 
 | 條目 | 來源 | 邊界 |
 |---|---|---|
-| README volatile baseline 清理 | onboarding O-01 | docs only；移除過期 commit/test 數，不改 phase 裁決 |
-| CLAUDE onboarding 導航前置 | onboarding O-02/O-03 | docs only；只加最短權威入口與硬閘摘要，不放寬 §6.13 |
-| 05 §5 排序可讀性提案 | onboarding O-04/O-05 | review/design only；不得改狀態事實 |
-| jsonschema error redaction 設計 | error audit E-01/E-02 | 先做格式設計與相容性盤點；remote/runtime 接線仍禁止 |
 | pyproject/requirements authority 提案 | dependency audit | docs/review only；不得在未授權包改依賴 |
 | transitive dependency lock 方案比較 | dependency audit | docs only；比較 lock file／constraints／同步 pyproject |
-| cross-reference orphan 清冊複核 | package 8 advisory | docs review；單次出現不等於錯誤，不得機械刪除 |
 | `main.py` GET coverage 後續輪替 | package 4 | 只加 GET/display 測試；POST、worker、claim 仍禁止 |
 | test layer profile 定期重跑 | package 9 | 測量與報告；四 marker 不代表安全等級放寬 |
 
@@ -81,3 +76,40 @@
 - `main.py` GET-only coverage 已達 65%，worker 結構契約已鎖；這不代表 POST 或 worker 執行獲准。
 - approval packet/evidence bundle 各六組 golden vectors 已建立。
 - schema stdout renderer、Phase 9 blocked preflight、error surface audit、dependency audit、onboarding review 均已完成。
+
+## NIGHT-BATCH-12 補貨（2026-07-24）
+
+### 【夜跑可做】
+
+| 條目 | 來源 | 邊界 |
+|---|---|---|
+| onboarding 舊報告補 resolution metadata | Round 4 R4-01 | docs only；只標 O-01～O-05 已由 NB-12 包3處置，不重寫歷史 findings |
+| error-surface 報告同步現況 | Round 4 R4-02 | docs only；E-01 標「設計已備、Owner 未選、validator 未改」；E-02 另列 remote projection companion design 尚缺 |
+| remote projection schema-error redaction companion design | E-02／R4-02 | docs only；不得改 projection validator 或接 remote/runtime |
+| compaction crosswalk 快照措辭修正 | Round 4 R4-03 | docs only；把 ≤440 明標為 NB-11 package-3 時點，現況仍受 F4 500 行上限 |
+| `main.py` coverage 包規格重整 | NB-12 包5 HOLD | 先由 Fable 5 精確裁定 coverage denominator 與允許的 helper 範圍；現行「只 GET/display」安全上限實測 67%，不得靠 POST/dispatch/command helper 湊 75% |
+| fixture inventory 定期複核 | NB-12 包12 | review only；目前 50 檔、零 byte-identical duplicate、零確認 orphan，不得機械刪除 |
+| board reader capacity 趨勢重跑 | NB-12 包7 | measurement only；無 CI 門檻，T3 未觸發前不得據此升級介質 |
+
+### 【Owner 閘】
+
+| 待裁決組 | Owner 需要選擇 | 未裁決前狀態 |
+|---|---|---|
+| Blackboard schema error redaction | `SCHEMA_ERROR_REDACTION_CONTRACT_DESIGN.md` 的 A／B／C（建議 C） | 十 schema leak-marker 基線維持 xfail；validator 不改、錯誤不得接不可信 exposure |
+| v1.1 audit record | 11 設計稿三案 | 不改 schema、不實作 writer |
+| rollback Git binding | 11 設計稿三案 | 不改 schema、不執行 Git rollback |
+| `produced_by` policy | 13 設計稿三案 | 維持 policy-only provenance |
+| root `parent_task_id: null` projection | 決定 root 顯示映射或拒絕規則 | 不填 placeholder、不直呼 projection builder |
+| Phase 7 audit writer | Owner 逐字授權句 | writer、正式 `data/` 與持久化仍禁止 |
+| Phase 9 N=1 | Owner 同步在場＋token/gate 另行裁決 | preflight 維持 BLOCKED |
+
+### 本批已消耗，不再重開
+
+- README volatile baseline、CLAUDE onboarding 前置、05 §5 can/cannot/next
+  入口與排序誤讀警告已由包3完成；cross-reference orphan 已由包4降為零。
+- Blackboard schema-error 遮罩三案設計與十 schema xfail 基線已由包1/2
+  完成；這不是 Owner 裁決，也不是 validator 修正。
+- legacy contract 兩模組覆蓋已由 95%/97% 提升至 100%/100%（包6）。
+- 500-message reader 容量量測、十 schema renderer 演習、Round 4、
+  compaction crosswalk guard、三源 JSON 模式、fixture inventory 均已完成。
+- 包5為 HOLD、無 commit、無殘留變更；不得把它列為 coverage 75% 完成。
