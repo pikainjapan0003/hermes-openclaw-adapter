@@ -181,6 +181,30 @@ def test_only_test_memory_can_render_the_all_conditions_true_counterfactual(
     )
 
 
+def test_every_non_green_condition_combination_is_blocked() -> None:
+    """Exhaust the 2^N truth table entirely inside test memory."""
+
+    baseline = evaluate_preflight()
+    condition_count = len(baseline)
+    all_green_mask = (1 << condition_count) - 1
+    blocked_combinations = 0
+
+    for mask in range(all_green_mask):
+        simulated = [
+            replace(check, passed=bool(mask & (1 << index)))
+            for index, check in enumerate(baseline)
+        ]
+        report = render_preflight_report(simulated)
+        assert report.endswith("FINAL | BLOCKED"), mask
+        assert "FINAL | READY" not in report
+        blocked_combinations += 1
+
+    all_green = [replace(check, passed=True) for check in baseline]
+    assert render_preflight_report(all_green).endswith("FINAL | READY")
+    assert condition_count == 12
+    assert blocked_combinations == (2**condition_count) - 1 == 4095
+
+
 def test_preflight_test_contains_no_unlock_or_execution_calls() -> None:
     tree = ast.parse(Path(__file__).read_text(encoding="utf-8"))
     forbidden_names = {
