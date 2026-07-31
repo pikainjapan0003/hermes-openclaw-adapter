@@ -161,16 +161,8 @@ Owner 可一次回覆四組，例如：
 
 ### 【夜跑可做】
 
-| 條目 | 來源 | 邊界 |
-|---|---|---|
-| Desktop／WSL 工作副本權威與交接方向提案 | Quarterly GQ-01 | docs proposal only；不得改 Git authority 或自動同步 |
-| C5/C8 模型路由與 R-01 cross-reference 校正 | Quarterly GQ-02 | docs only；不得自行換模型或放寬 escalation |
-| Phase 11 health report 落點措辭校正 | Quarterly GQ-03 | docs only；不得把例行量測追加進 90 |
-| L-001 host-shell quoting 與 L-002 UTF-8 一般讀檔教訓補強 | Quarterly GQ-04/GQ-05 | docs only；保留原事故史，不能用新文字掩蓋 recurrence |
-| three-source schema 納入 INDEX/path guard | Round 6 R6-01 | docs/test only；不得藉此修改 schema |
-| fixture convention 與機械 guard 強度對齊 | Round 6 R6-02 | docs/test only；不得刪除三個 script-referenced legacy fixtures |
-| three-source `verdict` 語意耦合設計 | Round 6 R6-03 | design/test proposal only；schema 變更需另包明文授權 |
-| `main.py` GET/display coverage 可達性再評估 | NB-14 包7 HOLD | 現有允許面理論上限 70.40%，低於 72%；不得靠 POST/execution/callback 補數字 |
+本表八項已由 NIGHT-BATCH-15 包1–6消耗；移入下方已消耗紀錄，
+不再列為目前存貨。
 
 ### 【Owner 閘】（位置確認，未移入夜跑）
 
@@ -194,3 +186,52 @@ Owner 可一次回覆四組，例如：
 - dependency authority/lock 方案、test-layer profile、board-reader capacity、
   fixture inventory、季度治理、Round 6、Owner 一頁摘要與 three-source
   Replit unknown schema 演習已完成；提案與 findings 不等於 Owner 裁決。
+
+## NIGHT-BATCH-15 補貨（2026-07-27）
+
+以下條目來自本批的實測與 fresh-context review。列入 backlog 不授權產品、
+schema、依賴、runtime、持久化或 Owner-gated 變更。
+
+### 【夜跑可做】
+
+| 條目 | 來源 | 邊界 |
+|---|---|---|
+| README 移除過期 `HEAD 7a93127e`，並保留 05 §5 為唯一狀態權威 | Onboarding O2-01 | docs only；不得以新 hash 取代舊 hash |
+| 05 Phase 3 備註移除「jsonschema/pytest 未入 requirements」過期掛帳 | Onboarding O2-02 | docs only；不改依賴檔或 Phase 完成裁決 |
+| README §6.13「批審通過即合」補同句封閉範圍 | Onboarding O2-03 | docs only；只 cross-reference CLAUDE/05，不能擴張常設授權 |
+| RED 一頁表 A/B 標籤對回 redaction source design | Round 7 R7-01 | docs only；只修摘要一致性，Owner choice 保持空白 |
+| ROOT 提案來源補齊：將 R 方案寫成正式 planning-only 比較稿，或把一頁表降為新提案 | Round 7 R7-02 | docs only；不得把 R 當 Owner 已選，不改 projection schema/builder |
+| Quarterly 與 Round 6 加 later-resolution metadata | Round 7 R7-03/R7-04 | docs only；歷史 finding 原文不重寫 |
+| 2026-07-26 layer profile 補 package checkpoint 註記 | Round 7 R7-05 | docs only；不把量測數變成 CI 門檻 |
+| legacy enum／mock E2E／preview-loader error exposure 修正方案 | Error audit ES2-01/02/03 | 先做 docs/test 設計；產品錯誤格式需另包明文授權，E-01/E-02 xfail 不動 |
+| test-layer profile 與 board-reader stress 趨勢重跑 | NB-15 包8/17 | measurement only；不設效能門檻、不以 marker 跳過最終全測 |
+| dependency declaration baseline 定期複核 | NB-15 包11 | tests/report only；Owner 未裁決 authority 前不得改三份依賴宣告 |
+
+上述十項足以供下一批取材，夜跑存貨未枯竭。執行者仍不得自行從本表加包。
+
+### 【Owner 閘】（五組選案維持未裁決）
+
+| 選案 | 目前狀態 | 未裁決前行為 |
+|---|---|---|
+| RED — schema error redaction | **空白**；R7-01 指出一頁表 A/B 對調，先修文件再請 Owner 選 | E-01/E-02 xfail 維持；不得 export raw validator error |
+| AUD — v1.1 audit record | **空白**；A/B/C 提案與 B 建議仍只是設計 | 不改 schema、不實作 writer |
+| RB — rollback Git binding | **空白**；A/B/C 提案與 B 建議仍只是設計 | 不改 schema、不執行或猜測 Git rollback |
+| PB — Hermes `produced_by` | **空白**；A/B/C 提案與 A 建議仍只是設計 | schema 維持非空字串；future adapter 另行 fail closed |
+| ROOT — `parent_task_id: null` projection | **空白**；R7-02 指出 R 建議缺完整來源提案 | root projection 維持 HOLD，不填 placeholder |
+
+Phase 7 audit writer、Phase 9 Owner-present N=1、v1.1/v1.2 instruction 與
+Replit/runtime 接線仍是各自獨立硬閘，不因上表或夜跑常設流程解鎖。
+
+### 本批已消耗，不再重開
+
+- 包1–3：three-source schema 已入 INDEX/path guard；fixture conventions 已與
+  實際機械範圍對齊；三源事實/UNKNOWN/verdict/exit-code 語義文件已完成。
+- 包4：季度 GQ-01～GQ-05 已修正；後續只補 resolution metadata，不重做修正。
+- 包5–6：`main.py` GET/helper 安全面達 71%；納管 coverage 缺口已逐條分類，
+  defensive/unreachable 分支保留。
+- 包7–9：六 contract mutation 240 案、大板面 2,000 檔量測、1,000 筆 hash
+  長鏈驗證均完成。
+- 包10–13：error surface Round 2、dependency sync baseline、15-schema renderer
+  全量演習、Phase 9 all-of preflight 反向測試完成。
+- 包14–18：v1.0 readiness 二版、onboarding/治理 review、test-layer 新檔 guard、
+  1,206-outcome profile、golden vector 獨立 hash 驗證完成。
