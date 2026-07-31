@@ -31,6 +31,18 @@ Checks:
 
 No P0 or P1 finding was identified.
 
+## Resolution metadata
+
+The findings above remain unchanged as dated review evidence. The metadata
+below records later disposition and must not be read as rewriting the original
+finding.
+
+| ID | Current status | Resolution |
+|---|---|---|
+| R4-01 | Resolved | NIGHT-BATCH-13 package 4 added resolution metadata to `ONBOARDING_REVIEW_20260723.md`; commit `614b09b` |
+| R4-02 | Design prepared; exposure risk unresolved pending Owner choice | NIGHT-BATCH-13 package 4 added explicit E-01/E-02 metadata stating that design exists, the Owner decision is blank, and validators are unchanged; commit `614b09b` |
+| R4-03 | Resolved | NIGHT-BATCH-13 package 3 corrected the crosswalk/current-plan line-count distinction; commit `c5f3ef5` |
+
 ## Checks with no finding
 
 ### Compaction content and indexes
