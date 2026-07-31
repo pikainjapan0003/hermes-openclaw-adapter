@@ -249,14 +249,14 @@ Replit/runtime 接線仍是各自獨立硬閘，不因上表或夜跑常設流�
 
 | 條目 | 來源 | 邊界 |
 |---|---|---|
-| Round 7 加 later-resolution metadata，記錄 R7-01～R7-05 已由 NB-16 包1/3處置 | Round 8 R8-02 | docs only；歷史 finding 原文不重寫、不宣稱 Owner 已選案 |
+| Round 7 加 later-resolution metadata，記錄 R7-01～R7-05 已由 NB-16 包1/3處置 | Round 8 R8-02 | 【已完成】NB-17 包2；歷史 finding 原文未重寫，Owner 選案仍空白 |
 | README/05 onboarding 三項過期文字校正 | Onboarding O2-01/02/03 | docs only；不得用新 HEAD 取代舊 HEAD；§6.13 封閉範圍不得放寬 |
 | 非 contract 唯讀工具 error-surface 遮罩設計 | ES3-01～ES3-04 | 先做 docs/tests；現有四個 xfail 維持，未有明文產品包不得改 script output contract |
 | delegation templates 加 current routing/night-batch overlays | TREV-01/03 | docs only；只同步 05 §6.13 與 10 C8，不新增授權或自動派工 |
 | T-07 補 R-13 雙模型 fresh-context 硬閘 | TREV-02 | docs only；不得把單模型 review 升格為高風險簽核 |
 | T-04/T-08/T-09/T-10 capability 與 Replit UNKNOWN 語義更新 | TREV-04/05 | docs only；不得建立 remote 接線、登入、deploy 或 deployed-hash 推測 |
 | board-wide `schema_version` 一致性設計評估 | NB-16 包11 | docs/tests only；現況為逐筆保留版本標記且可混版，不改既有 schema/reader |
-| `main.py` GET-only coverage 後續僅在新增安全表面時重估 | NB-16 包4 HOLD／包5 | 目前完整套件 raw 70.507%（顯示 71%）；POST/control/execution/callback 永不為 coverage 觸及 |
+| `main.py` GET-only coverage 後續僅在新增安全表面時重估 | NB-16 包4 HOLD／包5 | 【已完成】NB-17 包1改為 raw 69.507% 回歸 floor；POST/control/execution/callback 永不為 coverage 觸及 |
 | 唯讀 script coverage 輪替與 renderer union 顯示評估 | NB-16 包10 | tests/docs only；不為 coverage 改工具行為 |
 | board-reader symlink 惡意路徑在可建立 symlink 的 WSL 環境重跑 | NB-16 包7 | test-only；Windows 無權限 skip 不算通過該場景，不得建立 repo 正式 board |
 
@@ -282,3 +282,56 @@ Replit/runtime 接線仍是各自獨立硬閘，不因上表或夜跑常設流�
   引用逐字授權句不等於取得該授權。
 - 包17–18：research 目錄治理三案與 T-01～T-12 現況複核已完成；兩者皆為
   planning/review，未實際歸檔、搬檔、刪檔或修改 delegation templates。
+
+## NIGHT-BATCH-17 補貨（2026-07-29）
+
+本節吸收 NIGHT-BATCH-17 的 HOLD、error-surface／governance／core-doc
+findings 與效能量測。列入本檔只代表可供未來 Fable 5 派工取材；執行者
+不得自行加包。已完成的分析、測試與報告移到本節「已消耗」，不得拿同一
+工作再次交差。
+
+### 【夜跑可做】
+
+| 條目 | 來源 | 邊界 |
+|---|---|---|
+| board reader hardlink 目錄邊界修正設計＋產品小修＋回歸測試 | NB-17 包7 HOLD | 先把板內 hardlink 指向板外有效 fixture 的現行接受行為定為 closed rule；不得建立正式 board/data 目錄，不得藉測試讀任意板外 payload |
+| test helper／fixture loader pytest report redaction 設計 | ES4-01/ES4-02 | 先做 docs/test contract；現有 14 個 E-01/E-02/ES3 xfail 精確基線不增不減，禁止把 raw CI report 接 remote/dashboard |
+| Round 9 later-status 修補 | R9-01/R9-02 | 只加 health checkpoint metadata，並把 backlog 的「五組選案」改成「四組正式選案＋一個 ROOT direction gate」；歷史 finding 原文不改 |
+| 00 current-workflow checkpoint | `CORE_DOCS_REVIEW_00_01.md` finding 1 | docs only；保留 2026-07-07 歷史事實，另標 current Codex 五級路由、immutable night package 與 Fable 5 批審流程 |
+| 00 Phase 9 token 措辭收斂 | `CORE_DOCS_REVIEW_00_01.md` finding 2 | docs only；只能標明舊 env-token 句未拍板／不得實作，不得替 Owner 設計或解鎖 token |
+| 00 active-checkout 可攜命令修訂 | `CORE_DOCS_REVIEW_00_01.md` finding 3 | docs only；先 resolve Owner 指定 checkout，再給 Windows/WSL 分支示例；不得自行同步、push 或猜 authoritative clone |
+| 00 capability/model example 更新 | `CORE_DOCS_REVIEW_00_01.md` finding 4 | docs only；以 available approved capability 與 10 C8 五級路由 cross-reference 取代固定 WebSearch/Haiku/Sonnet 名稱 |
+| coverage floor 執行分層提案 | `TEST_PERFORMANCE_20260729.md` P1 | tests/settings proposal；floor 仍是必跑 gate，不降 raw 69.507%、不觸及 POST/control/execution/callback |
+| dependency AST inventory session-scope 評估 | `TEST_PERFORMANCE_20260729.md` P2 | tests only；同平台 before/after，assertion/baseline 零改動，先證明 collection scope 不造成 stale inventory |
+| test layers 平行 CI 可行性審查 | `TEST_PERFORMANCE_20260729.md` P3/P4 | docs/tests only；不得加未宣告 dependency、不得縮 stress/capacity workload、governance/Git/global collection 先排除 |
+| delegation template proposal fresh review | `DELEGATION_TEMPLATE_REVISION_PROPOSAL.md` | review only；若後續明文包核准修改 30，必須保持 §6.13/C8/R-13 邊界且不得新增自動派工權 |
+| fixture SHA-256 inventory 定期更新規則 | NB-17 包19 | docs/test convention；fixture 新增/修改需同包說明 hash table 變更，不能用自動接受新 digest 掩蓋未審 fixture |
+
+以上存貨足以拆成下一個不少於十包的夜跑批次；不需要也不得挪用下列
+Owner gates 充數。
+
+### 【Owner 閘】（全部維持未裁決）
+
+| 待裁決組 | 目前狀態 | 未裁決前行為 |
+|---|---|---|
+| RED／AUD／RB／PB 四組正式選案 | **全部空白**；一頁表已校正、guard 已建，可安全回覆 | 不改 schema、validator、writer、projection 或 runtime |
+| ROOT direction gate | **空白**；尚無正式標號方案，不可回選案字母 | root projection 維持 HOLD，不填 placeholder |
+| `research/` 目錄治理 | A/B/C 三案與二版 SOP 已備，Owner 欄空白 | 不建 archive、不搬檔、不刪檔、不壓縮 |
+| 01 §2／§4.5 夜跑例外 cross-reference | `CORE_DOCS_REVIEW_00_01.md` finding 5；01 屬 F2 | 未有 Owner 明示 F2 文件包前不動 01；既有 §6.13 例外不擴張 |
+| Phase 7 audit writer | 實作包草案與 readiness 路徑已備 | 仍需 Owner 在實作 turn 給逐字授權句；不得建立 writer、正式 `data/` 或持久化 |
+| Phase 9 N=1 | 12-condition preflight 仍 fail closed | 等 Phase 7 完成、Owner 同步在場及另行 token/gate 裁決 |
+
+### 本批已消耗，不再重開
+
+- 包1：`main.py` raw coverage 回歸 floor 已建；GET-only 安全面不再追高。
+- 包2：Round 7/8 later-disposition metadata 已補。
+- 包3–5：Owner choice preflight、research 治理二版 SOP、delegation template
+  修訂提案已備；沒有任何 Owner 欄被填、30 檔未改。
+- 包6、8、10、11：時間/序 mutation、builder 極端合法值、three-source
+  schema 雙向鎖、12 步負向全鏈已完成。
+- 包7：HOLD；hardlink 板外讀取缺口已列上方，未以弱測試交差。
+- 包9：四支唯讀 script 覆蓋第二輪已完成。
+- 包12–14：preflight catalog、AUD/RB/PB impact analysis 已完成；只屬分析。
+- 包15–18：error surface Round 4、governance Round 9、00/01 review 與
+  Windows 效能量測已完成；findings 已轉上方存貨。
+- 包19：50-file fixture SHA-256 closed inventory 已建。
