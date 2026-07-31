@@ -270,6 +270,7 @@ def test_auto_policy_safety_level_parsing(value, expected) -> None:
         ("./app/main.py", True),
         ("templates/review.html", True),
         ("app/hermes_client.py", True),
+        ("app/free.py", False),
         ("docs/hermes_notes.md", False),
         ("src/free.py", False),
     ],
@@ -386,3 +387,46 @@ def test_auto_policy_safe_results_never_authorize_execution(
     assert result["queue_transition_allowed"] is False
     assert result["audit_event"]["observation_only"] is True
     assert row == snapshot
+
+
+def test_auto_policy_safe_operation_and_unprotected_file_continue() -> None:
+    row = _policy_row(
+        task_type="test",
+        safety_level=0,
+        requested_tools=["run_tests"],
+        allowed_tools=["run_tests"],
+        requested_operations=["inspect_report"],
+        touched_files=["docs/report.md"],
+    )
+
+    result = _evaluate_policy(row)
+
+    assert result["policy_decision"] == "auto_approved"
+    assert result["matched_level"] == 0
+    assert result["can_execute"] is False
+
+
+def test_auto_policy_defensive_downstream_denylist_remains_fail_closed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        auto_policy,
+        "evaluate_security_gates",
+        lambda **_kwargs: {
+            "allowed": False,
+            "priority": "denylist",
+            "reason": "defensive_downstream_deny",
+        },
+    )
+    row = _policy_row(
+        task_type="test",
+        safety_level=0,
+        requested_tools=["run_tests"],
+        allowed_tools=["run_tests"],
+    )
+
+    result = _evaluate_policy(row)
+
+    assert result["policy_decision"] == "prohibited"
+    assert result["reason"] == "denied_tool_matched"
+    assert result["can_execute"] is False

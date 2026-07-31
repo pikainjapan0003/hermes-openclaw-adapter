@@ -229,6 +229,32 @@ def test_timestamp_and_decision_inconsistencies_fail_closed() -> None:
         _build(source)
 
 
+def test_empty_string_and_defensive_final_leak_guard(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    empty_phase = _source()
+    empty_phase["phase"] = " "
+    with pytest.raises(RemoteReadonlyProjectionError, match="phase must be a non-empty string"):
+        _build(empty_phase)
+
+    monkeypatch.setattr(
+        projection_module,
+        "_projection_leaks",
+        lambda _value: [
+            {
+                "path": "$.synthetic",
+                "validator": "projectionLeak",
+                "message": "synthetic defensive rejection",
+            }
+        ],
+    )
+    with pytest.raises(
+        RemoteReadonlyProjectionError,
+        match="projection leak guard rejected output",
+    ):
+        _build(_source())
+
+
 def test_projection_module_has_no_io_network_runtime_or_dispatch_imports() -> None:
     source = Path(projection_module.__file__).read_text(encoding="utf-8")
     tree = ast.parse(source)
