@@ -1,4 +1,4 @@
-# `research/` Directory Governance Proposal
+# `research/` Directory Governance Proposal — Version 2
 
 Status: **PLANNING ONLY, NOT AUTHORIZED — OWNER DECISION BLANK**
 
@@ -7,6 +7,10 @@ to 45 Markdown files and 4,732 lines. Those values are a dated observation, not
 an automatic cleanup threshold. This document does not create an archive,
 move, rename, compact, or delete any file, and it does not change the authority
 of `00/01/05/10/20/30/40/90/99` or any Owner gate.
+
+Version 2 turns the original alternatives into a reviewable SOP without
+executing it. It incorporates the Round 8 rule that historical findings remain
+unchanged while later disposition is recorded separately and visibly.
 
 ## 1. Proposed classifications
 
@@ -24,6 +28,26 @@ governance authority.
 “Archive-eligible” never means “move automatically.” Git history is not a
 replacement for discoverable resolution metadata or a stable current source.
 
+### 1.1 Classification decision tree
+
+For a future manifest author, classify one file at a time in this order:
+
+1. Does the file compare alternatives and leave an Owner/governance field open?
+   If yes, classify `proposal`.
+2. Does it specify a future contract, package, interface, or implementation
+   shape? If yes, classify `design` even when it also contains alternatives.
+3. Does it assign findings/severity or simulate a fresh-context reader? If yes,
+   classify `review`.
+4. Does it primarily record counts, timing, coverage, capacity, or dependency
+   state at a date/checkpoint? If yes, classify `measurement`.
+5. If none applies, HOLD classification and record why; do not invent a fifth
+   class or move the file.
+
+When a document mixes classes, select the class that controls its retention and
+record secondary tags. An unresolved Owner field always forces `proposal` as
+the retention-controlling class unless the document is an authoritative design
+source with its own stable path.
+
 ## 2. Proposed naming convention
 
 1. Dated review and measurement files use
@@ -40,6 +64,21 @@ replacement for discoverable resolution metadata or a stable current source.
 5. Paths cited by governance, tests, the contract index, backlog, or an open
    Owner decision are stable until a separately reviewed path map is accepted.
 
+### 2.1 Naming SOP for a future new file
+
+1. Choose the class using §1.1.
+2. Pick a topic noun already used by the authoritative/source document; do not
+   coin a synonym that can look like a competing system.
+3. For a dated review/measurement, use UTC-independent calendar date supplied
+   by the work order: `<TOPIC>_<YYYYMMDD>.md`.
+4. For a numbered audit, keep a monotonic `ROUND<N>` and verify no file already
+   uses that number.
+5. For a stable design/proposal, add `DESIGN` or `PROPOSAL` to the filename and
+   put version/status metadata inside the file rather than silently replacing
+   its identity.
+6. Run case-insensitive collision and reference searches before proposing the
+   name. A collision is HOLD, not permission to overwrite.
+
 ## 3. Common metadata proposed for future files
 
 ```text
@@ -54,6 +93,26 @@ Authority boundary: research only; named governance source remains authoritative
 
 This block is a proposed human-readable convention, not a schema and not a
 request to rewrite every historical file at once.
+
+### 3.1 Proposed manifest/index fields
+
+If Option B or C is later selected and separately authorized, the active
+`research/INDEX.md` would contain one row per Markdown file:
+
+| Field | Rule |
+|---|---|
+| `path` | Exact repository-relative current path; unique and case-sensitive |
+| `class` | One of design/review/measurement/proposal |
+| `status` | active/unresolved/resolved/superseded |
+| `authority_source` | Named governing file, or `none`; research never names itself as L0 authority |
+| `open_ids` | Finding/decision IDs still open, or `none` |
+| `resolution` | Commit/Owner decision reference, or blank while unresolved |
+| `successor` | Exact path or `none` |
+| `retention_until` | Date derived from the selected policy, or `not eligible` |
+| `archive_path` | Proposed/actual path or blank; never filled speculatively |
+
+The index would be descriptive. It could not select an option, resolve a
+finding, authorize movement, or override the source file.
 
 ## 4. Three governance options
 
@@ -110,6 +169,19 @@ The request should also be allowed when onboarding review proves that historical
 search noise causes a concrete misread. Crossing a number grants no movement or
 deletion authority. A proposal may instead conclude that no archive is needed.
 
+### 5.1 Trigger-evaluation SOP
+
+1. Count only first-level `research/*.md` files and their byte newline totals;
+   print the exact command and environment.
+2. Compare with both proposal observations, not with an invented percentage.
+3. If neither is exceeded and there is no documented onboarding misread, record
+   `NO REVIEW NEEDED` and stop.
+4. If a trigger is met, produce a review request listing counts and candidate
+   classes only. Do not create a directory or path map yet.
+5. Confirm that an Owner option in §7 is actually selected. If blank, HOLD.
+6. Obtain a separately issued docs-only work order before producing candidate
+   movement artifacts.
+
 ## 6. Mandatory preconditions for any later movement
 
 1. Owner selects an option in this document.
@@ -123,6 +195,44 @@ deletion authority. A proposal may instead conclude that no archive is needed.
 7. The later work order explicitly authorizes the exact docs-only moves.
 8. No deletion occurs; recovery remains possible through both the archive and
    Git history.
+
+## 6.1 Future Option-B archive SOP (not authorized)
+
+The following sequence is executable only after §6 preconditions and an exact
+later work order are satisfied:
+
+1. Freeze a pre-move inventory of current paths, hashes, incoming references,
+   class/status, and resolution metadata.
+2. Select candidates mechanically from resolved status plus elapsed retention;
+   manually exclude Owner-choice sources, open findings/proposals, readiness,
+   current health/governance, and latest two comparable measurements.
+3. Produce an old-path → proposed-path map without moving anything.
+4. Run a fresh-context review of every candidate and map row. Any disputed
+   status/path is removed from the candidate set rather than guessed.
+5. In one atomic docs-only commit, create only the authorized year directory,
+   move only listed candidates, and update all exact references.
+6. Update the active index with new path, preserved hash, resolution, and
+   successor; keep historical finding text byte-equivalent apart from any
+   separately approved path-only reference repair.
+7. Run docs-drift, cross-reference, contract-index, onboarding, compaction, and
+   path guards plus `git diff --check`.
+8. If any guard fails, revert the proposed commit before review; do not leave a
+   half-moved tree.
+9. Require Fable 5 fresh-context review before merge. No deletion is part of the
+   SOP.
+
+## 6.2 Index maintenance after an authorized archive
+
+- Every later new research file gets an index row in the same package.
+- A finding resolution updates the original review's visible disposition and
+  its index row; it does not rewrite the original finding.
+- A successor sets both directions: old `successor`, new `supersedes`.
+- Measurements keep exact checkpoint/environment wording and never become
+  “current” merely because the index lists them.
+- Quarterly review checks missing files, duplicate/case-colliding paths, blank
+  resolution on `resolved`, retention arithmetic, and orphaned incoming refs.
+- An archived file returning to active/unresolved status requires a separately
+  reviewed restoration map; copying it to two active paths is forbidden.
 
 ## 7. Recommendation and Owner decision
 
