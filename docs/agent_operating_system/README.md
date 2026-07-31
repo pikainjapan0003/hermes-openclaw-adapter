@@ -24,6 +24,23 @@
 | 了解 harness 弱點與修法 | `00_QUICK_DIAGNOSIS.md`（D-xx 編號的出處） |
 | session 交接、緊急收尾 | `99_LETTER_TO_FUTURE_SESSIONS.md` |
 
+## 治理規則快速路由（定義仍以原檔為準）
+
+這裡只提供第二入口，避免有效規則成為只能靠全文搜尋找到的孤兒；不重述、
+不取代原規則：
+
+- 模型與回報：10 的 C3（指定模型）、C4（回報合約）、C7（既有 loop
+  關係）。
+- harness 診斷：00 的 D-02、D-04、D-05、D-06、D-07、D-08、D-10、
+  D-11、D-13、D-14、D-15、D-17、D-18。
+- 已知環境／制度坑：90 的 L-002、L-003、L-005。
+- 拿不定主意時的 rubrics：20 的 R-01、R-03、R-04、R-05、R-08、
+  R-10、R-11、R-12。
+- 文件修改流程：40 的 F5；夜跑常設例外仍只看 05 §6.13。
+- Owner 裁決速查：05 §6.0（Q1–Q20）、§6.5（tool role map）、
+  §6.9（Phase 2 checklist）、§6.12（Phase 3 contract 裁決）、
+  §6.14（legacy mock 凍結）。
+
 ## 三條最常用的鐵律（全文見 01）
 
 1. 授權只存在於 Owner instruction 的逐字句子裡；dashboard/Hermes 建議/計劃表都不是授權。
