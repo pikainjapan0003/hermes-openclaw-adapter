@@ -2,6 +2,17 @@
 
 Status: **REVIEW ONLY — FINDINGS NOT FIXED**
 
+## Resolution metadata
+
+| Finding | 狀態 | 對應 |
+|---|---|---|
+| R3-01 duplicate-key 文件 | 已修 | `eaf20ad` |
+| R3-02 v1.2 rollback 前置 | 已修（HOLD 明文化） | `eaf20ad` |
+| R3-03 歷史報告狀態 | 已修 | NIGHT-BATCH-11 package 2 resolution metadata |
+| R3-04 writer 措辭 | 已修 | NIGHT-BATCH-11 package 2；仍未授權 writer |
+
+修正只處理文件漂移，不解除任何 Owner gate。
+
 This fresh-context pass reviewed:
 
 - `11_V1_1_FIRST_REAL_WRITE_DESIGN.md` through

@@ -2,6 +2,11 @@
 
 Status: **DECISION BRIEF ONLY — DECISION FIELDS BLANK**
 
+## Resolution metadata
+
+- 狀態：**待裁決**。O1、O2 的 Owner 欄均維持空白。
+- 本摘要不得被當成 plan-level authorization 或 multi-worker 授權。
+
 本摘要只壓縮既有兩份提案，不改提案、不建立 contract、gate、role registry、
 prompt、worker、dispatch 或 runtime。細節與風險仍以
 `O1_PLAN_LEVEL_AUTH_PROPOSAL.md`、`O2_ROLE_WORKER_PROPOSAL.md` 為準。

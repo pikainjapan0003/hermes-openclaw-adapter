@@ -1,5 +1,10 @@
 # Coverage Closeout — 2026-07-21
 
+## Resolution metadata
+
+- 狀態：**已作廢（僅指 current-metric 用途）**。
+- 歷史量測保留；較新基線見 `PHASE11_HEALTH_20260722.md`，不得用本檔數字宣稱目前 coverage。
+
 ## Scope and method
 
 This report records NIGHT-BATCH-8 package 11.  It measures branch coverage for

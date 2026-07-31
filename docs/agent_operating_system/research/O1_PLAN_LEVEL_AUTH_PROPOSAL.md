@@ -2,6 +2,11 @@
 
 Status: **PROPOSAL ONLY — OWNER NOT DECIDED**
 
+## Resolution metadata
+
+- 狀態：**待裁決**。Owner 尚未選 A/B/C。
+- 未裁決前沿用 01 的逐字授權與 fail-closed 邊界。
+
 本文件只提出資料與治理選項，不修改 `01_SAFETY_BOUNDARIES.md`，不建立授權
 gate，不允許 dispatch/runtime，不讓 approval event 變成 execution permission。
 

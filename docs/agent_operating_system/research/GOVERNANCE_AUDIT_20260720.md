@@ -2,6 +2,11 @@
 
 Status: **REVIEW ONLY — FINDINGS ARE NOT FIXES OR AUTHORIZATION**
 
+## Resolution metadata
+
+- 狀態：**已修**。G-01～G-09 由 NIGHT-BATCH-8/9 的治理同步包處置。
+- 本檔是 2026-07-20 快照；current authority 仍是 01、05、40 與 CLAUDE.md。
+
 ## 1. Scope and method
 
 Reviewed as one authority chain:

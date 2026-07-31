@@ -2,6 +2,11 @@
 
 Status: **REVIEW ONLY — FINDINGS NOT FIXED**
 
+## Resolution metadata
+
+- 狀態：**已修**。G2-01～G2-09 由 NIGHT-BATCH-9 package 1 處置。
+- 原文保留為歷史 finding，不得把其中過期現況重新當成待辦。
+
 Scope: `10_MODEL_ORCHESTRATION.md`, `20_JUDGMENT_RUBRICS.md`,
 `30_DELEGATION_PROMPTS.md`, `90_LESSONS_LEARNED.md`,
 `99_LETTER_TO_FUTURE_SESSIONS.md`, `CLAUDE.md`, and

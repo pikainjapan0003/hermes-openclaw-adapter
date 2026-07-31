@@ -2,6 +2,11 @@
 
 Status: **REVIEW ONLY — NO CODE CHANGE**
 
+## Resolution metadata
+
+- 狀態：**已修（決策已記錄）**。05 §6.14 採「保留並凍結」；mock code 未遷移。
+- 若 Owner 日後翻案，須另開設計與實作包，本檔不構成授權。
+
 Scope: `app/mock_e2e_v0_7.py`, its v0.7 TaskEnvelope/CallbackEvent dependencies,
 and the current ten Blackboard schemas. This assessment neither changes the legacy
 mock nor authorizes a queue, worker, dispatch, runtime, or migration adapter.

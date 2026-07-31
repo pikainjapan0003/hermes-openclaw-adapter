@@ -2,6 +2,11 @@
 
 Status: **PLANNING ONLY, NOT AUTHORIZED**
 
+## Resolution metadata
+
+- 狀態：**待裁決**。Phase 10 scope、connector 與資料權限仍屬 Owner gate。
+- 本研究未授權 connector call、credential、remote transport 或 payload write。
+
 This is a research note for the indefinitely deferred Phase 10 described in
 `05_VERIFIED_LONG_TERM_PLAN.md`. It does not authorize a connector credential,
 connector call, scope gate, audit write, remote connection, runtime connection, or

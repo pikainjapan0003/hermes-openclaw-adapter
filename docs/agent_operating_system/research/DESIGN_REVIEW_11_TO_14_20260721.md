@@ -2,6 +2,18 @@
 
 Status: **REVIEW ONLY — FINDINGS RECORDED, NOTHING FIXED OR AUTHORIZED**
 
+## Resolution metadata
+
+| Finding | 狀態 | 對應 |
+|---|---|---|
+| F-01 audit contract | 待裁決 | `11_V1_1_FIRST_REAL_WRITE_DESIGN.md` §5.1 三案，Owner 欄留白 |
+| F-02 rollback binding | 待裁決 | 同檔 §5.2 三案，Owner 欄留白 |
+| F-03 duplicate-key decoder | 已修 | `005e9e0` reader hook；`eaf20ad` 文件同步 |
+| F-04 `produced_by` | 待裁決 | `13_HERMES_WIRING_DESIGN.md` §4.1 三案 |
+| F-05 projection mapping | 已修（設計） | `115d40b` 逐欄映射；runtime 仍未授權 |
+
+原 finding 文字保留為當時快照，不可覆蓋上表 current status。
+
 ## 1. Scope and method
 
 Reviewed:

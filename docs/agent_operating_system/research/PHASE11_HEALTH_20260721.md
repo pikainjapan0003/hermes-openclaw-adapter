@@ -3,6 +3,11 @@
 Status: measurement and recommendations only. No governance file was compacted and no
 product/runtime behavior was changed.
 
+## Resolution metadata
+
+- 狀態：**已作廢（僅指 current-metric 用途）**。
+- 歷史量測保留；current snapshot 由後續 `PHASE11_HEALTH_20260722.md` 取代。
+
 ## 1. Environment and scope
 
 - Worktree: NIGHT-BATCH-9 package 10 candidate after package 9 commit `58b7d9a`.

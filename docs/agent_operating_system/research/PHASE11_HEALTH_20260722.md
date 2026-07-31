@@ -3,6 +3,11 @@
 Status: measurement and recommendations only. No governance file was compacted, no
 product behavior was changed, and no slow marker or persistence path was added.
 
+## Resolution metadata
+
+- 狀態：**已修（報告型 artifact，當輪無待修 finding）**。
+- 本檔是 NIGHT-BATCH-10 closeout 基線；新一輪量測完成後只會被標為歷史快照。
+
 ## 1. Environment and measurement scope
 
 - Candidate: NIGHT-BATCH-10 after package 9, commit `fe4fd6c`.

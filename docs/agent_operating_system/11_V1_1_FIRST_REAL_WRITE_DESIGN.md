@@ -160,7 +160,7 @@ token、檔案內容、環境值或完整測試輸出：
 
 | 方案 | 做法 | 優點 | 風險與弱模型誤讀面 |
 |---|---|---|---|
-| A：擴充 `audit_event` | 升版既有 schema，加入封閉的 `write_evidence` object，依 `event_type` 用條件式 required | 沿用 Phase 7 writer、同一 hash-chain、查詢面最少 | 會改動既有 10-message contract；弱模型可能把 optional 欄位亂填，或把 v1.0 preview 誤當 v1.1 write record；需要版本遷移與全部舊 fixture 重驗 |
+| A：擴充 `audit_event` | 升版既有 schema，加入封閉的 `write_evidence` object，依 `event_type` 用條件式 required | 未來可沿用 Phase 7 writer 設計與同一 hash-chain、查詢面最少；writer 仍不存在且未授權 | 會改動既有 10-message contract；弱模型可能把 optional 欄位亂填，或把 v1.0 preview 誤當 v1.1 write record；需要版本遷移與全部舊 fixture 重驗 |
 | B：新增 `v1_1_write_record` | 建立專用、封閉的新 message type，欄位直接對應 digest/precondition/commit/tests；Phase 7 audit 只引用其 record id/hash | v1.0 audit 與真實寫入證據分離最清楚；可讓 commit/tests 條件成為 schema 必填；弱模型只需拒絕格式錯誤 | contract inventory 由 10 增加為 11，validator、fixtures、INDEX 與全鏈測試都要獨立包更新；若錯把 record 本身當授權或執行命令，會形成新誤讀面 |
 | C：塞入 `event_notes` 結構化字串 | 把固定鍵值序列化成 `event_notes` 字串，不改 schema | 表面改動最少 | schema 只驗「非空字串」，無法機械拒絕缺欄、錯型、重複鍵或偽造狀態；canonicalization 會把 opaque 字串當整體，弱模型也容易把人類文字當結構化證據 |
 

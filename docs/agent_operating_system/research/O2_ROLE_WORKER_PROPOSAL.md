@@ -2,6 +2,11 @@
 
 Status: **PROPOSAL ONLY — OWNER NOT DECIDED**
 
+## Resolution metadata
+
+- 狀態：**待裁決**。Owner 尚未選角色治理方案。
+- 三份 role prompt 仍是草稿，不產生 router、dispatch 或並行權限。
+
 本文件只提出角色治理、資料對應與 prompt 草稿，不建立多 worker、不啟動 dispatch、
 不修改 queue/Blackboard schema、不讓任何 prompt 成為授權。三份 prompt 均為草稿，
 O2 裁決後才可能生效。
