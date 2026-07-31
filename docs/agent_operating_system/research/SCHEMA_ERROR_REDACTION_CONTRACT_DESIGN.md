@@ -2,7 +2,7 @@
 
 Status: **PLANNING ONLY, NOT AUTHORIZED**  
 Prepared: 2026-07-24  
-Scope: Blackboard JSON Schema validation errors only
+Scope: Blackboard and remote read-only projection JSON Schema validation errors
 
 This document designs the error boundary between JSON Schema validation and a
 future display/logging surface. It does not authorize changes to
@@ -82,9 +82,64 @@ Example target shape:
 The example is data shape only. It is not validator implementation
 authorization.
 
-## 5. Design options
+## 5. E-02 remote projection validator boundary
 
-### Option A — redact inside the validator
+E-02 is a distinct exposure boundary, not merely another Blackboard schema.
+`validate_remote_readonly_projection` validates a deliberately lossy display
+object intended for a future remote-facing presentation layer. Even though the
+current projection is offline-only, an echoed instance value, property name,
+or instance path would be closer to an eventual remote exposure than an
+in-process Blackboard validation error. The consequence of leakage is
+therefore higher, and remote wiring must remain blocked until this boundary has
+an implemented, mechanically tested redaction gate.
+
+### 5.1 Remote projection exposure table
+
+| Validator material | Exposure | E-02 rule |
+|---|---|---|
+| Fixed schema identity | Safe | Expose only the adapter-owned literal `remote_readonly_projection`; never expose `$id` or a schema filesystem path. |
+| Stable error code | Safe | Adapter-owned enum only; unknown validator keywords collapse to `validation_failed`. |
+| Validator keyword | Safe after allowlist | Map `required`, `type`, `enum`, `const`, `additionalProperties`, `format`, `pattern`, and the adapter-owned `projectionLeak`; all others collapse. |
+| Schema path | Safe after normalization | May identify a schema-owned projection field, but must not include schema literal values or a local path. |
+| Coarse projection field class | Safe | Use an enum such as `identity`, `freshness`, `status`, `safety_summary`, `decision_summary`, `evidence_reference`, or `unknown`. |
+| Adapter-authored message | Safe | Fixed template only; it must not interpolate `jsonschema.ValidationError.message` or leak-guard findings. |
+| Rejected projection value | Must omit | It may contain a secret, URL, filesystem path, source identifier, or unapproved payload despite the projection allowlist. |
+| Unknown/additional property name | Must mask | Replace with `<redacted-property>` or omit; remote consumers do not need an attacker-controlled key. |
+| Instance path | Must mask | Reduce to `$` or the coarse field class because path segments may be attacker-controlled. |
+| `jsonschema` error message | Must mask | It can echo values, property names, enum literals, and patterns. |
+| `_projection_leaks` finding path | Must mask | The current path identifies the rejected key; export only `projection_leak` plus a coarse field class. |
+| Schema-loader/decoder exception | Must mask | Never expose absolute paths, decoder context, stack text, or environment details. |
+
+### 5.2 Minimum E-02 debugging information
+
+The exportable remote projection error needs only:
+
+1. `valid=false`;
+2. schema identity `remote_readonly_projection`;
+3. a stable adapter-owned error code;
+4. an allowlisted validator class;
+5. a normalized schema-owned path when safe;
+6. a coarse projection field class; and
+7. a fixed adapter-authored message.
+
+It must not contain source task identifiers, display identifiers, commit
+values, timestamps, evidence hashes, rejected safety values, unknown property
+names, URLs, or paths. Trusted local diagnosis may retain a richer internal
+object only under Option C; that object is never exportable.
+
+### 5.3 Difference from E-01
+
+E-01 protects ten Blackboard message validators whose present callers are
+local contract code. E-02 protects a display projection specifically designed
+to cross into a future remote read-only presentation layer. Both require the
+same denylist categories, but E-02 additionally masks display identifiers,
+freshness metadata, commit/evidence references, and leak-guard paths. A future
+remote route or transport remains a separate Owner gate; this design does not
+authorize one.
+
+## 6. Design options
+
+### Option A — redact inside each validator
 
 `validate_blackboard_message` would return only the public redacted contract.
 
@@ -117,7 +172,13 @@ persistent sinks.
 - Weak-model misread surface: medium if types/names are distinct and the raw
   object is documented as non-exportable.
 
-## 6. Recommendation
+For E-02, the same choice applies to
+`validate_remote_readonly_projection`: A changes its returned shape, B makes a
+future display boundary solely responsible, and C retains a process-local raw
+result plus a mandatory export-safe conversion. No option authorizes remote
+wiring.
+
+## 7. Recommendation
 
 **Recommended: Option C**, with Option A as the fail-safe fallback if the
 export-boundary guard cannot be made mechanically complete. The public
@@ -127,7 +188,7 @@ leak-marker tests for all ten Blackboard schemas and schema-selection errors.
 
 This recommendation is not a decision and grants no permission to implement.
 
-## 7. Owner decision
+## 8. Owner decision
 
 Owner decision (choose A, B, or C): **__________**
 
