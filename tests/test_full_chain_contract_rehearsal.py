@@ -7,6 +7,7 @@ audit-event sequence uses the approved in-memory canonical hash calculation.
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 from pathlib import Path
 from typing import Any, Callable
@@ -25,6 +26,7 @@ from app.worker_mock_gateway_dry_run import run_worker_to_mock_gateway_dry_run
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURE_DIR = ROOT / "fixtures" / "blackboard_contract"
 EVIDENCE_SCHEMA = ROOT / "docs" / "schemas" / "evidence_bundle.json"
+BUILDER_VECTOR_DIR = ROOT / "fixtures" / "builder_golden_vectors"
 
 BLACKBOARD_PREFIX_ORDER = (
     "task_draft",
@@ -188,6 +190,27 @@ def _validate_evidence_bundle(bundle: dict[str, Any]) -> list[Any]:
     return sorted(validator.iter_errors(bundle), key=lambda error: list(error.path))
 
 
+def _independent_canonical_bytes(value: dict[str, Any]) -> bytes:
+    """NB-15 package-18 canonical implementation; no app hash helper call."""
+
+    return json.dumps(
+        value,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+        allow_nan=False,
+    ).encode("utf-8")
+
+
+def _independent_sha256(value: dict[str, Any]) -> str:
+    return hashlib.sha256(_independent_canonical_bytes(value)).hexdigest()
+
+
+def _independent_evidence_hash(value: dict[str, Any]) -> str:
+    payload = {key: item for key, item in value.items() if key != "bundle_hash"}
+    return _independent_sha256(payload)
+
+
 def test_complete_twelve_step_contract_chain_is_valid_linked_and_hashed() -> None:
     messages, evidence_bundle = _build_full_chain()
 
@@ -276,3 +299,99 @@ def test_tampering_with_hashed_audit_event_breaks_the_chain() -> None:
     audit_sequence[0]["event_notes"] = "Tampered after the link was calculated."
 
     assert verify_chain(audit_sequence) is False
+
+
+def test_v4_all_twelve_outputs_recompute_and_cross_check_golden_vectors() -> None:
+    messages, evidence_bundle = _build_full_chain()
+    ordered_outputs = [
+        *(messages[name] for name in BLACKBOARD_PREFIX_ORDER),
+        evidence_bundle,
+        messages["audit_event_genesis"],
+        messages["audit_event_linked"],
+        messages["rollback_preview"],
+    ]
+
+    assert len(ordered_outputs) == len(FULL_CHAIN_ORDER) == 12
+    independent_digests = [_independent_sha256(value) for value in ordered_outputs]
+    assert independent_digests == [
+        _independent_sha256(copy.deepcopy(value)) for value in ordered_outputs
+    ]
+    assert len(set(independent_digests)) == 12
+    assert _independent_evidence_hash(evidence_bundle) == evidence_bundle["bundle_hash"]
+
+    rebuilt_packet = build_approval_packet(
+        messages["worker_dry_run"],
+        messages["result_message"],
+        decision="approve",
+        approval_timestamp="2026-07-18T10:07:00Z",
+        prev_entry_hash=None,
+    )
+    assert rebuilt_packet == messages["approval_packet"]
+
+    chain_command = _evidence_command(
+        messages["task_draft"], messages["openclaw_command_envelope"]
+    )
+    rebuilt_evidence = build_evidence_bundle(
+        messages["task_draft"],
+        chain_command,
+        run_worker_to_mock_gateway_dry_run(chain_command),
+        [],
+        created_at=evidence_bundle["created_at"],
+    )
+    assert rebuilt_evidence == evidence_bundle
+
+    approval_manifest = json.loads(
+        (BUILDER_VECTOR_DIR / "approval_packet_vectors.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    approval_vector = next(
+        item for item in approval_manifest["vectors"] if item["name"] == "approve-stamped"
+    )
+    approval_expected = json.loads(
+        (ROOT / approval_manifest["expected_output_template"]).read_text(
+            encoding="utf-8"
+        )
+    )
+    approval_expected.update(approval_vector["expected_overrides"])
+    approval_actual = build_approval_packet(
+        json.loads(
+            (ROOT / approval_manifest["source_files"]["worker_dry_run"]).read_text(
+                encoding="utf-8"
+            )
+        ),
+        json.loads(
+            (ROOT / approval_manifest["source_files"]["result_message"]).read_text(
+                encoding="utf-8"
+            )
+        ),
+        **approval_vector["kwargs"],
+    )
+    assert approval_actual == approval_expected
+    assert _independent_sha256(approval_actual) == approval_vector["bundle_hash"]
+
+    evidence_manifest = json.loads(
+        (BUILDER_VECTOR_DIR / "evidence_bundle_vectors.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    evidence_vector = next(
+        item for item in evidence_manifest["vectors"] if item["name"] == "minute-00"
+    )
+    golden_task = json.loads(
+        (ROOT / evidence_manifest["source_files"]["task"]).read_text(
+            encoding="utf-8"
+        )
+    )
+    golden_command = dict(evidence_manifest["command_envelope"])
+    assert golden_command.pop("task_id_from_source") is True
+    golden_command["task_id"] = golden_task["task_id"]
+    evidence_actual = build_evidence_bundle(
+        golden_task,
+        golden_command,
+        run_worker_to_mock_gateway_dry_run(golden_command),
+        [],
+        created_at=evidence_vector["created_at"],
+    )
+    assert evidence_actual["bundle_hash"] == evidence_vector["bundle_hash"]
+    assert _independent_evidence_hash(evidence_actual) == evidence_vector["bundle_hash"]
