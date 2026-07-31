@@ -395,3 +395,157 @@ def test_v4_all_twelve_outputs_recompute_and_cross_check_golden_vectors() -> Non
     )
     assert evidence_actual["bundle_hash"] == evidence_vector["bundle_hash"]
     assert _independent_evidence_hash(evidence_actual) == evidence_vector["bundle_hash"]
+
+
+class _V5StepRejected(ValueError):
+    """One staged rehearsal step failed before later steps could run."""
+
+    def __init__(self, step: str, completed: list[str]) -> None:
+        super().__init__(step)
+        self.completed = tuple(completed)
+
+
+def _v5_blackboard_step(
+    step: str,
+    message_type: str,
+    message: dict[str, Any],
+    bad_step: str,
+    completed: list[str],
+) -> dict[str, Any]:
+    if step == bad_step:
+        message["message_type"] = "v5-intentionally-invalid"
+    validation = validate_blackboard_message(message, message_type)
+    if not validation["valid"]:
+        raise _V5StepRejected(step, completed)
+    completed.append(step)
+    return message
+
+
+def _run_v5_staged_chain(bad_step: str) -> list[str]:
+    """Build only through the first rejected step; never prebuild later output."""
+
+    completed: list[str] = []
+    task = _v5_blackboard_step(
+        "task_draft", "task_draft", _load_valid_fixture("task_draft"), bad_step, completed
+    )
+    annotation = _v5_blackboard_step(
+        "annotation", "annotation", _load_valid_fixture("annotation"), bad_step, completed
+    )
+    if annotation["task_id"] != task["task_id"]:
+        raise _V5StepRejected("annotation", completed)
+    readiness = _v5_blackboard_step(
+        "approval_readiness",
+        "approval_readiness",
+        _load_valid_fixture("approval_readiness"),
+        bad_step,
+        completed,
+    )
+    if readiness["annotation_id"] != annotation["annotation_id"]:
+        raise _V5StepRejected("approval_readiness", completed)
+    decision = _v5_blackboard_step(
+        "owner_decision",
+        "owner_decision",
+        _load_valid_fixture("owner_decision"),
+        bad_step,
+        completed,
+    )
+    if decision["readiness_id"] != readiness["readiness_id"]:
+        raise _V5StepRejected("owner_decision", completed)
+    dry_run = _v5_blackboard_step(
+        "worker_dry_run",
+        "worker_dry_run",
+        _load_valid_fixture("worker_dry_run"),
+        bad_step,
+        completed,
+    )
+    if dry_run["decision_id"] != decision["decision_id"]:
+        raise _V5StepRejected("worker_dry_run", completed)
+    command = _v5_blackboard_step(
+        "openclaw_command_envelope",
+        "openclaw_command_envelope",
+        _load_valid_fixture("openclaw_command_envelope"),
+        bad_step,
+        completed,
+    )
+    if command["dry_run_id"] != dry_run["dry_run_id"]:
+        raise _V5StepRejected("openclaw_command_envelope", completed)
+    result = _v5_blackboard_step(
+        "result_message",
+        "result_message",
+        _load_valid_fixture("result_message"),
+        bad_step,
+        completed,
+    )
+    if result["command_id"] != command["command_id"]:
+        raise _V5StepRejected("result_message", completed)
+
+    packet = build_approval_packet(
+        dry_run,
+        result,
+        decision="approve",
+        approval_timestamp="2026-07-18T10:07:00Z",
+        prev_entry_hash=None,
+    )
+    _v5_blackboard_step(
+        "approval_packet", "approval_packet", packet, bad_step, completed
+    )
+
+    evidence_command = _evidence_command(task, command)
+    evidence = build_evidence_bundle(
+        task,
+        evidence_command,
+        run_worker_to_mock_gateway_dry_run(evidence_command),
+        [],
+        created_at="2026-07-18T10:06:30Z",
+    )
+    if bad_step == "evidence_bundle":
+        evidence["bundle_hash"] = "0" * 64
+    if _validate_evidence_bundle(evidence) or not verify_bundle_hash(evidence):
+        raise _V5StepRejected("evidence_bundle", completed)
+    if _independent_evidence_hash(evidence) != evidence["bundle_hash"]:
+        raise _V5StepRejected("evidence_bundle", completed)
+    completed.append("evidence_bundle")
+
+    audit_genesis = _load_valid_fixture("audit_event")
+    audit_genesis["prev_entry_hash"] = None
+    _v5_blackboard_step(
+        "audit_event_genesis", "audit_event", audit_genesis, bad_step, completed
+    )
+
+    audit_linked = copy.deepcopy(audit_genesis)
+    audit_linked.update(
+        {
+            "audit_id": "audit-phase3-002",
+            "event_id": "audit-event-phase3-002",
+            "event_notes": "V5 linked in-memory preview; nothing persisted.",
+            "prev_entry_hash": _independent_sha256(audit_genesis),
+        }
+    )
+    if bad_step == "audit_event_linked":
+        audit_linked["prev_entry_hash"] = "0" * 64
+    validation = validate_blackboard_message(audit_linked, "audit_event")
+    if not validation["valid"] or not verify_chain([audit_genesis, audit_linked]):
+        raise _V5StepRejected("audit_event_linked", completed)
+    completed.append("audit_event_linked")
+
+    rollback = build_rollback_preview(audit_linked, evidence, result)
+    _v5_blackboard_step(
+        "rollback_preview", "rollback_event", rollback, bad_step, completed
+    )
+    return completed
+
+
+@pytest.mark.parametrize("bad_step", FULL_CHAIN_ORDER)
+def test_v5_each_bad_step_fails_immediately_without_running_later_steps(
+    bad_step: str,
+) -> None:
+    with pytest.raises(_V5StepRejected) as captured:
+        _run_v5_staged_chain(bad_step)
+
+    assert str(captured.value) == bad_step
+    failed_index = FULL_CHAIN_ORDER.index(bad_step)
+    assert captured.value.completed == FULL_CHAIN_ORDER[:failed_index]
+
+
+def test_v5_valid_staged_chain_runs_all_steps_with_independent_hash_checks() -> None:
+    assert _run_v5_staged_chain("no-bad-step") == list(FULL_CHAIN_ORDER)
