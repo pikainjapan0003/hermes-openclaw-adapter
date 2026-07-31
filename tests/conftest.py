@@ -15,6 +15,7 @@ COLLECTED_ITEM_COUNT = 0
 FUZZ_FILES = {
     "test_board_reader_file_fuzz.py",
     "test_builder_input_fuzz.py",
+    "test_contract_mutation_resistance.py",
     "test_schema_fuzz.py",
 }
 GOVERNANCE_FILES = {
@@ -35,6 +36,53 @@ LEGACY_PREFIXES = (
     "test_coverage_closeout_",
     "test_legacy_",
 )
+LEGACY_FILES = {
+    "test_coverage_closeout_board_reader.py",
+    "test_coverage_closeout_legacy_chain.py",
+    "test_coverage_closeout_storage.py",
+    "test_coverage_closeout_views.py",
+    "test_legacy_adapter_readback_coverage.py",
+    "test_legacy_contract_cleanup_coverage.py",
+    "test_legacy_contract_coverage_round3.py",
+    "test_legacy_policy_coverage_round2.py",
+    "test_legacy_preview_coverage.py",
+    "test_legacy_view_reader_coverage_round4.py",
+}
+CONTRACT_FILES = {
+    "test_approval_packet.py",
+    "test_blackboard_board_reader.py",
+    "test_blackboard_schemas.py",
+    "test_blackboard_store_coverage.py",
+    "test_board_reader_capacity.py",
+    "test_board_reader_concurrency.py",
+    "test_board_reader_stress.py",
+    "test_board_roundtrip_rehearsal.py",
+    "test_builder_golden_vectors.py",
+    "test_compaction_crosswalk_integrity.py",
+    "test_contract_coverage_edges.py",
+    "test_dependency_declaration_sync.py",
+    "test_error_surface_no_leak.py",
+    "test_evidence_bundle.py",
+    "test_fixture_conventions.py",
+    "test_full_chain_contract_rehearsal.py",
+    "test_hash_chain.py",
+    "test_hash_chain_long_chain.py",
+    "test_hash_chain_vectors.py",
+    "test_inspect_blackboard_readonly.py",
+    "test_main_get_routes_coverage.py",
+    "test_main_pure_helpers_coverage.py",
+    "test_mock_gateway_real_chain.py",
+    "test_n1_preflight_dryrun.py",
+    "test_noncontract_error_surface_no_leak.py",
+    "test_queue_state_matrix.py",
+    "test_remote_readonly_projection.py",
+    "test_render_schema_docs_readonly.py",
+    "test_rollback_preview_builder.py",
+    "test_schema_error_redaction_baseline.py",
+    "test_schema_renderer_full_tree.py",
+    "test_schema_renderer_rehearsal.py",
+    "test_three_source_report_schema.py",
+}
 
 
 def _layer_for(path: Path) -> str:
@@ -43,9 +91,14 @@ def _layer_for(path: Path) -> str:
         return "fuzz"
     if name in GOVERNANCE_FILES:
         return "governance"
-    if name.startswith(LEGACY_PREFIXES):
+    if name in LEGACY_FILES and name.startswith(LEGACY_PREFIXES):
         return "legacy"
-    return "contract"
+    if name in CONTRACT_FILES:
+        return "contract"
+    raise ValueError(
+        f"{name} has no explicit test-layer marker and is absent from the "
+        "reviewed layer inventory"
+    )
 
 
 def pytest_collection_modifyitems(items: list[pytest.Item], config: Any) -> None:
