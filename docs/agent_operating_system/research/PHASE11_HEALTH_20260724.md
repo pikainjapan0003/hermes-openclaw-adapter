@@ -35,11 +35,13 @@ The last accepted full-suite measurements for excluded `main.py` and
 | File | Lines | F4 maximum | Headroom | State |
 |---|---:|---:|---:|---|
 | `90_LESSONS_LEARNED.md` | 78 | 300 | 222 | healthy |
-| `05_VERIFIED_LONG_TERM_PLAN.md` | 441 | 500 | 59 | watch |
+| `05_VERIFIED_LONG_TERM_PLAN.md` | 445 | 500 | 55 | watch |
 | root `README.md` | 436 | 500 | 64 | watch |
 
-No F4 threshold is exceeded. The one-line increase in 05 since the prior
-health report is the package-3 onboarding clarification. It remains covered by
+No F4 threshold is exceeded. The five-line increase in 05 since the NB-11
+health report is the NB-12 package-3 onboarding clarification. Measurement:
+`wc -l docs/agent_operating_system/05_VERIFIED_LONG_TERM_PLAN.md` at
+NIGHT-BATCH-13 package-3 start (`9da4f78`) returned `445`. It remains covered by
 the compaction crosswalk guard, which locks the archived C01–C18 and M01–M11
 rule inventory.
 
@@ -93,6 +95,6 @@ This is a proposal, not authorization to archive or rewrite history.
 
 All executable gates are green. The material maintenance signals are the
 intentional ten-case schema-error xfail baseline, one capacity test above five
-seconds, 59/64-line headroom in 05/root README, and research growth that now
+seconds, 55/64-line headroom in 05/root README, and research growth that now
 needs an Owner-defined threshold before automation can classify it as excess.
 Phase 7 and Phase 9 remain correctly blocked.

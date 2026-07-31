@@ -8,14 +8,16 @@ permission, or replace the current 05 plan.
 
 | Check | Before | After | Result |
 |---|---:|---:|---|
-| `05_VERIFIED_LONG_TERM_PLAN.md` line count | 482 | ≤440 | required |
+| `05_VERIFIED_LONG_TERM_PLAN.md` line count at NIGHT-BATCH-11 package-3 compaction | 482 | ≤440 | required snapshot |
 | Moved completed-phase rule groups | 11 | 11 indexed below | exact |
 | Compressed live rule groups | 18 | 18 mapped below | exact |
 | Owner decisions or HOLD rules deleted | 0 | 0 | required |
 
-The current compact wording remains in 05. The blocks below are verbatim historical
-text from pre-compaction commit `63384b8`, retained so no completed-phase record or
-Owner wording disappears.
+The ≤440 result is a snapshot of NIGHT-BATCH-11 package 3, not a permanent
+line-count invariant. The compact rules remain indexed from 05 even when later
+authorized clarifications change its size. The blocks below are verbatim
+historical text from pre-compaction commit `63384b8`, retained so no
+completed-phase record or Owner wording disappears.
 
 ## 2. Archived §6.3 original — Phase 2 candidate
 
