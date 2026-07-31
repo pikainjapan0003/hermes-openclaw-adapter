@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hermes-openclaw-adapter.local/schemas/three_source_report.schema.json",
+  "title": "Phase 0 Three-source Read-only Check Report",
+  "description": "Machine-readable stdout contract for the read-only local/GitHub/Replit comparison. Replit deployed hash remains explicitly unknown.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "verdict",
+    "sources"
+  ],
+  "properties": {
+    "verdict": {
+      "type": "string",
+      "enum": [
+        "ALIGNED",
+        "DRIFT",
+        "INCOMPLETE"
+      ]
+    },
+    "sources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "local",
+        "github",
+        "replit"
+      ],
+      "properties": {
+        "local": {
+          "$ref": "#/$defs/sourceState"
+        },
+        "github": {
+          "$ref": "#/$defs/sourceState"
+        },
+        "replit": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "detail",
+            "deployed_hash",
+            "deployed_hash_status",
+            "deployed_hash_verified"
+          ],
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "detail": {
+              "type": "string"
+            },
+            "deployed_hash": {
+              "type": "null",
+              "const": null
+            },
+            "deployed_hash_status": {
+              "type": "string",
+              "const": "UNKNOWN"
+            },
+            "deployed_hash_verified": {
+              "type": "boolean",
+              "const": false
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "sourceState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "value",
+        "detail"
+      ],
+      "properties": {
+        "value": {
+          "type": "string"
+        },
+        "detail": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
