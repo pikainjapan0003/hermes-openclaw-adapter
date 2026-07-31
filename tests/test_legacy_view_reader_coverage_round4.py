@@ -91,4 +91,3 @@ def test_annotation_direct_restrictive_readiness_precedes_other_signals(
     assert view["approval_blockers"] == [expected]
     assert view["execution_permission"] is False
     assert view["dispatch_allowed"] is False
-

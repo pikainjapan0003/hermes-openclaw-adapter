@@ -123,4 +123,3 @@ def test_require_token_accepts_disabled_and_exact_token_and_rejects_other(
         main.require_token("wrong-token")
     assert captured.value.status_code == 401
     assert captured.value.detail == "Invalid or missing X-Adapter-Token"
-

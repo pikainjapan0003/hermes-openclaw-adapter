@@ -92,4 +92,3 @@ def test_schema_rejects_missing_or_claimed_replit_hash_state() -> None:
         }
     )
     assert list(validator.iter_errors(claimed))
-
