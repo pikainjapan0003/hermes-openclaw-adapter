@@ -184,7 +184,12 @@ wiring.
 export-boundary guard cannot be made mechanically complete. The public
 redacted shape should be a new explicit contract rather than a silent change to
 the current validator return value. The implementation package must include
-leak-marker tests for all ten Blackboard schemas and schema-selection errors.
+the following future acceptance items:
+
+- leak-marker tests for all ten Blackboard schemas;
+- a payload-free schema-selection error test; and
+- a remote projection validator leak-marker test covering E-02 with the same
+  mechanical no-payload assertion.
 
 This recommendation is not a decision and grants no permission to implement.
 
