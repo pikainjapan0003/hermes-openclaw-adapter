@@ -2,6 +2,17 @@
 
 Status: **REVIEW ONLY — FINDINGS RECORDED, NOTHING FIXED OR AUTHORIZED**
 
+Resolution metadata (added after the review; original findings below remain
+unchanged):
+
+| Finding | Later disposition | Commit |
+|---|---|---|
+| R8-01 | Resolved by removing the stale RED/ROOT repair status from the backlog and recording the corrected fail-closed choice state. | `ed5f299` (`night-batch-16-pkg19-backlog-refill`) |
+| R8-02 | Resolved by the Round 7 disposition table above. | `night-batch-17-pkg2-round8-resolution` (this package; immutable commit recorded in Git history) |
+
+This metadata is historical bookkeeping only. It makes no Owner decision and
+does not change any authorization boundary.
+
 ## Scope and method
 
 Fresh-context review of the reports added by NIGHT-BATCH-15, their direct

@@ -2,6 +2,20 @@
 
 Status: **REVIEW ONLY — FINDINGS RECORDED, NOTHING FIXED OR AUTHORIZED**
 
+Resolution metadata (added after the review; original findings below remain
+unchanged):
+
+| Finding | Later disposition | Commit |
+|---|---|---|
+| R7-01 | Resolved by restoring RED A/B to the source design labels and retaining C as the recommendation. | `3ba13c1` (`night-batch-16-pkg1-owner-one-pager`) |
+| R7-02 | Resolved by removing the invented ROOT=R option identity and stating that no formal source options exist. | `3ba13c1` (`night-batch-16-pkg1-owner-one-pager`) |
+| R7-03 | Resolved by adding later-disposition metadata to the quarterly review. | `11d036b` (`night-batch-16-pkg3-resolution-metadata`) |
+| R7-04 | Resolved by adding later-disposition metadata to Governance Round 6. | `11d036b` (`night-batch-16-pkg3-resolution-metadata`) |
+| R7-05 | Resolved by tying the 931 outcomes to their dated snapshot rather than current repository state. | `11d036b` (`night-batch-16-pkg3-resolution-metadata`) |
+
+This metadata records later history only. It does not retroactively change the
+review, select an Owner option, or authorize implementation.
+
 ## Scope and method
 
 Fresh-context review of every report added or materially updated by
