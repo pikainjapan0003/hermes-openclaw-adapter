@@ -1,0 +1,88 @@
+{
+  "source_files": {
+    "worker_dry_run": "fixtures/blackboard_contract/worker_dry_run.valid.json",
+    "result_message": "fixtures/blackboard_contract/result_message.valid.json"
+  },
+  "expected_output_template": "fixtures/blackboard_contract/approval_packet.valid.json",
+  "hash_rule": "sha256(canonical-json(expected-output))",
+  "vectors": [
+    {
+      "name": "approved-with-chain",
+      "kwargs": {
+        "decision": "approve",
+        "approval_timestamp": "2026-07-18T10:07:00Z",
+        "prev_entry_hash": "1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "expected_overrides": {
+        "decision": "approve",
+        "approval_timestamp": "2026-07-18T10:07:00Z",
+        "prev_entry_hash": "1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "bundle_hash": "46d52bfc2ce5ce6ba33edb36ec84ed8b8437d5aaae1dee44878d0e05121dd88c"
+    },
+    {
+      "name": "respond-null",
+      "kwargs": {
+        "decision": "respond"
+      },
+      "expected_overrides": {
+        "decision": "respond",
+        "approval_timestamp": null,
+        "prev_entry_hash": null
+      },
+      "bundle_hash": "08e2b3589f69cd88222f2e6895d14cc8b3c1536424423596f7cabfd9b69162b8"
+    },
+    {
+      "name": "approve-stamped",
+      "kwargs": {
+        "decision": "approve",
+        "approval_timestamp": "2026-07-23T00:00:00Z"
+      },
+      "expected_overrides": {
+        "decision": "approve",
+        "approval_timestamp": "2026-07-23T00:00:00Z",
+        "prev_entry_hash": null
+      },
+      "bundle_hash": "c773da769906d8b76c8e2955bb3fedb962795a8ce8d07d7f6dd32fe2440c5e57"
+    },
+    {
+      "name": "edit-stamped",
+      "kwargs": {
+        "decision": "edit",
+        "approval_timestamp": "2026-07-23T00:01:00Z"
+      },
+      "expected_overrides": {
+        "decision": "edit",
+        "approval_timestamp": "2026-07-23T00:01:00Z",
+        "prev_entry_hash": null
+      },
+      "bundle_hash": "18bdacb76af0aeebb1ce4e669dc4850143a5aabdd8d10ed394c128d3e1bde6ba"
+    },
+    {
+      "name": "reject-stamped",
+      "kwargs": {
+        "decision": "reject",
+        "approval_timestamp": "2026-07-23T00:02:00Z"
+      },
+      "expected_overrides": {
+        "decision": "reject",
+        "approval_timestamp": "2026-07-23T00:02:00Z",
+        "prev_entry_hash": null
+      },
+      "bundle_hash": "edd7b9749e30e88963b83ff5af826ea630c16545f3d9a6718ce9cd7c7be6f8f7"
+    },
+    {
+      "name": "respond-hash-a",
+      "kwargs": {
+        "decision": "respond",
+        "prev_entry_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "expected_overrides": {
+        "decision": "respond",
+        "approval_timestamp": null,
+        "prev_entry_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "bundle_hash": "14e904092bfc7bf1c27b4fedb5d29046ba3a3e0214ed1dd31711ede911a1f65f"
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "source_files": {
+    "task": "fixtures/blackboard_contract/task_draft.valid.json"
+  },
+  "command_envelope": {
+    "command_id": "cmd-evidence-n1-001",
+    "task_id_from_source": true,
+    "tool_target": "synthetic.adapter.status",
+    "requested_action": "read one synthetic adapter status value",
+    "risk_level": "low",
+    "approval_snapshot": {
+      "owner_review_required": true
+    },
+    "execution_mode": "mock_only",
+    "dry_run": true,
+    "mock_only": true,
+    "external_touchpoints": [],
+    "rollback_plan": "no rollback required; nothing is executed",
+    "external_side_effects_allowed": false
+  },
+  "mock_result_factory": "app.worker_mock_gateway_dry_run.run_worker_to_mock_gateway_dry_run",
+  "expected_output_template": "fixtures/local_mock_data/n1_dry_run_evidence_bundle.json",
+  "hash_rule": "expected-output.bundle_hash == compute_bundle_hash(expected-output)",
+  "vectors": [
+    {
+      "name": "original-rehearsal",
+      "created_at": "2026-07-19T18:00:00Z",
+      "bundle_hash": "9ba98d9bcdd8c659b927e7bdd1b10edbdc94f0f15112ddb19e5270c6e802d7aa"
+    },
+    {
+      "name": "minute-00",
+      "created_at": "2026-07-23T00:00:00Z",
+      "bundle_hash": "5f07765237ea8892ea2e6cf6985db3d751cbb93bff70e5b7a114e319d46e444b"
+    },
+    {
+      "name": "minute-01",
+      "created_at": "2026-07-23T00:01:00Z",
+      "bundle_hash": "0cba9cabd5f7e5309af501d492156c193efec8c608d397c3b1c61109ba14a33e"
+    },
+    {
+      "name": "minute-02",
+      "created_at": "2026-07-23T00:02:00Z",
+      "bundle_hash": "d570e7cd10d0ab17b8180071c35450a4bda8c2bbf3605c4dca87a08fefd83cff"
+    },
+    {
+      "name": "minute-03",
+      "created_at": "2026-07-23T00:03:00Z",
+      "bundle_hash": "5bbf8891877e3efc7ef6cecafb1298968d37ea2ab1193d36cc5d714906d7c4ad"
+    },
+    {
+      "name": "minute-04",
+      "created_at": "2026-07-23T00:04:00Z",
+      "bundle_hash": "fbc77fca4e676e93ff40a58e058f599874079742fe7e996e9fdb4d8a0471a402"
+    }
+  ]
+}
