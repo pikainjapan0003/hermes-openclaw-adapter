@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 import copy
+import ast
 import json
+import os
 from pathlib import Path
+import subprocess
+import sys
 from typing import Callable
 
 import pytest
@@ -25,6 +29,7 @@ from app.worker_mock_gateway_dry_run import run_worker_to_mock_gateway_dry_run
 ROOT = Path(__file__).resolve().parent.parent
 SECRET = "FAKE-SECRET-20260723"
 ABSOLUTE_PATH = r"C:\Users\Owner\private\payload.txt"
+TEST_HELPER_REPORT_MARKER = "FAKE-SECRET-NB17-TEST-HELPER"
 
 
 def _load(path: str) -> dict:
@@ -127,3 +132,120 @@ def test_selection_and_canonicalization_errors_omit_unrelated_payload() -> None:
 
     hostile = {"safe": copy.deepcopy([SECRET, ABSOLUTE_PATH]), "bad": 1.5}
     _assert_redacted(lambda: canonical_json(hostile), HashChainError)
+
+
+def test_fixture_loader_success_does_not_write_payload_to_captured_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    fixture = tmp_path / "synthetic.json"
+    fixture.write_text(
+        json.dumps(
+            {"marker": TEST_HELPER_REPORT_MARKER, "path": ABSOLUTE_PATH},
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setitem(_load.__globals__, "ROOT", tmp_path)
+
+    loaded = _load(fixture.name)
+
+    captured = capsys.readouterr()
+    assert loaded["marker"] == TEST_HELPER_REPORT_MARKER
+    assert TEST_HELPER_REPORT_MARKER not in captured.out + captured.err
+    assert ABSOLUTE_PATH not in captured.out + captured.err
+
+
+def test_fixture_loader_helpers_have_no_direct_output_calls() -> None:
+    """Fixture readers may return data, but must not print or log it themselves."""
+
+    output_calls: list[tuple[str, str, str]] = []
+    loader_count = 0
+    for source_path in sorted((ROOT / "tests").glob("test_*.py")):
+        tree = ast.parse(source_path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            calls = [child for child in ast.walk(node) if isinstance(child, ast.Call)]
+            call_names = {
+                child.func.attr
+                if isinstance(child.func, ast.Attribute)
+                else child.func.id
+                if isinstance(child.func, ast.Name)
+                else ""
+                for child in calls
+            }
+            if "read_text" not in call_names or "loads" not in call_names:
+                continue
+            loader_count += 1
+            for child in calls:
+                if isinstance(child.func, ast.Name) and child.func.id == "print":
+                    output_calls.append((source_path.name, node.name, "print"))
+                if (
+                    isinstance(child.func, ast.Attribute)
+                    and isinstance(child.func.value, ast.Name)
+                    and child.func.value.id in {"logging", "logger", "sys"}
+                    and child.func.attr
+                    in {"debug", "info", "warning", "error", "exception", "stdout", "stderr"}
+                ):
+                    output_calls.append(
+                        (source_path.name, node.name, child.func.attr)
+                    )
+
+    assert loader_count >= 20
+    assert output_calls == []
+
+
+@pytest.mark.parametrize("probe_case", ("malformed_payload", "missing_path"))
+def test_fixture_loader_pytest_report_leak_baseline_is_explicit(
+    tmp_path: Path, probe_case: str
+) -> None:
+    """Lock the known local-only report leak without adding another xfail."""
+
+    fixture_root = tmp_path / "fixtures"
+    fixture_root.mkdir()
+    if probe_case == "malformed_payload":
+        fixture_name = "hostile.json"
+        (fixture_root / fixture_name).write_text(
+            json.dumps([TEST_HELPER_REPORT_MARKER, ABSOLUTE_PATH]),
+            encoding="utf-8",
+        )
+    else:
+        fixture_name = f"{TEST_HELPER_REPORT_MARKER}.json"
+
+    probe = tmp_path / "test_fixture_loader_report_probe.py"
+    probe.write_text(
+        "from pathlib import Path\n"
+        "import json\n"
+        "import os\n"
+        "ROOT = Path(os.environ['NB17_FIXTURE_ROOT'])\n\n"
+        "def loader(path):\n"
+        "    value = json.loads((ROOT / path).read_text(encoding='utf-8'))\n"
+        "    assert isinstance(value, dict)\n"
+        "    return value\n\n"
+        "def test_probe():\n"
+        "    loader(os.environ['NB17_FIXTURE_NAME'])\n",
+        encoding="utf-8",
+    )
+    environment = os.environ.copy()
+    environment.update(
+        {
+            "NB17_FIXTURE_ROOT": str(fixture_root),
+            "NB17_FIXTURE_NAME": fixture_name,
+        }
+    )
+
+    completed = subprocess.run(
+        [sys.executable, "-m", "pytest", "-p", "no:cacheprovider", "-q", str(probe)],
+        cwd=ROOT,
+        env=environment,
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+    )
+    report = completed.stdout + completed.stderr
+
+    assert completed.returncode == 1
+    assert TEST_HELPER_REPORT_MARKER in report
+    if probe_case == "malformed_payload":
+        assert ABSOLUTE_PATH.replace("\\", "\\\\") in report
