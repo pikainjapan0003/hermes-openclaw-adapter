@@ -257,7 +257,7 @@
   - 每 10 個 session 或每月（先到者）：跑一次「制度健檢」——90 是否超 300 行需精簡（40 F4）、文件互引是否斷鏈、01 是否被繞過的案例。
   - 每次 phase closeout：更新本計劃表的 Phase 狀態行（只改狀態不改結構）。
   - 每季：重新驗證 2.3 參考的活性（deprecated 的移除）；重讀 Anthropic/OWASP 是否有新版。
-- 輸出：健檢報告 append 到 90；計劃表狀態更新。
+- 輸出：例行健檢報告落於 `docs/agent_operating_system/research/`；計劃表狀態更新。只有符合 40 F3 的實際踩坑／信任事故才追加到 90，不得把每次健康量測塞入 90。
 - 安全邊界：健檢是讀取與 docs 修訂，走 40 的權限分級。
 - 驗收條件：健檢報告含具體行數/斷鏈清單，非「大致良好」。
 - HOLD 條件：健檢發現 01 曾被繞過 → 立即報 Owner，凍結相關能力直到根因寫入 90。
@@ -355,7 +355,7 @@ Q4 差異與簽核前措辭的歷史原文存於 `research/05_COMPACTION_RULE_CR
 | 手機審批入口被冒用 | 接受（Q19=A，現有登入牆） | Owner 已知悉；重審觸發器見 6.11 |
 
 ### 6.5 Tool Role Map
-- **本機 WSL repo**：開發工作區，一切開發在此發生。
+- **本機完整 Git worktree**：開發工作區。GitHub master 仍是 source of truth；每張已授權批單須明列使用 WSL worktree 或完整 Windows Desktop worktree，執行者只在該指定 worktree/branch 施工。Desktop→WSL review handoff 不改變 GitHub 權威，也不得改用無 `.git`、落後或來源不明的拷貝。
 - **GitHub master**：source of truth；三源漂移須回報並依 GitHub 提同步提案；固定流向本機→GitHub→Replit，實際同步／push 仍需 Owner 指示。
 - **Replit**：部署、展示與完成態手機主介面；只從 GitHub 拉取，不直接改碼，顯示須帶資料時間戳。
 - **Claude Code**：建造 Hermes 的施工介面，不是 Hermes 本人。

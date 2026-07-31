@@ -5,13 +5,13 @@
 
 ---
 
-## L-001 wsl.exe 會吃掉 $ 變數
+## L-001 host shell 可能在 wsl.exe 前先展開 `$`
 - 日期：2026-06（回填），2026-07-07 由 Fable 5 收錄
 - 任務：從 Windows 端 Bash/PowerShell 工具經 wsl.exe 跑 Linux 命令
 - 症狀：`echo EXIT=$?`、`$VAR`、`$(...)` 在 wsl.exe 邊界被 Windows 端展開或吞掉，輸出為空或錯值
 - 根因：變數在 Windows shell 層先被解析，到不了 WSL bash
-- 缺的規則：wsl.exe 命令內禁用 `$`
-- 新增/修改的規則：00_QUICK_DIAGNOSIS.md D-16——成敗判定用 `cmd && echo PASS || echo FAIL`
+- 缺的規則：跨 PowerShell→wsl.exe→Bash 時必須保護 Bash 程式不被 host shell 展開；不是全面禁止 Bash `$`
+- 新增/修改的規則：PowerShell 呼叫 `bash -lc` 時把整段 Bash 程式置於 PowerShell 單引號中；簡單成敗判定仍優先用 00_QUICK_DIAGNOSIS.md D-16 的 `cmd && echo PASS || echo FAIL`
 - 驗收：本 session 全程以該模式實跑無誤
 
 ## L-002 PowerShell 5.1 的 ConvertFrom-Json 對含跳脫序列的大 JSON 會炸
@@ -20,7 +20,7 @@
 - 症狀：`ConvertFrom-Json : Unrecognized escape sequence`
 - 根因：Windows PowerShell 5.1 的 JSON 解析器不完全支援；且中文內容在 console 顯示為亂碼（編碼層問題，檔案本身正常）
 - 缺的規則：大 JSON / 含非 ASCII 的解析不要用 PS 5.1
-- 新增/修改的規則：僅記錄——改用 `python -c "import json; ..."` 指定 `encoding='utf-8'`，一次成功
+- 新增/修改的規則：JSON 解析改用 `python -c "import json; ..."` 並指定 `encoding='utf-8'`；一般 UTF-8 文字以 PowerShell 讀取時明示 `Get-Content -Encoding UTF8`，必要時同步設定 console output encoding，不把顯示亂碼誤判成檔案損壞
 - 驗收：本 session 以 python 解析同檔成功列出 15 個項目
 
 ## L-003 UNC 路徑下 git 極慢，檔案讀寫卻可靠
