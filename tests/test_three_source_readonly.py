@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import json
 import subprocess
 from pathlib import Path
-from urllib.error import URLError
+from urllib.error import HTTPError, URLError
+
+import pytest
 
 from scripts import check_three_source_readonly as checker
 
@@ -107,3 +110,69 @@ def test_main_exit_codes_are_status_only(monkeypatch, capsys) -> None:
 
     assert checker.main(["--repo", "."]) == 1
     assert "VERDICT: DRIFT" in capsys.readouterr().out
+
+
+def test_json_mode_is_machine_readable_and_never_claims_replit_hash(
+    monkeypatch, capsys
+) -> None:
+    report = checker.ThreeSourceReport(
+        checker.SourceState("local", LOCAL_HASH, "local"),
+        checker.SourceState("github", LOCAL_HASH, "remote"),
+        checker.SourceState("replit", "REACHABLE", "HTTP 200"),
+        "ALIGNED",
+    )
+    monkeypatch.setattr(checker, "check_three_sources", lambda *_args, **_kwargs: report)
+
+    assert checker.main(["--repo", ".", "--json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["verdict"] == "ALIGNED"
+    assert payload["sources"]["local"]["value"] == LOCAL_HASH
+    assert payload["sources"]["github"]["value"] == LOCAL_HASH
+    assert payload["sources"]["replit"] == {
+        "value": "REACHABLE",
+        "detail": "HTTP 200",
+        "deployed_hash": None,
+        "deployed_hash_status": "UNKNOWN",
+        "deployed_hash_verified": False,
+    }
+
+
+@pytest.mark.parametrize("failed_source", ("local", "github", "replit"))
+def test_each_source_failure_is_structured_and_fail_closed(
+    failed_source: str,
+    monkeypatch,
+) -> None:
+    def git_runner(command: list[str], **_kwargs: object):
+        if command[1:] == ["rev-parse", "HEAD"]:
+            if failed_source == "local":
+                raise OSError("local git unavailable")
+            return subprocess.CompletedProcess(command, 0, LOCAL_HASH + "\n", "")
+        if command[1:] == ["ls-remote", "origin", "refs/heads/master"]:
+            if failed_source == "github":
+                raise subprocess.TimeoutExpired(command, timeout=1)
+            output = f"{LOCAL_HASH}\trefs/heads/master\n"
+            return subprocess.CompletedProcess(command, 0, output, "")
+        raise AssertionError(f"unexpected git command: {command}")
+
+    def replit_response(*_args: object, **_kwargs: object):
+        if failed_source == "replit":
+            raise HTTPError(
+                "https://example.invalid",
+                503,
+                "unavailable",
+                {},
+                None,
+            )
+        return _Response(200)
+
+    monkeypatch.setattr(checker.subprocess, "run", git_runner)
+    monkeypatch.setattr(checker, "urlopen", replit_response)
+
+    report = checker.check_three_sources(Path("repo"))
+    payload = checker.report_as_json(report)
+
+    assert report.verdict == "INCOMPLETE"
+    assert payload["sources"][failed_source]["value"] == "UNREACHABLE"
+    assert payload["sources"]["replit"]["deployed_hash_status"] == "UNKNOWN"
+    assert payload["sources"]["replit"]["deployed_hash_verified"] is False

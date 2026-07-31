@@ -9,6 +9,7 @@ checkout, deploy, or drift repair.
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import subprocess
 import sys
@@ -142,9 +143,34 @@ def render_report(report: ThreeSourceReport) -> str:
     ]
     note = (
         "Replit reports HTTP reachability only; it does not prove the deployed "
-        "commit hash."
+        "commit hash. deployed_hash=UNKNOWN; deployed_hash_verified=false."
     )
     return "\n".join([header, separator, *body, f"VERDICT: {report.verdict}", note])
+
+
+def report_as_json(report: ThreeSourceReport) -> dict[str, object]:
+    """Return a stable machine-readable report without inventing Replit state."""
+
+    return {
+        "verdict": report.verdict,
+        "sources": {
+            "local": {
+                "value": report.local.value,
+                "detail": report.local.detail,
+            },
+            "github": {
+                "value": report.github.value,
+                "detail": report.github.detail,
+            },
+            "replit": {
+                "value": report.replit.value,
+                "detail": report.replit.detail,
+                "deployed_hash": None,
+                "deployed_hash_status": "UNKNOWN",
+                "deployed_hash_verified": False,
+            },
+        },
+    }
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -153,6 +179,11 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--remote", default="origin")
     parser.add_argument("--branch", default="master")
     parser.add_argument("--replit-url", default=DEFAULT_REPLIT_URL)
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="emit the read-only report as JSON on stdout",
+    )
     return parser
 
 
@@ -164,7 +195,16 @@ def main(argv: list[str] | None = None) -> int:
         branch=args.branch,
         replit_url=args.replit_url,
     )
-    print(render_report(report))
+    if args.json:
+        print(
+            json.dumps(
+                report_as_json(report),
+                ensure_ascii=False,
+                sort_keys=True,
+            )
+        )
+    else:
+        print(render_report(report))
     return {"ALIGNED": 0, "DRIFT": 1, "INCOMPLETE": 2}[report.verdict]
 
 
