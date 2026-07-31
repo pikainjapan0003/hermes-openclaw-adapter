@@ -65,18 +65,27 @@ def test_add_get_list_and_count_cover_normalization_and_missing_row(
         author_name=" guard ",
         metadata={"attempt": 2},
     )
+    third = store.add_comment(
+        task_id="task-coverage",
+        author_type="hermes",
+        content="third",
+        author_name=None,
+        metadata={},
+    )
 
     assert first["author_name"] is None
     assert first["content"] == "first"
     assert first["metadata"] == {}
     assert second["author_name"] == "guard"
     assert second["metadata"] == {"attempt": 2}
+    assert third["author_name"] is None
     assert store.get("missing-comment") is None
-    assert store.count_for_task("task-coverage") == 2
+    assert store.count_for_task("task-coverage") == 3
     assert store.count_for_task("other-task") == 0
     assert {item["comment_id"] for item in store.list_for_task("task-coverage")} == {
         first["comment_id"],
         second["comment_id"],
+        third["comment_id"],
     }
     assert store.list_for_task("other-task") == []
 

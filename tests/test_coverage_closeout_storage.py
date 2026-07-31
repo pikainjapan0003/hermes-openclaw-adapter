@@ -165,6 +165,39 @@ def test_queue_recent_failed_and_archive_without_error_change(tmp_path: Path) ->
     assert archived["error"] == "reason"
 
 
+def test_queue_claim_rolls_back_and_closes_on_database_error(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    store = QueueStore(tmp_path / "unused.sqlite3")
+    statements: list[str] = []
+
+    class FailingCursor:
+        def execute(self, statement: str, _params: object = None) -> "FailingCursor":
+            statements.append(statement)
+            if statement.startswith("SELECT task_id"):
+                raise RuntimeError("synthetic select failure")
+            return self
+
+    class FailingConnection:
+        closed = False
+
+        def cursor(self) -> FailingCursor:
+            return FailingCursor()
+
+        def close(self) -> None:
+            self.closed = True
+
+    connection = FailingConnection()
+    monkeypatch.setattr(store, "_connect", lambda: connection)
+
+    with pytest.raises(RuntimeError, match="synthetic select failure"):
+        store.claim_next()
+
+    assert statements == ["BEGIN IMMEDIATE;", "SELECT task_id FROM queue WHERE status=? ORDER BY created_at ASC LIMIT 1", "ROLLBACK;"]
+    assert connection.closed is True
+
+
 @pytest.mark.parametrize(
     ("value", "expected"),
     [(True, True), (False, False), (1, True), (0, False), (" yes ", True), (None, False)],
@@ -284,3 +317,26 @@ def test_intake_bridge_security_rejection_production_refusal_and_tmp_write(
     payload = json.loads(row["payload"])
     assert payload["metadata"]["executable_by_worker"] is False
     assert payload["status"] == "pending_approval"
+
+
+def test_intake_bridge_security_allow_continues_to_tmp_write(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _enable_bridge(monkeypatch)
+    monkeypatch.setenv("INTAKE_SECURITY_GATES_ENABLED", "true")
+    request = _envelope(
+        allowed_tools=["read"],
+        denied_tools=[],
+        metadata={"mock": True, "requested_tools": ["read"]},
+    )
+    intake_db = tmp_path / "security-allowed.sqlite3"
+
+    accepted = bridge.intake_task_envelope_local_only(
+        request,
+        db_path=str(intake_db),
+    )
+
+    assert accepted["accepted"] is True
+    assert accepted["initial_status"] == WAITING_REVIEW
+    assert intake_db.exists()
