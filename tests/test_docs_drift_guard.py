@@ -177,7 +177,7 @@ def test_contract_index_table_paths_all_exist() -> None:
         text,
         re.MULTILINE,
     )
-    assert len(rows) == 19
+    assert len(rows) == 20
     for row in rows:
         for path in row:
             referenced_path = ROOT / path

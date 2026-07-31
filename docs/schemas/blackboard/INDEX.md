@@ -26,6 +26,7 @@ queue mutation, Worker dispatch, runtime execution, or remote connectivity.
 | `blackboard_board_reader` | Read-only N=1 board-directory loader and contract validator. | `app/blackboard_board_reader.py` | `docs/agent_operating_system/12_BLACKBOARD_DATA_LAYOUT.md` | `tests/test_blackboard_board_reader.py` |
 | `mirror_drift_readonly` | Four-state read-only governance mirror comparison. | `scripts/check_mirror_drift_readonly.py` | `docs/agent_operating_system/40_MAINTENANCE_PROTOCOL.md` | `tests/test_check_mirror_drift_readonly.py` |
 | `three_source_readonly` | Read-only local, origin, and deployment-source comparison. | `scripts/check_three_source_readonly.py` | `docs/agent_operating_system/00_QUICK_DIAGNOSIS.md` | `tests/test_three_source_readonly.py` |
+| `three_source_report` | Closed JSON stdout contract for the three-source comparison. | `docs/schemas/three_source_report.schema.json` | `scripts/check_three_source_readonly.py` | `tests/test_three_source_report_schema.py` |
 | `n1_preflight_runbook` | Planning-only Phase 9 single-query checklist. | `docs/agent_operating_system/09_N1_PREFLIGHT_RUNBOOK.md` | `docs/agent_operating_system/05_VERIFIED_LONG_TERM_PLAN.md` | `tests/test_contract_index.py` |
 
 ## Phase 4 Owner approval packet

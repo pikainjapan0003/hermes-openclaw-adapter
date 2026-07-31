@@ -34,6 +34,7 @@ EXPECTED_CONTRACTS = {
     "blackboard_board_reader",
     "mirror_drift_readonly",
     "three_source_readonly",
+    "three_source_report",
     "n1_preflight_runbook",
 }
 
@@ -42,9 +43,9 @@ def test_contract_index_inventory_and_all_referenced_paths_exist() -> None:
     index_text = INDEX_PATH.read_text(encoding="utf-8")
     rows = [match.groupdict() for match in ROW_PATTERN.finditer(index_text)]
 
-    assert len(rows) == 19
+    assert len(rows) == 20
     assert {row["contract"] for row in rows} == EXPECTED_CONTRACTS
-    assert len({row["artifact"] for row in rows}) == 19
+    assert len({row["artifact"] for row in rows}) == 20
     for row in rows:
         assert row["purpose"].strip().endswith(".")
         for path_field in ("artifact", "reference", "test"):
