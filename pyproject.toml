@@ -16,6 +16,12 @@ dependencies = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 filterwarnings = ["error::DeprecationWarning"]
+markers = [
+  "contract: executable schemas, builders, board, queue, and safety contracts",
+  "governance: repository policy, documentation, preflight, and trust guards",
+  "legacy: frozen or compatibility-layer behavior",
+  "fuzz: deterministic mutation and malformed-input suites",
+]
 
 [tool.mypy]
 python_version = "3.11"
