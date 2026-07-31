@@ -6,6 +6,17 @@ Scope: `approval_packet_builder.py`, `evidence_bundle_builder.py`,
 `rollback_preview_builder.py`, `remote_readonly_projection.py`,
 `blackboard_validators.py`, and `hash_chain.py`.
 
+## Resolution metadata
+
+| Finding | Status | Resolution |
+|---|---|---|
+| E-01 | Design prepared; unresolved | NIGHT-BATCH-12 package 1 (`2fdd423`) prepared Options A/B/C and a recommendation. The Owner decision remains blank. `app/blackboard_validators.py` is unchanged. |
+| E-02 | Design prepared; unresolved | NIGHT-BATCH-13 package 2 (`9da4f78`) added the remote-projection-specific exposure/masking contract to the same Options A/B/C decision. The Owner decision remains blank. `app/remote_readonly_projection.py` is unchanged. |
+
+The ten-schema xfail baseline records the present E-01 behavior; it is not a
+fix. No validator, route, projection, remote surface, or runtime wiring has
+been changed or authorized.
+
 ## Method
 
 The review enumerated every explicit `raise`, structured `errors` construction,

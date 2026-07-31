@@ -2,6 +2,22 @@
 
 Status: review only; findings are not fixes or authorization.
 
+## Resolution metadata
+
+The historical simulation and findings below are retained verbatim as review
+evidence. Their current disposition is:
+
+| Finding | Status | Resolution |
+|---|---|---|
+| O-01 | Resolved | NIGHT-BATCH-12 package 3 (`57f342a`) removed volatile commit/test baselines from the onboarding README. |
+| O-02 | Resolved | NIGHT-BATCH-12 package 3 (`57f342a`) placed the authority/current-state route at the top of `CLAUDE.md`. |
+| O-03 | Resolved | The same top-level route explicitly says §6.13 does not unlock Phase 7, Phase 9, v1.1, or v1.2. |
+| O-04 | Resolved | 05 §5 now orders Phase 7 before Phase 8 and warns that row order does not confer authorization. |
+| O-05 | Resolved | The three-file entry path now states can/cannot/next without a volatile baseline; 05 §5 remains the state authority. |
+
+Resolution metadata records later action; it does not rewrite the historical
+finding, grant new authority, or relax any gate.
+
 ## Simulation
 
 Reader profile: a fresh, weak model with no prior conversation. Allowed reading
