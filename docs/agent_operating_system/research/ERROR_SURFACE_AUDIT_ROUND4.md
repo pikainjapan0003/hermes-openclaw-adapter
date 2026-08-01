@@ -65,3 +65,16 @@ failure-report rendering rather than ordinary fixture loading.
 Any remediation must be separately scoped. This review does not authorize
 custom pytest reporters, global exception rewriting, fixture schema changes,
 or output persistence.
+
+## Resolution metadata — NIGHT-BATCH-18 package 7 (2026-08-01)
+
+Status: **test-surface remediation applied; no product/runtime change**.
+
+`tests/test_error_surface_no_leak.py` now converts fixture read, decode, missing
+file, and non-object-root failures to payload-free assertion messages. Its
+subprocess reverse tests still require a failing report and assert the generic
+failure reason, while asserting that both the synthetic marker and absolute
+path are absent. Successful captured-output and the existing E-01/E-02 plus
+ES3 xfail inventory remain unchanged. This metadata does not authorize a
+custom pytest reporter, fixture migration, runtime redaction, or report
+persistence.

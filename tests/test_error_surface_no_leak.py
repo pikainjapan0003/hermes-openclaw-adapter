@@ -33,8 +33,12 @@ TEST_HELPER_REPORT_MARKER = "FAKE-SECRET-NB17-TEST-HELPER"
 
 
 def _load(path: str) -> dict:
-    value = json.loads((ROOT / path).read_text(encoding="utf-8"))
-    assert isinstance(value, dict)
+    try:
+        value = json.loads((ROOT / path).read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        raise AssertionError("fixture could not be loaded") from None
+    if not isinstance(value, dict):
+        raise AssertionError("fixture root must be object")
     return value
 
 
@@ -196,10 +200,10 @@ def test_fixture_loader_helpers_have_no_direct_output_calls() -> None:
 
 
 @pytest.mark.parametrize("probe_case", ("malformed_payload", "missing_path"))
-def test_fixture_loader_pytest_report_leak_baseline_is_explicit(
+def test_fixture_loader_pytest_report_redacts_sensitive_markers(
     tmp_path: Path, probe_case: str
 ) -> None:
-    """Lock the known local-only report leak without adding another xfail."""
+    """A loader failure stays visible without echoing payload or path markers."""
 
     fixture_root = tmp_path / "fixtures"
     fixture_root.mkdir()
@@ -219,8 +223,13 @@ def test_fixture_loader_pytest_report_leak_baseline_is_explicit(
         "import os\n"
         "ROOT = Path(os.environ['NB17_FIXTURE_ROOT'])\n\n"
         "def loader(path):\n"
-        "    value = json.loads((ROOT / path).read_text(encoding='utf-8'))\n"
-        "    assert isinstance(value, dict)\n"
+        "    try:\n"
+        "        value = json.loads((ROOT / path).read_text(encoding='utf-8'))\n"
+        "    except (OSError, UnicodeError, json.JSONDecodeError):\n"
+        "        path = '<redacted>'\n"
+        "        raise AssertionError('fixture could not be loaded') from None\n"
+        "    if not isinstance(value, dict):\n"
+        "        raise AssertionError('fixture root must be object')\n"
         "    return value\n\n"
         "def test_probe():\n"
         "    loader(os.environ['NB17_FIXTURE_NAME'])\n",
@@ -246,6 +255,10 @@ def test_fixture_loader_pytest_report_leak_baseline_is_explicit(
     report = completed.stdout + completed.stderr
 
     assert completed.returncode == 1
-    assert TEST_HELPER_REPORT_MARKER in report
+    assert "AssertionError" in report
+    assert TEST_HELPER_REPORT_MARKER not in report
+    assert ABSOLUTE_PATH.replace("\\", "\\\\") not in report
     if probe_case == "malformed_payload":
-        assert ABSOLUTE_PATH.replace("\\", "\\\\") in report
+        assert "fixture root must be object" in report
+    else:
+        assert "fixture could not be loaded" in report
