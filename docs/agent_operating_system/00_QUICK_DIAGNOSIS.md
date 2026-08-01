@@ -1,9 +1,11 @@
 # 00 快速診斷（Quick Diagnosis）
 
 - 撰寫：Fable 5 replanning session（2026-07-07）
-- 讀者：未來較弱模型（Sonnet / Haiku / API 調用模型）與 Owner
-- 依據（已驗證）：本機 repo `HEAD=7a93127e`（與 GitHub live HEAD 一致）、`CLAUDE.md` Loop Format Contract、既有 docs 166 份、scripts/ 209 個檔案（其中 157 個 `check_*.py`）、Drive《開發總結報告 v1.0 / v0.9.5–v0.9.6》全文、Replit `/dashboard/system` 實際抓取
-- 本檔用途：列出目前 harness（ChatGPT 出指令 → Claude Code 執行 → Owner review 的 loop）最漏 token、最易失焦、最易出錯的問題，每項附具體修法與弱模型可執行的檢查法。後續所有制度檔都引用本檔的問題編號（D-xx）。
+- 讀者：未來較弱模型（可用模型依當次 session 能力清單）與 Owner
+- 依據（2026-07-07 歷史快照）：當時的 repo、docs、scripts、Drive 與 Replit 觀測；其中的 HEAD、檔案數與 harness 拓撲不可當成今日現況
+- 本檔用途：保留當次診斷的問題卡與修法。現行 workflow、checkout、Phase 狀態與夜跑規則以 `CLAUDE.md`、`README.md`、`05_VERIFIED_LONG_TERM_PLAN.md` 及其明示 cross-reference 為準。
+
+> **現況覆蓋聲明（2026-08-01）**：本檔是歷史診斷，不是 active checkout 或 current workflow 的權威。當前 session 必須先解析 Owner 指定的 authorized checkout；night-batch 依 05 §6.13 執行 Fable 5 批審、逐包 commit、HOLD/skipped continuation 與 Owner 蓋章後 merge/push。D-09 的 live execution-token 句子是 superseded planning；現行 Phase 9 contract 將 `single_use_execution_token` 鎖為 `null`，不得由本檔推導 token 實作。
 
 ---
 
@@ -127,7 +129,7 @@
 ### D-09 mock / dry-run / real 邊界只靠文件記憶
 
 - 症狀：mock gateway、dry-run worker、preview adapter 與未來的 real 元件同居一個 app/，弱模型改錯檔就可能把 mock 換成 real。
-- 修法：(1) 命名鐵律：所有 mock/dry-run/preview 檔案與函式必須含 `mock_`、`_mock`、`dry_run`、`preview`、`synthetic` 字樣之一；未來 real 元件必須含 `real_` 且住在獨立模組。(2) 程式層防呆：real 元件入口必須檢查環境變數形式的 execution token（Phase 9 定義），缺 token 直接 raise。(3) 弱模型不得在同一個 commit 內同時修改 mock 檔與 real 檔。(4) **重要例外**：既有檔案早於本規則，命名不可靠。已知**無標記但具真實寫入能力**的檔案：`app/google_sheets_oauth_writer.py`（真實 Google Sheets 寫入路徑，env flag 防護、預設關閉）；`app/worker.py`、`app/queue_store.py`、`app/blackboard_store.py`、`app/result_sink.py` 亦無 mock/real 標記。修改這些檔案前把本卡讀完整張，並視為高風險（R-09 必走 fresh-context review）。命名鐵律約束的是**新檔案**。
+- 修法：(1) 命名鐵律：所有 mock/dry-run/preview 檔案與函式必須含 `mock_`、`_mock`、`dry_run`、`preview`、`synthetic` 字樣之一；未來 real 元件必須含 `real_` 且住在獨立模組。(2) **過時規劃標記**：本卡早期提到的環境變數 execution token 尚未定義或授權；現行 Phase 9 contract 將 token 鎖為 `null`，不得依本卡實作或推導 live token。(3) 弱模型不得在同一個 commit 內同時修改 mock 檔與 real 檔。(4) **重要例外**：既有檔案早於本規則，命名不可靠。已知**無標記但具真實寫入能力**的檔案：`app/google_sheets_oauth_writer.py`（真實 Google Sheets 寫入路徑，env flag 防護、預設關閉）；`app/worker.py`、`app/queue_store.py`、`app/blackboard_store.py`、`app/result_sink.py` 亦無 mock/real 標記。修改這些檔案前把本卡讀完整張，並視為高風險（R-09 必走 fresh-context review）。命名鐵律約束的是**新檔案**。
 - 弱模型檢查法：改任何 app/ 檔案前，看檔名——含 mock/preview/dry_run 字樣就確認你的任務也是 mock/preview 範疇；任務要求 real 行為但目標檔是 mock 檔（或反之），HOLD 並回報 mismatch。
 - 正例：任務是「調整 mock gateway 回傳格式」→ 只碰 `app/mock_openclaw_gateway.py`。
 - 反例：任務是改 mock，順手把 `worker.py` 裡的 dry-run flag 預設值改成 False。
@@ -143,18 +145,18 @@
 ### D-11 沒有 freshness / web verification 規則
 
 - 症狀：模型憑訓練記憶回答「某 repo 有某功能」「某 API 這樣用」，事後發現是編造。弱模型此缺陷更嚴重。
-- 修法：三類主張必須先查證再寫：(1) 外部 repo/工具/API 的存在與行為；(2) 模型名稱與參數；(3) 任何日期敏感資訊。查證手段：WebSearch/WebFetch/實跑命令。查不到就寫 `無法驗證`，禁止補白。
+- 修法：三類主張必須先查證再寫：(1) 外部 repo/工具/API 的存在與行為；(2) 模型名稱與參數；(3) 任何日期敏感資訊。查證手段：本 session 實際可用且獲准的工具、官方來源或實跑命令；工具名稱不可從舊文件假定。查不到就寫 `無法驗證`，禁止補白。
 - 弱模型檢查法：寫下任何含專有名詞的外部主張前自問：「這句話的來源是本 session 的哪一次工具呼叫？」答不出來就刪掉或標 `無法驗證`。
-- 正例：「LangGraph interrupt() 支援 human-in-the-loop（來源：本 session WebFetch 官方文件）」。
+- 正例：「LangGraph interrupt() 支援 human-in-the-loop（來源：本 session 實際取得的官方文件）」。
 - 反例：「AutoGen 上個月剛加了 blackboard 模式」（沒有任何工具呼叫支撐）。
 
 ### D-12 沒有 repo / GitHub / Replit 一致性檢查
 
 - 症狀：本機改了沒 push、Replit 跑的是舊版、GitHub 是唯一 remote——三者漂移時，針對錯誤狀態做的決策全部作廢。
 - 修法：每個 session 開工前跑三源檢查（一條命令，見下）；結果不一致時先回報差異，等 Owner 決定同步方向，不要擅自 push/pull/redeploy。
-- 弱模型檢查法（Windows host 端可直接複製執行；已在 WSL 內則去掉外層 wrapper 只跑引號內命令）：
+- 弱模型檢查法（先解析本輪 Owner 指定的 authorized checkout；下列只是替換 `<ACTIVE_AUTHORIZED_CHECKOUT>` 後的命令形狀，不是固定路徑）：
   ```bash
-  wsl.exe -e bash -c "cd /home/lnovo/projects/hermes-openclaw-adapter && git status --short && git log --oneline -1 && git ls-remote origin master"
+  wsl.exe -e bash -c "cd <ACTIVE_AUTHORIZED_CHECKOUT> && git status --short && git log --oneline -1 && git ls-remote origin master"
   ```
   比對本機 HEAD 與 `ls-remote` hash；再開 `https://hermes-openclaw-adapter.replit.app/dashboard/system` 確認 HTTP 可達。此檢查不取得 Replit deployed hash，故只能證明 local/GitHub hash 是否一致及 Replit 是否可達，不得宣稱三個 revision 一致。
 - 正例：發現本機 ahead 2 commits → 回報「local ahead of origin by 2, HOLD for push decision」。
@@ -181,7 +183,7 @@
 - 症狀：便宜模型在超出能力的任務上重試到天荒地老；或強模型做批次體力活浪費成本。
 - 修法：見 `10_MODEL_ORCHESTRATION.md` C5。一句話版：小模型錯一次就升級；同一子任務連錯兩次帶失敗軌跡升級;最多重試兩輪，第三次換路線或問 Owner。
 - 弱模型檢查法：每次重試前數一下這是第幾次。第 3 次 = 禁止重試。
-- 正例：Haiku 寫 schema 驗證器失敗一次 → 直接升 Sonnet 帶著失敗 diff 重做。
+- 正例：較弱模型寫 schema 驗證器失敗一次 → 直接升級到本輪核准的較強模型，帶著失敗 diff 重做。
 - 反例：同一個 import error 用五種姿勢重試五次。
 
 ### D-16 WSL / Windows 混合環境陷阱
