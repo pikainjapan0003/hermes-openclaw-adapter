@@ -5,6 +5,9 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
+import re
+import subprocess
+import sys
 from typing import Any
 
 import pytest
@@ -58,6 +61,60 @@ def _digest(snapshot: dict[str, Any]) -> str:
     return hashlib.sha256(canonical).hexdigest()
 
 
+def _collect_count(marker: str | None = None) -> int:
+    command = [
+        sys.executable,
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "-o",
+        "addopts=",
+        "--collect-only",
+        "-q",
+    ]
+    if marker is not None:
+        command.extend(["-m", marker])
+    completed = subprocess.run(
+        command,
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+    assert completed.returncode == 0
+    matches = re.findall(r"(?m)^(\d+)(?:/\d+)? tests? collected", completed.stdout)
+    assert len(matches) == 1
+    return int(matches[0])
+
+
+def _runtime_metrics_report() -> dict[str, Any]:
+    research_files = sorted(
+        (ROOT / "docs" / "agent_operating_system" / "research").glob("*.md")
+    )
+    diff_check = subprocess.run(
+        ["git", "diff", "--check", "9d26477"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    assert diff_check.returncode == 0
+    layer_counts = {
+        layer: _collect_count(layer)
+        for layer in ("contract", "governance", "legacy", "fuzz")
+    }
+    return {
+        "git_diff_check": diff_check.stdout,
+        "research_file_count": len(research_files),
+        "research_line_count": sum(_line_count(path) for path in research_files),
+        "test_outcome_count": _collect_count(),
+        "layer_counts": layer_counts,
+    }
+
+
 def test_metrics_snapshot_is_reproducible_and_order_independent() -> None:
     first = _snapshot()
     second = _snapshot()
@@ -76,3 +133,17 @@ def test_health_report_is_explicitly_point_in_time_measurement() -> None:
     assert "NO ARCHIVE, PRODUCT, TEST, OR RUNTIME CHANGE" in text
     assert "NIGHT-BATCH-17" in text
     assert "No F4 threshold is exceeded" in text
+
+
+@pytest.mark.slow
+def test_runtime_metrics_report_round_trips_only_recomputed_values() -> None:
+    report = _runtime_metrics_report()
+    serialized = json.dumps(report, sort_keys=True, separators=(",", ":"))
+    parsed = json.loads(serialized)
+
+    assert parsed == report
+    assert report["git_diff_check"] == ""
+    assert sum(report["layer_counts"].values()) == report["test_outcome_count"]
+    assert report["research_file_count"] == len(
+        list((ROOT / "docs" / "agent_operating_system" / "research").glob("*.md"))
+    )
