@@ -1,10 +1,11 @@
-# Phase 7 Local Audit Writer — Implementation Package Draft
+# Phase 7 Local Audit Writer — Implementation Package Draft v2
 
 **未取得 Owner 逐字授權句前，本檔不得被當成派工單使用**
 
 Status: **PLANNING ONLY, NOT AUTHORIZED — DRAFT FOR FUTURE OWNER REVIEW**
 
-Authority source: `07_AUDIT_WRITE_DESIGN.md`. This draft compresses that
+Authority sources: `07_AUDIT_WRITE_DESIGN.md` and
+`40_MAINTENANCE_PROTOCOL.md` F7. This draft compresses that
 approved design into a reviewable future package shape. It does not create a
 writer, open a file, authorize persistence, change Phase 7 status, or satisfy
 the mandatory gate merely by quoting it.
@@ -64,21 +65,27 @@ The future writer must:
    serialized line;
 2. validate the exact closed `audit_event` schema before touching the target;
 3. resolve an internal repository constant to exactly
-   `data/audit_dev.jsonl` and reject symlinks, traversal, path overrides, and a
-   repository-root mismatch;
+   `data/audit_dev.jsonl` and reject symlinks, traversal, path overrides, a
+   repository-root mismatch, and any existing/target inode with
+   `st_nlink > 1`; the link-count check must be repeated inside the exclusive
+   append protection immediately before writing;
 4. decode the complete existing file as UTF-8 JSONL with duplicate-key
    rejection and require a final LF when non-empty;
 5. reject malformed lines, schema-invalid events, duplicate audit/event IDs,
    a broken genesis rule, a broken `prev_entry_hash`, and unsupported canonical
    values;
-6. verify the complete chain before constructing the append candidate;
+6. verify the complete chain before constructing the append candidate and
+   return a structured chain-break location when genesis or any predecessor
+   link fails; detection must stop the write before a byte changes;
 7. require the new entry's `prev_entry_hash` to equal the verified current tail
    hash, or `null` only for a genuinely empty genesis file;
 8. calculate bytes by `07_AUDIT_WRITE_DESIGN.md` §4: dict root, NFC strings and
    keys, sorted keys, compact JSON, UTF-8, no float, no trailing LF inside the
    hash, and SHA-256 over the entire event including `prev_entry_hash`;
-9. append exactly one canonical JSON line plus one physical LF, with no reopen,
-   rewrite, repair, rotate, truncate, retry, or second event;
+9. append exactly one canonical JSON line plus one physical LF in binary mode,
+   with no reopen, rewrite, repair, rotate, truncate, retry, or second event;
+   host text-mode conversion is forbidden, so Windows must not turn the line
+   terminator into CRLF;
 10. use an explicit supported-platform exclusive append/lock strategy and
     re-check the tail inside that protection immediately before append;
 11. verify the complete resulting file after append and return structured,
@@ -88,6 +95,14 @@ The future writer must:
 
 Import, module initialization, input validation, preview generation, chain
 verification, and failure before the append boundary must perform zero writes.
+
+“CRLF normalization” in this package means a single portable physical LF is
+emitted by binary append (`canonical_json(event) + b"\n"`). Existing audit
+bytes containing CRLF or a bare CR are rejected, never rewritten or normalized
+in place. JSON string control characters remain part of canonical JSON and are
+escaped by the encoder; they are not physical record delimiters. F7.4's
+CRLF-to-LF normalization for fixture-inventory hashing does not authorize
+normalizing or repairing an audit file.
 
 ## 5. Required tests and acceptance
 
@@ -106,6 +121,13 @@ The future package must provide ordinary passing tests for:
   expected tail, so no test claims otherwise;
 - target path constant, repository containment, symlink rejection, and absence
   of argument/environment path overrides;
+- existing/target hardlink rejection for `st_nlink > 1`, including a
+  check-after-lock race simulation; the reader's `shared_inode=true` metadata
+  is not writer permission;
+- binary LF-only output on Windows and WSL, plus rejection of existing CRLF or
+  bare-CR record delimiters without modifying the file;
+- hash-chain break detection at genesis, first, middle, and tail predecessor
+  boundaries, with byte identity preserved after every rejection;
 - before-append failures leaving existing bytes exactly unchanged;
 - simulated append failure/ambiguous result causing no retry;
 - two concurrent append attempts on each supported platform producing either
@@ -120,7 +142,7 @@ route registration, token issuance, task-state mutation, or follow-up creation.
 Final mechanical acceptance requires:
 
 ```text
-python -m pytest -p no:cacheprovider -q
+python -m pytest -o addopts=""
 python -m mypy
 git diff --check
 ```
@@ -137,13 +159,15 @@ author's explanation and answer with file:line evidence:
 1. Is there literally one writable target?
 2. Can an argument, environment value, symlink, junction, traversal,
    repository alias, fixture, or test monkeypatch redirect it?
-3. Does import or any pre-append phase mutate a byte?
+3. Is `st_nlink > 1` rejected both before and inside append protection, and
+   does import or any pre-append phase mutate a byte?
 4. Is every existing line schema-valid and the complete chain verified?
 5. Are duplicate keys rejected before a Python mapping erases evidence?
 6. Are canonicalization and hash coverage identical to §4 and golden vectors?
 7. Is `null` predecessor accepted only for true genesis?
 8. Can concurrent state change between tail verification and append?
-9. Can a partial/ambiguous append trigger retry or silent repair?
+9. Can a partial/ambiguous append trigger retry or silent repair, and are
+   physical record delimiters always one binary LF rather than host CRLF?
 10. Do tamper tests mutate the actual file under test rather than an unrelated
     helper object?
 11. Is clean tail truncation ever falsely claimed detectable?
