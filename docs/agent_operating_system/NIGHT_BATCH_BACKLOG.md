@@ -296,7 +296,7 @@ findings 與效能量測。列入本檔只代表可供未來 Fable 5 派工取�
 | 條目 | 來源 | 邊界 |
 |---|---|---|
 
-| NIGHT-BATCH-18 refill (2026-08-01) | Packages 1–18 completed; packages 20–22 recorded below; Round-10 findings remain review-only | 22 independent commits; no Owner gate is opened |
+| NIGHT-BATCH-18 refill (2026-08-01) | Packages 1–22 completed in the section below; Round-10 findings remain review-only | 22 package commits plus mechanical corrections; no Owner gate is opened |
 | board reader hardlink 目錄邊界修正設計＋產品小修＋回歸測試 | NB-17 包7 HOLD | 先把板內 hardlink 指向板外有效 fixture 的現行接受行為定為 closed rule；不得建立正式 board/data 目錄，不得藉測試讀任意板外 payload |
 | test helper／fixture loader pytest report redaction 設計 | ES4-01/ES4-02 | 先做 docs/test contract；現有 14 個 E-01/E-02/ES3 xfail 精確基線不增不減，禁止把 raw CI report 接 remote/dashboard |
 | Round 9 later-status 修補 | R9-01/R9-02 | 只加 health checkpoint metadata，並把 backlog 的「五組選案」改成「四組正式選案＋一個 ROOT direction gate」；歷史 finding 原文不改 |
