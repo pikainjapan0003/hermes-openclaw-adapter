@@ -365,13 +365,15 @@ This round records the completed NB18 packages and remaining work that may be sc
 | 16 | Governance audit round 10 | 255cceaa |
 | 17 | Metrics reproducibility test | 4ceaea4a |
 | 18 | Fixture/golden integrity v3 | d0091cf8 |
+| 19 | Backlog refill round 8 | 22bca79 / f0602af |
+| 20 | Lesson L-009 | a9aa42c |
+| 21 | Maintenance F7 | f7a3496 |
+| 22 | Phase-11 health report 2026-08-01 | 1b6da89 |
 
-### Open night-run candidates
+### Follow-up candidates after NIGHT-BATCH-18
 
-- Package 20: record a new lesson on cross-platform fixture bytes, hardlink semantics, and payload-free failures.
-- Package 21: record a new maintenance rule for board path trust, mirror DIFFERS handling, and fixture hash normalization.
-- Package 22: publish the 2026-08-01 Phase-11 health measurement report.
 - Governance Round 10 findings R10-01 through R10-04 remain review findings; repair work requires a separately scoped package.
+- Any future package must preserve the no-persistence, no-execution, no-runtime, no-remote, and Owner-gate boundaries stated below.
 
 ### Owner-gated items (not night-run authorization)
 
