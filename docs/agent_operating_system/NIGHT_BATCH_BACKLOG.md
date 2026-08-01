@@ -296,43 +296,7 @@ findings 與效能量測。列入本檔只代表可供未來 Fable 5 派工取�
 | 條目 | 來源 | 邊界 |
 |---|---|---|
 
-## NIGHT-BATCH-18 backlog refill — 2026-08-01 (Round 8)
-
-This round records the completed NB18 packages and remaining work that may be scheduled without reopening an Owner gate. It is bookkeeping only; it does not authorize implementation, persistence, execution, dispatch, runtime, remote, or schema changes.
-
-### Completed in NIGHT-BATCH-18
-
-| Package | Result | Commit |
-|---|---|---|
-| 1 | Fixture SHA-256 inventory is line-ending portable | 977375fe |
-| 2 | Board-reader hardlink boundary and shared-inode report | 494e47a3 |
-| 3 | Malicious board-path boundary tests | 65cca7de |
-| 4 | Coverage-floor assertion decoupled from child return code | 1cfe0128 |
-| 5 | Round-9 documentation findings resolved | 59364fb7 |
-| 6 | Core-document boundary updates and Owner-only proposal | 3f4a5f1b |
-| 7 | Error-surface redaction hardening | 0220923f |
-| 8 | Slow-test markers and performance selection | 738a2daf |
-| 9 | Test-layer guard compatibility | b8141495 |
-| 10 | Contract mutation resistance round 4 | 8fb700f9 |
-| 11 | Builder extreme-input round 2 | 46b42b86 |
-| 12 | Read-only script coverage round 3 | 1ad4d042 |
-| 13 | Full-chain rehearsal v6 determinism | 5d5e70cf |
-| 14 | Phase-9 preflight condition catalog v2 | d14e0ff5 |
-| 15 | v1.1/PB impact analysis v2 | 9bff23b8 |
-| 16 | Governance audit round 10 | 255cceaa |
-| 17 | Metrics reproducibility test | 4ceaea4a |
-| 18 | Fixture/golden integrity v3 | d0091cf8 |
-
-### Open night-run candidates
-
-- Package 20: record a new lesson on cross-platform fixture bytes, hardlink semantics, and payload-free failures.
-- Package 21: record a new maintenance rule for board path trust, mirror DIFFERS handling, and fixture hash normalization.
-- Package 22: publish the 2026-08-01 Phase-11 health measurement report.
-- Governance Round 10 findings R10-01 through R10-04 remain review findings; repair work requires a separately scoped package.
-
-### Owner-gated items (not night-run authorization)
-
-AUD (v1.1 audit record), RB (rollback-to-Git binding), PB (produced_by policy), and ROOT projection decisions remain blank pending Owner choice. Phase 7 still requires the exact Owner instruction `允許寫入 data/audit_dev.jsonl（local dev append-only）`; Phase 9 still requires Owner presence. This section does not grant either gate.
+| NIGHT-BATCH-18 refill (2026-08-01) | Packages 1–18 completed; packages 20–22 recorded below; Round-10 findings remain review-only | 22 independent commits; no Owner gate is opened |
 | board reader hardlink 目錄邊界修正設計＋產品小修＋回歸測試 | NB-17 包7 HOLD | 先把板內 hardlink 指向板外有效 fixture 的現行接受行為定為 closed rule；不得建立正式 board/data 目錄，不得藉測試讀任意板外 payload |
 | test helper／fixture loader pytest report redaction 設計 | ES4-01/ES4-02 | 先做 docs/test contract；現有 14 個 E-01/E-02/ES3 xfail 精確基線不增不減，禁止把 raw CI report 接 remote/dashboard |
 | Round 9 later-status 修補 | R9-01/R9-02 | 只加 health checkpoint metadata，並把 backlog 的「五組選案」改成「四組正式選案＋一個 ROOT direction gate」；歷史 finding 原文不改 |
@@ -374,3 +338,41 @@ Owner gates 充數。
 - 包15–18：error surface Round 4、governance Round 9、00/01 review 與
   Windows 效能量測已完成；findings 已轉上方存貨。
 - 包19：50-file fixture SHA-256 closed inventory 已建。
+
+## NIGHT-BATCH-18 backlog refill — 2026-08-01 (Round 8)
+
+This round records the completed NB18 packages and remaining work that may be scheduled without reopening an Owner gate. It is bookkeeping only; it does not authorize implementation, persistence, execution, dispatch, runtime, remote, or schema changes.
+
+### Completed in NIGHT-BATCH-18
+
+| Package | Result | Commit |
+|---|---|---|
+| 1 | Fixture SHA-256 inventory is line-ending portable | 977375fe |
+| 2 | Board-reader hardlink boundary and shared-inode report | 494e47a3 |
+| 3 | Malicious board-path boundary tests | 65cca7de |
+| 4 | Coverage-floor assertion decoupled from child return code | 1cfe0128 |
+| 5 | Round-9 documentation findings resolved | 59364fb7 |
+| 6 | Core-document boundary updates and Owner-only proposal | 3f4a5f1b |
+| 7 | Error-surface redaction hardening | 0220923f |
+| 8 | Slow-test markers and performance selection | 738a2daf |
+| 9 | Test-layer guard compatibility | b8141495 |
+| 10 | Contract mutation resistance round 4 | 8fb700f9 |
+| 11 | Builder extreme-input round 2 | 46b42b86 |
+| 12 | Read-only script coverage round 3 | 1ad4d042 |
+| 13 | Full-chain rehearsal v6 determinism | 5d5e70cf |
+| 14 | Phase-9 preflight condition catalog v2 | d14e0ff5 |
+| 15 | v1.1/PB impact analysis v2 | 9bff23b8 |
+| 16 | Governance audit round 10 | 255cceaa |
+| 17 | Metrics reproducibility test | 4ceaea4a |
+| 18 | Fixture/golden integrity v3 | d0091cf8 |
+
+### Open night-run candidates
+
+- Package 20: record a new lesson on cross-platform fixture bytes, hardlink semantics, and payload-free failures.
+- Package 21: record a new maintenance rule for board path trust, mirror DIFFERS handling, and fixture hash normalization.
+- Package 22: publish the 2026-08-01 Phase-11 health measurement report.
+- Governance Round 10 findings R10-01 through R10-04 remain review findings; repair work requires a separately scoped package.
+
+### Owner-gated items (not night-run authorization)
+
+AUD (v1.1 audit record), RB (rollback-to-Git binding), PB (produced_by policy), and ROOT projection decisions remain blank pending Owner choice. Phase 7 still requires the exact Owner instruction `允許寫入 data/audit_dev.jsonl（local dev append-only）`; Phase 9 still requires Owner presence. This section does not grant either gate.
