@@ -61,7 +61,7 @@ product branch was removed to improve coverage.
 | `05_VERIFIED_LONG_TERM_PLAN.md` | 445 |
 | `README.md` | 436 |
 | `07_AUDIT_WRITE_DESIGN.md` | 357 |
-| `NIGHT_BATCH_BACKLOG.md` | 376 |
+| `NIGHT_BATCH_BACKLOG.md` | 380 |
 | `11_V1_1_FIRST_REAL_WRITE_DESIGN.md` | 332 |
 | `90_LESSONS_LEARNED.md` | 86 |
 | `40_MAINTENANCE_PROTOCOL.md` | 101 |
@@ -71,7 +71,7 @@ product branch was removed to improve coverage.
 | research Markdown lines | 7,190 |
 
 All governed F4 thresholds remain below their limits: 05 is 445/500, README
-436/500, and 90 is 86/300. The backlog is 376 lines and should be managed as
+436/500, and 90 is 86/300. The backlog is 380 lines and should be managed as
 governance inventory, not silently deleted or compressed.
 
 ## Maintenance signals
