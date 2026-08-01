@@ -120,8 +120,11 @@ delete any research file**.
 2. ES4-01/ES4-02 show that malformed fixture values and missing paths can reach
    local pytest reports; ordinary successful loading has no direct output.
 3. Round 9 records two P3 metadata/wording findings: the old health snapshot's
-   Round-7 status and “five selections” wording for a ROOT gate with no formal
-   choices.
+   Round-7 status and the prior “five selections” wording for a ROOT gate with
+   no formal choices. Later checkpoint metadata: R7-01 through R7-05 were
+   dispositioned by NIGHT-BATCH-17 package 2; the corrected summaries describe
+   four formal option groups (RED/AUD/RB/PB) plus one unlabelled ROOT direction
+   gate. The original measurements and findings remain historical evidence.
 4. The 00/01 review records three P2 and two P3 documentation findings. The
    canonical prohibitions remain intact; any 01 edit remains F2/Owner-gated.
 5. The coverage floor protects `main.py` without entering 198 forbidden

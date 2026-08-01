@@ -205,7 +205,7 @@ schema、依賴、runtime、持久化或 Owner-gated 變更。
 
 執行者仍不得自行從本表加包。
 
-### 【Owner 閘】（五組選案維持未裁決）
+### 【Owner 閘】（四組正式選案＋一個 ROOT direction gate，均未裁決）
 
 | 選案 | 目前狀態 | 未裁決前行為 |
 |---|---|---|
@@ -216,8 +216,9 @@ schema、依賴、runtime、持久化或 Owner-gated 變更。
 | ROOT — `parent_task_id: null` projection | **空白**；一頁表已校正為「尚無正式標號方案」，suggested direction 不是選項 | root projection 維持 HOLD，不填 placeholder；ROOT 不可回選案字母 |
 
 `OWNER_DECISION_ONE_PAGER_20260726.md` 已於 NIGHT-BATCH-16 包1校正，現在可
-安全閱讀與回覆其中四組已有正式來源選項的選案：RED／AUD／RB／PB。ROOT
-仍是第五組空白 Owner gate，但在正式比較稿完成前只能維持空白。任何回覆都
+安全閱讀與回覆四組已有正式來源選項的選案：RED／AUD／RB／PB。ROOT
+不是第五個選案，而是一個尚無正式標號方案的空白 direction gate；在正式比較稿
+完成前只能維持空白。任何回覆都
 只是設計裁決，不是 schema、writer、runtime、execution 或 dispatch 授權。
 
 Phase 7 audit writer、Phase 9 Owner-present N=1、v1.1/v1.2 instruction 與
@@ -264,7 +265,7 @@ Replit/runtime 接線仍是各自獨立硬閘，不因上表或夜跑常設流�
 
 | 待裁決組 | 目前狀態 | 未裁決前行為 |
 |---|---|---|
-| RED／AUD／RB／PB／ROOT 五組既有選案 | **全部空白**；校正後一頁表可安全回覆四組正式選案，ROOT 無正式選項 | 不改 schema、validator、writer、projection 或 runtime；ROOT 保持 HOLD |
+| RED／AUD／RB／PB 四組正式選案＋ROOT direction gate | **全部空白**；校正後一頁表可安全回覆四組正式選案，ROOT 無正式選項 | 不改 schema、validator、writer、projection 或 runtime；ROOT 保持 HOLD |
 | `research/` 目錄治理 | `RESEARCH_DIR_GOVERNANCE.md` A/B/C 三案（建議 B），Owner 欄空白 | 不建 archive、不搬檔、不改名、不壓縮、不刪檔 |
 | Phase 7 audit writer | 實作包規格草案已備，但仍只屬 PLANNING ONLY | 仍需 Owner 在實作 turn 給逐字授權句；不得建立 writer/正式 `data/` |
 | Phase 9 N=1 | 12-condition truth table 與 preflight 仍 fail closed | 等 Phase 7 完成、Owner 同步在場及另行 token/gate 裁決 |
