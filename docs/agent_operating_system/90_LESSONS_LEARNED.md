@@ -5,6 +5,14 @@
 
 ---
 
+## L-009 Cross-platform fixture bytes and board-boundary tests
+
+- Incident: fixture digest checks and filesystem-boundary tests can pass on one host while failing on another when line endings, hardlinks, symlinks, or non-regular files differ.
+- Cause: hashing raw checkout bytes and treating host filesystem semantics as universal makes the contract depend on the runner rather than the fixture content.
+- Rule: canonical fixture digest inputs normalize CRLF to LF; tests must state which filesystem cases are portable and which are skipped by capability. A board reader may report a shared inode for a hardlink, while any future writer must reject hardlinks and other ambiguous paths.
+- Safety: malformed-input failures are structured and payload-free, and a platform-specific skip is never a silent acceptance of an unsafe path.
+- Verification: run the fixture inventory, malicious-path boundary tests, and the full suite on both Windows and WSL before accepting a batch.
+
 ## L-001 host shell 可能在 wsl.exe 前先展開 `$`
 - 日期：2026-06（回填），2026-07-07 由 Fable 5 收錄
 - 任務：從 Windows 端 Bash/PowerShell 工具經 wsl.exe 跑 Linux 命令
