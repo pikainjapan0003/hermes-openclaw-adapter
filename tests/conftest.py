@@ -11,6 +11,7 @@ import pytest
 LAYER_MARKERS = frozenset({"contract", "governance", "legacy", "fuzz"})
 OPTIONAL_MARKERS = frozenset({"slow"})
 COLLECTED_LAYER_ASSIGNMENTS: dict[str, tuple[str, ...]] = {}
+COLLECTED_OPTIONAL_ASSIGNMENTS: dict[str, tuple[str, ...]] = {}
 COLLECTED_ITEM_COUNT = 0
 
 FUZZ_FILES = {
@@ -109,6 +110,7 @@ def pytest_collection_modifyitems(items: list[pytest.Item], config: Any) -> None
     del config
     COLLECTED_ITEM_COUNT = len(items)
     COLLECTED_LAYER_ASSIGNMENTS.clear()
+    COLLECTED_OPTIONAL_ASSIGNMENTS.clear()
     for item in items:
         explicit_layers = {
             marker.name
@@ -127,3 +129,12 @@ def pytest_collection_modifyitems(items: list[pytest.Item], config: Any) -> None
             )
         )
         COLLECTED_LAYER_ASSIGNMENTS[item.nodeid] = assigned_layers
+        COLLECTED_OPTIONAL_ASSIGNMENTS[item.nodeid] = tuple(
+            sorted(
+                {
+                    marker.name
+                    for marker in item.iter_markers()
+                    if marker.name in OPTIONAL_MARKERS
+                }
+            )
+        )
