@@ -5,6 +5,17 @@
 
 ---
 
+## F7. Blackboard path trust and portable fixture maintenance
+
+For every board-reader or fixture change, maintain the following boundary contract:
+
+1. A reader may accept a valid hardlink as an input and report `shared_inode=true`; a future writer must reject hardlinks (`st_nlink > 1`) before any write is authorized.
+2. Symlinks, sockets, FIFOs, directories used as files, paths outside the selected board root, and malformed or ambiguous names are rejected fail-closed. Tests may skip a capability only when the reason is recorded.
+3. Mirror comparison state `DIFFERS` means human decision required; never overwrite either copy automatically. `BEHIND` is reserved for a missing mirror file and `AHEAD` for a mirror-only file.
+4. Fixture SHA-256 inventory inputs normalize CRLF to LF before hashing so Windows and WSL verify the same contract bytes. Error reports remain structured and payload-free.
+
+Verification: run the malicious-path, fixture-integrity, mirror-drift, and full-suite tests on each supported host before accepting a maintenance batch.
+
 ## F1. 可以自行修改（改動落於工作區並在回報中註明；commit 需 Owner 指示。視情況記入 90）
 
 F1 的「自行修改」指工作區檔案編輯，屬 01 §4 第 5 條的任務授權範圍。git commit / push 永遠需要 Owner 指示，不隨 F1 附帶。
