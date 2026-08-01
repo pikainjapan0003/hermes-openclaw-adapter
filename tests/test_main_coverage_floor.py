@@ -28,6 +28,7 @@ ALLOWED_REGRESSION_POINTS = 1.0
 MINIMUM_RAW_PERCENT = CURRENT_RAW_PERCENT - ALLOWED_REGRESSION_POINTS
 
 
+@pytest.mark.slow
 def test_main_branch_coverage_does_not_regress(tmp_path: Path) -> None:
     """Measure the whole suite without recursively running this floor test."""
 

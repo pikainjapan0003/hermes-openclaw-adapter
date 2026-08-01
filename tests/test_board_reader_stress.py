@@ -7,6 +7,8 @@ import time
 import tracemalloc
 from pathlib import Path
 
+import pytest
+
 from app.blackboard_board_reader import read_blackboard_board
 from app.blackboard_validators import SCHEMA_FILES
 
@@ -16,6 +18,7 @@ FIXTURES = ROOT / "fixtures" / "blackboard_contract"
 BOARD_COUNT = 200
 MESSAGES_PER_BOARD = len(SCHEMA_FILES)
 TOTAL_FILES = BOARD_COUNT * MESSAGES_PER_BOARD
+pytestmark = pytest.mark.slow
 
 
 def _fixture_text(message_type: str) -> str:

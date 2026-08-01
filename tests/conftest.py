@@ -9,6 +9,7 @@ import pytest
 
 
 LAYER_MARKERS = frozenset({"contract", "governance", "legacy", "fuzz"})
+OPTIONAL_MARKERS = frozenset({"slow"})
 COLLECTED_LAYER_ASSIGNMENTS: dict[str, tuple[str, ...]] = {}
 COLLECTED_ITEM_COUNT = 0
 

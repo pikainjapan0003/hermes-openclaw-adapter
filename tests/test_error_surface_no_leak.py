@@ -26,6 +26,8 @@ from app.rollback_preview_builder import RollbackPreviewBuildError, build_rollba
 from app.worker_mock_gateway_dry_run import run_worker_to_mock_gateway_dry_run
 
 
+pytestmark = pytest.mark.slow
+
 ROOT = Path(__file__).resolve().parent.parent
 SECRET = "FAKE-SECRET-20260723"
 ABSOLUTE_PATH = r"C:\Users\Owner\private\payload.txt"

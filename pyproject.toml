@@ -21,6 +21,7 @@ markers = [
   "governance: repository policy, documentation, preflight, and trust guards",
   "legacy: frozen or compatibility-layer behavior",
   "fuzz: deterministic mutation and malformed-input suites",
+  "slow: intentionally expensive tests; included by default and skippable with -m 'not slow'",
 ]
 
 [tool.mypy]

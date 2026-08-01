@@ -116,3 +116,14 @@ def test_four_layer_outcome_sum_equals_complete_collection() -> None:
         assert all(count > 0 for count in counts.values())
     else:
         assert any(count > 0 for count in counts.values())
+
+
+def test_slow_marker_is_optional_and_never_counts_as_a_layer(
+    request: pytest.FixtureRequest,
+) -> None:
+    for item in request.session.items:
+        slow_markers = [marker for marker in item.iter_markers("slow")]
+        assert len(slow_markers) <= 1
+        layers = conftest.COLLECTED_LAYER_ASSIGNMENTS[item.nodeid]
+        assert "slow" not in layers
+        assert len(layers) == 1
