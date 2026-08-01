@@ -64,7 +64,7 @@
 
 ### D-01 安全聲明全文重複於每份 phase 文件
 
-- 症狀：166 份既有 docs 幾乎每份都全文重抄「No Blackboard write / No Worker dispatch / ...」約 20 條。每次讀文件都重複消耗 token，且抄寫時容易漏條或改字，造成版本漂移。
+- 症狀：2026-07-07 歷史快照中的大量既有 docs 幾乎每份都全文重抄「No Blackboard write / No Worker dispatch / ...」約 20 條；檔案數會持續變動，不得把當時數字當今日 inventory。每次讀文件都重複消耗 token，且抄寫時容易漏條或改字，造成版本漂移。
 - 修法：以 `docs/agent_operating_system/01_SAFETY_BOUNDARIES.md` 為唯一正本（canonical）。新 phase 文件只寫一行：`本 phase 遵守 01_SAFETY_BOUNDARIES.md 全部規則，無新增豁免。` 只有「本 phase 特有」的邊界才展開寫。舊文件不回頭改（歷史紀錄保持原樣）。
 - 弱模型檢查法：新增 phase 文件前，grep 該文件是否含 `01_SAFETY_BOUNDARIES.md` 字樣；若同時又全文重抄超過 5 條 litany，判定違規，改為引用。
 - 正例：`## 安全邊界\n本 phase 遵守 01_SAFETY_BOUNDARIES.md 全部規則。本 phase 特有限制：fixture 僅允許讀取 fixtures/local_mock_data/。`
@@ -72,10 +72,10 @@
 
 ### D-02 每 phase 一個 check script，大量重複樣板
 
-- 症狀：scripts/ 有 209 個檔案，其中 157 個 `check_*.py`，多數只驗證「文件裡存在某些字串」。維護成本高、真實防護力低（字串在≠行為對）。
+- 症狀：2026-07-07 歷史快照中 scripts/ 有 209 個檔案，其中 157 個 `check_*.py`；數量不是現況保證。多數只驗證「文件裡存在某些字串」。維護成本高、真實防護力低（字串在≠行為對）。
 - 修法：新 phase 不再產生一次性 check script，改用兩層驗收：(1) 通用 read-back 驗收（見 `10_MODEL_ORCHESTRATION.md` C6）；(2) 涉及程式行為時用真測試（pytest / smoke test / 實跑 route）。既有 157 個 check script 保留不動（歷史證據），但不再作為新 phase 的驗收標準。
 - 弱模型檢查法：若你正要寫一個「檢查文件是否包含某段字」的新 script，停下來——改用 read-back 驗收模板。只有「檢查程式行為」的 script 才值得新寫。
-- 正例：v1.0-A 驗收 = `pytest tests/test_blackboard_schemas.py`（未來檔案，tests/ 目錄屆時新建）+ fresh-context read-back。
+- 正例：Blackboard schema 驗收使用現存的 `pytest tests/test_blackboard_schemas.py` + fresh-context read-back；實際完整命令仍以 40 F7 的 fast/full profile 為準。
 - 反例：`check_v1_0_a_plan.py` 內容是 20 行 `assert "No Worker dispatch" in text`。
 
 ### D-03 Owner instruction 每次重貼完整背景
@@ -88,11 +88,11 @@
 
 ### D-04 docs/ 無索引摘要層
 
-- 症狀：README 21KB、既有 docs 166 份平鋪，弱模型找現況要靠檔名猜，常讀到過期版本文件當成現況。
+- 症狀：2026-07-07 歷史快照中 README 約 21KB、既有 docs 大量平鋪；大小與檔案數會變動，不是現況 inventory。弱模型找現況若仍靠檔名猜，容易把過期版本文件當成現況。
 - 修法：`docs/agent_operating_system/README.md`（本資料夾索引，已建立）作為入口；現況只認 `05_VERIFIED_LONG_TERM_PLAN.md` 第 5 節狀態表。最新正式 closeout 文件仍是 `docs/HERMES_FULL_BLACKBOARD_LOOP_REHEARSAL_CLOSEOUT_V1_0_RC_R.md`，但它只代表過去 closeout，不覆蓋其後已落入 05 第 5 節的 Phase 實況。其餘既有 docs 一律視為歷史紀錄，除非被指名，不要主動讀。
 - 弱模型檢查法：開工前只讀三份：CLAUDE.md → agent_operating_system/README.md → 計劃表對應 Phase。讀第四份前先問自己「指令有指名它嗎」。
 - 正例：被要求了解現況 → 讀計劃表 Phase 0 的「目前系統狀態」節，5 分鐘完成。
-- 反例：把 docs/ 下 167 份全部 glob 出來逐一略讀「以求完整」。
+- 反例：把 docs/ 全部 glob 出來逐一略讀「以求完整」。
 
 ### D-05 無 routing 導致每次重新解釋背景
 
@@ -104,11 +104,11 @@
 
 ### D-06 主模型親自做大量讀取與掃 repo
 
-- 症狀：commander 模型把 context 花在讀 167 份文件、掃 209 個 script、逐字 diff，導致後段驗收與決策時 context 已殘破。
+- 症狀：commander 模型把 context 花在讀全量文件、掃全量 scripts、逐字 diff；歷史數量只證明規模，不能當今日 inventory，且會導致後段驗收與決策時 context 已殘破。
 - 修法：見 `10_MODEL_ORCHESTRATION.md` C1「指揮官不下場」。大量讀取一律派 Explore/general-purpose subagent，只回結構化摘要與 `檔案:行號`。
 - 弱模型檢查法：動手前估算——若需要開超過 5 個檔案或讀超過 500 行，就派 subagent；若無 subagent 可用（例如 API 直連），改為分段讀並隨讀隨記摘要到 scratch 檔。
 - 正例：「掃 app/ 找出所有寫入 queue 的 code path」→ 派 Explore，回報 `app/queue_store.py:41` 等清單。
-- 反例：主對話逐檔 cat app/ 下 28 個 .py。
+- 反例：主對話無篩選地逐檔輸出 app/ 下所有 `.py`。
 
 ### D-07 驗收過度依賴同一模型自驗
 
@@ -188,11 +188,11 @@
 
 ### D-16 WSL / Windows 混合環境陷阱
 
-- 症狀：本專案跨 Windows（Claude Code host）與 WSL Ubuntu（repo 所在）。已知坑：(1) Bash-tool→wsl.exe 會吃掉 `$?`/`$VAR`/`$(...)`；(2) PowerShell 5.1 無 `&&`、`ConvertFrom-Json` 對某些 escape 會炸；(3) UNC 路徑 `\\wsl.localhost\...` 下 git 操作極慢，git 一律進 WSL 內跑。
-- 修法：固定命令模式：`wsl.exe -e bash -c "cd /home/lnovo/projects/hermes-openclaw-adapter && <cmd>"`，命令內不用 `$` 變數，成敗用 `&& echo PASS || echo FAIL` 表達。檔案讀寫用 Read/Write 工具走 UNC 路徑（可靠），shell 命令走 wsl.exe（快）。
-- 弱模型檢查法：wsl.exe 命令含 `$` 字元 → 改寫。PowerShell 中用了 `&&` → 改成 `if ($?)` 或分開呼叫。
-- 正例：`wsl.exe -e bash -c "cd /home/... && python -m pytest -q && echo PASS || echo FAIL"`
-- 反例：`wsl.exe -e bash -c "echo EXIT=$?"`（$? 會被 Windows 端吃掉）。
+- 症狀：本專案可能在 Windows 工作副本或 WSL 工作副本執行；repo 不再固定只位於其中一側。跨 shell 時仍可能發生 `$?`/`$VAR`/`$(...)` 被外層展開、PowerShell 版本語法差異、UNC git 緩慢，以及人在家目錄誤以為已進 repo。
+- 修法：先解析 Owner 本輪指定的 authorized checkout，並在該路徑用 `git rev-parse --show-toplevel` 證明已進 repo；之後讓同一原生 shell 完成該命令。只有 repo 真正在 WSL 時才用 `wsl.exe`，只有 repo 真正在 Windows 時才用 PowerShell；不得把 `/home/...` 或 `C:\Users\...` 舊路徑硬編碼為永遠正本。
+- 弱模型檢查法：命令前先比對目前目錄、`git rev-parse --show-toplevel` 與 authorized checkout。任一不一致就停止，不跨 shell 猜路徑。
+- 正例：先 `cd <ACTIVE_AUTHORIZED_CHECKOUT>`，確認 `git rev-parse --show-toplevel`，再用該環境可用的 `python -m pytest`。
+- 反例：停在 `~` 或 `C:\Users\...` 家目錄直接跑 git/pytest；或因舊文件寫過 `/home/...` 就忽略本輪 Windows repo。
 
 ### D-17 phase 命名密集導致抓錯 phase
 
