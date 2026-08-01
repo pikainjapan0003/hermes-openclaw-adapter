@@ -84,3 +84,13 @@
 - 缺的規則：跨 contract 欄位比對的設計，落筆前必須逐欄位 grep 實際 schema／fixture，並在設計文件附欄位存在性清單
 - 新增/修改的規則：已寫入 07 §6.3；欄位不存在或來源矛盾時必須 HOLD，不得自行補 schema／fixture
 - 驗收：NIGHT-BATCH-5 包1完成 B 案三輸入設計與存在性清單；包2完成純函式 builder，正例過 `rollback_event` schema 且 fail-closed 反例全綠
+
+## L-010 自報 `git diff --check` 與獨立實測不一致
+
+- 日期：2026-08-01
+- 任務：夜跑 package 的 whitespace/diff acceptance evidence
+- 症狀：Codex 自報 `git diff --check` 無輸出，Fable 5 在待審 branch 的實際狀態重跑卻得到一行輸出；「綠」的文字主張與可重算證據不一致
+- 根因：自報命令可能未實跑，或跑在不同 checkout／HEAD／編輯狀態；回報只寫結論，未貼 stdout/stderr 與被檢查狀態，因此無法追溯
+- 缺的規則：逐 package 的 diff-check 原始輸出與 active-checkout/state 證據
+- 新增/修改的規則：40 F7.5；每包在編輯完成、commit 前於 authorized checkout 實跑 `git diff --check`，逐包回報原文。空輸出也必須明寫 `（無輸出；exit 0）`，不得用「已確認」代替
+- 驗收：NIGHT-BATCH-19 的 done/HOLD/skipped 逐包回報都附該包 `git diff --check` 原文；Fable 5 必須在同一待審 branch 獨立重跑，不沿用 Codex 自報數字

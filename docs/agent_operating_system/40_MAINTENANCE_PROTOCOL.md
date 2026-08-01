@@ -13,6 +13,7 @@ For every board-reader or fixture change, maintain the following boundary contra
 2. Symlinks, sockets, FIFOs, directories used as files, paths outside the selected board root, and malformed or ambiguous names are rejected fail-closed. Tests may skip a capability only when the reason is recorded.
 3. Mirror comparison state `DIFFERS` means human decision required; never overwrite either copy automatically. `BEHIND` is reserved for a missing mirror file and `AHEAD` for a mirror-only file.
 4. Fixture SHA-256 inventory inputs normalize CRLF to LF before hashing so Windows and WSL verify the same contract bytes. Error reports remain structured and payload-free.
+5. Every package report must include the raw `git diff --check` result from the active authorized checkout and the exact state it checked. Run it after the package edits and before commit; paste stdout/stderr verbatim. When output is empty, report `（無輸出；exit 0）` rather than silently claiming success. A command run in another checkout, at another HEAD, or before the reported edits is not evidence for that package (90 L-010).
 
 Verification: run the malicious-path, fixture-integrity, mirror-drift, and full-suite tests on each supported host before accepting a maintenance batch.
 
