@@ -378,3 +378,68 @@ This round records the completed NB18 packages and remaining work that may be sc
 ### Owner-gated items (not night-run authorization)
 
 AUD (v1.1 audit record), RB (rollback-to-Git binding), PB (produced_by policy), and ROOT projection decisions remain blank pending Owner choice. Phase 7 still requires the exact Owner instruction `允許寫入 data/audit_dev.jsonl（local dev append-only）`; Phase 9 still requires Owner presence. This section does not grant either gate.
+
+## NIGHT-BATCH-19 backlog refill — 2026-08-02 (Round 9)
+
+This section supersedes only the current-status interpretation of older
+backlog rows; it does not rewrite their historical record and grants no new
+authority. NIGHT-BATCH-17 and NIGHT-BATCH-18 are already merged in the
+NIGHT-BATCH-19 base (`10fd5a2`). The issued package text still called their
+merge the upstream blocker, but recording that as current would be false and
+would conflict with the authorized checkout. The current upstream v1.0
+blockers remain the Phase 7 exact instruction and Phase 9 Owner presence.
+
+### 【夜跑可做】current stock
+
+| Item | Source | Boundary |
+|---|---|---|
+| Reject a board-root symlink in `blackboard_board_reader` | NB-19 package 6 HOLD | Product fix plus regression tests; do not weaken F7, follow the link, or create a formal board/data directory |
+| Decide the Replit response-body contract for three-source checking | NB-19 package 9 HOLD | Choose reachability-only (remove body cases) or a bounded/parsed body contract before code; no remote write/deploy |
+| Extend schema renderer for `$ref`, deep properties, `oneOf` and `anyOf` | NB-19 package 11 HOLD | Read-only stdout tool plus tests; no generated file persistence and no schema changes |
+| Repair NB-18 correction-commit traceability and add F7/L-009 point-of-use links | R11-01/R11-02 | Docs only; preserve historical commit content and all gates |
+| Add later-status metadata to the dated 2026-08-01 health snapshot | R11-03 | Docs only; do not rewrite point-in-time measurements |
+| Repair 20 R-05/R-11 and nightly cross-references | `CORE_DOCS_REVIEW_20.md` findings 01–06 | Dedicated rubric docs package; preserve authorization precedence and §6.13 limits |
+| Review 00 D-03/D-08/D-10/D-13/D-14/D-17 proposals | `CORE_DOCS_REVIEW_00_ROUND2.md` findings 01–04 | Safety-semantics review only; no direct edit until the package explicitly authorizes it |
+| Re-run research stdout redaction baseline | ESR5-03 | Tests/report only; existing 14 xfails must not silently grow or disappear |
+
+### 【Owner 閘】all choices remain blank
+
+| Gate | Current state | Until a future Owner decision |
+|---|---|---|
+| RED schema-error redaction | **Blank** | Existing xfail contract remains; validator/exposure unchanged |
+| AUD v1.1 audit record | **Blank** | No schema extension and no writer |
+| RB rollback Git binding | **Blank** | No Git rollback execution |
+| PB `produced_by` policy | **Blank** | Provenance remains non-authorizing |
+| ROOT projection direction | **Blank; no lettered options** | No placeholder and no direct root projection |
+| Research-directory governance | **Blank** | No archive directory, move, rename, compression, or deletion |
+| Phase 7 audit writer | Exact active instruction still absent | No writer, formal `data/`, or persistent append |
+| Phase 9 N=1 | Owner presence and prior Phase 7 closeout absent | Token remains null; preflight stays blocked |
+
+### NIGHT-BATCH-19 consumed through package 19
+
+| Package | Result | Commit/evidence |
+|---:|---|---|
+| 1 | Trailing blank removed | `357566c` |
+| 2 | Default fast/full test profiles and measured slow marker | `6cfda35`, `d551c3c` |
+| 3 | Slow-marker integrity meta-test | `e1be0ff` |
+| 4 | Round-10 documentation findings repaired | `32b3216` |
+| 5 | Recomputable report metrics extended | `8078fae` |
+| 6 | **HOLD**: root symlink accepted by current reader | Direct WSL evidence; no commit |
+| 7 | Test-local future-writer hardlink precondition guard | `fe236f2` |
+| 8 | 90 safety-flag combination mutations | `26e8a49` |
+| 9 | **HOLD**: truncated HTTP-200 body remains `REACHABLE` | Direct injected-response evidence; no commit |
+| 10 | Mirror scale/missing/permission/DIFFERS boundaries | `cef0d02` |
+| 11 | **HOLD**: renderer omits ref/union/deep semantics | Direct rendered-output evidence; no commit |
+| 12 | 100,000-entry hash-chain measurement and tamper localization | `04da304` |
+| 13 | Research-report persistence leak audit | `219e6bb` |
+| 14 | Governance audit Round 11 | `a3964c6` |
+| 15 | 00 Round-2 environment corrections and proposals | `da712ab` |
+| 16 | 20 R-01 through R-13 review | `3120ea9` |
+| 17 | v1.0 readiness fifth pass | `85fd7e2` |
+| 18 | Phase-7 implementation package spec v2 | `3f4d1f4` |
+| 19 | Unified 65-artifact integrity inventory | `b9375c1` |
+
+Older NIGHT-BATCH-17 stock for hardlinks, active-checkout portability,
+coverage-floor layering, test-layer markers, and fixture hash portability is
+consumed by NIGHT-BATCH-18/19 and must not be reopened under the old wording.
+The Owner choices above intentionally remain blank.
