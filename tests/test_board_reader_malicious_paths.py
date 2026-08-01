@@ -141,3 +141,102 @@ def test_reader_rejects_fifo_as_nonregular_entry(tmp_path: Path) -> None:
             "message": "nested or non-file entry is not allowed",
         }
     ]
+
+
+def test_reader_does_not_recurse_through_recursive_symlink(
+    tmp_path: Path,
+) -> None:
+    outside = tmp_path.parent / f"{tmp_path.name}-recursive-outside"
+    outside.mkdir()
+    marker = "RECURSIVE-SYMLINK-PAYLOAD-MUST-NOT-BE-READ"
+    (outside / "payload.txt").write_text(marker, encoding="utf-8")
+    link = tmp_path / "nested-link"
+    try:
+        link.symlink_to(tmp_path, target_is_directory=True)
+    except OSError as exc:
+        pytest.skip(f"platform cannot create directory symlink: {type(exc).__name__}")
+
+    result = read_blackboard_board(tmp_path)
+
+    assert result["valid"] is False
+    assert result["entries"] == []
+    assert result["errors"] == [
+        {
+            "filename": link.name,
+            "code": "symlink_rejected",
+            "message": "symlinks are not read",
+        }
+    ]
+    assert marker not in json.dumps(result, ensure_ascii=False)
+
+
+def test_reader_does_not_descend_into_one_hundred_nested_directories(
+    tmp_path: Path,
+) -> None:
+    deep = tmp_path
+    try:
+        for index in range(100):
+            deep = deep / f"d{index:03d}"
+            deep.mkdir()
+        marker = "DEEP-DIRECTORY-PAYLOAD-MUST-NOT-BE-READ"
+        (deep / "payload.txt").write_text(marker, encoding="utf-8")
+    except OSError as exc:
+        pytest.skip(f"platform cannot create 100 nested directories: {type(exc).__name__}")
+
+    result = read_blackboard_board(tmp_path)
+
+    assert result["valid"] is False
+    assert result["entries"] == []
+    assert result["errors"] == [
+        {
+            "filename": "d000",
+            "code": "unexpected_entry",
+            "message": "nested or non-file entry is not allowed",
+        }
+    ]
+    assert marker not in json.dumps(result, ensure_ascii=False)
+
+
+def test_reader_handles_case_conflicting_entry_names_without_payload_leak(
+    tmp_path: Path,
+) -> None:
+    canonical = tmp_path / "0001_task_draft.json"
+    conflict = tmp_path / "0001_TASK_DRAFT.json"
+    canonical.write_text(
+        json.dumps(_fixture("task_draft"), ensure_ascii=False, sort_keys=True),
+        encoding="utf-8",
+    )
+    marker = "CASE-CONFLICT-PAYLOAD-MUST-NOT-BE-READ"
+    try:
+        conflict.write_text(marker, encoding="utf-8")
+    except OSError as exc:
+        pytest.skip(f"platform cannot create case-conflict fixture: {type(exc).__name__}")
+    if len(list(tmp_path.iterdir())) < 2:
+        pytest.skip("filesystem is case-insensitive; case-conflict names alias")
+
+    result = read_blackboard_board(tmp_path)
+
+    assert result["valid"] is False
+    assert result["entry_count"] == 1
+    assert any(error["code"] == "invalid_filename" for error in result["errors"])
+    assert marker not in json.dumps(result, ensure_ascii=False)
+
+
+def test_reader_rejects_unreadable_entry_without_echoing_payload(
+    tmp_path: Path,
+) -> None:
+    if os.name == "nt":
+        pytest.skip("chmod 000 boundary is POSIX-only")
+    entry = tmp_path / "0001_task_draft.json"
+    marker = "CHMOD-000-PAYLOAD-MUST-NOT-BE-READ"
+    entry.write_text(marker, encoding="utf-8")
+    entry.chmod(0)
+    try:
+        result = read_blackboard_board(tmp_path)
+    finally:
+        entry.chmod(0o600)
+
+    assert result["valid"] is False
+    assert result["entries"] == []
+    assert result["errors"][0]["code"] == "json_read_failed"
+    assert marker not in json.dumps(result, ensure_ascii=False)
