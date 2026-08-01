@@ -14,6 +14,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.queue_store import QueueStore
@@ -114,6 +115,7 @@ def _dashboard_get_paths(app: Any, task_id: str) -> list[str]:
     return sorted(paths)
 
 
+@pytest.mark.slow
 def test_app_import_all_dashboard_gets_and_approve_never_claim(
     tmp_path: Path, monkeypatch: Any
 ) -> None:
