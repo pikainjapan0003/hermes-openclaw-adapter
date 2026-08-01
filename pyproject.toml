@@ -15,13 +15,14 @@ dependencies = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = "-m 'not slow'"
 filterwarnings = ["error::DeprecationWarning"]
 markers = [
   "contract: executable schemas, builders, board, queue, and safety contracts",
   "governance: repository policy, documentation, preflight, and trust guards",
   "legacy: frozen or compatibility-layer behavior",
   "fuzz: deterministic mutation and malformed-input suites",
-  "slow: intentionally expensive tests; included by default and skippable with -m 'not slow'",
+  "slow: intentionally expensive tests; excluded by default and included by the documented full-suite command",
 ]
 
 [tool.mypy]
