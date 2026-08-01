@@ -40,4 +40,3 @@ Owner response: **____________________________**
 
 Until the Owner accepts exact wording through an explicitly authorized F2
 documentation package, do not edit `01_SAFETY_BOUNDARIES.md`.
-
