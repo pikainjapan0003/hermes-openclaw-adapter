@@ -1,5 +1,9 @@
 # Phase 9 N=1 Preflight Condition Catalog
 
+> **Historical catalog wording.** The latest additive summary is
+> `PREFLIGHT_CONDITION_CATALOG_V2.md`; the authoritative execution boundary
+> remains `../09_N1_PREFLIGHT_RUNBOOK.md`. This file does not unlock any gate.
+
 Status: **READ-ONLY CATALOG — BLOCKED, NOT AUTHORIZED**
 
 Source of executable truth: `tests/test_n1_preflight_dryrun.py`. The preflight

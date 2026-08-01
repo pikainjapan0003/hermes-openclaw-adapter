@@ -87,6 +87,10 @@ Packet 必須在 evidence bundle 凍結後生成。Owner 若 edit 任一 target�
 timeout、side effect 或 rollback 欄位，舊 packet 與 token 全部失效，須重做 dry-run
 與新 packet；不得就地修補後沿用 approval。
 
+> **PLANNING ONLY, NOT AUTHORIZED.** The token lifecycle below is a future
+> design checklist, not an executable sequence. Copying this section without
+> this boundary does not grant token or write authority.
+
 ## 4. Single-use token 生命週期
 
 ### 4.1 發放
@@ -206,6 +210,10 @@ Status: **PLANNING ONLY, NOT AUTHORIZED**
 
 未有裁決時一律 HOLD；不得從 branch HEAD、最近 commit、文字摘要或模型回答猜
 `write_commit`、parent、target hash 或 outcome。
+
+> **PLANNING ONLY, NOT AUTHORIZED.** Every numbered step below is a proposed
+> future rehearsal dependency. No reader, parser, worker, or agent may execute
+> it until the separate Owner gates and contracts are complete.
 
 ## 6. Rehearsal 全鏈順序
 

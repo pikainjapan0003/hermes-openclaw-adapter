@@ -2,6 +2,11 @@
 
 Status: **PLANNING ONLY. Phase 9 execution is not authorized.**
 
+Catalog routing: the latest additive wording is
+`research/PREFLIGHT_CONDITION_CATALOG_V2.md`; the original
+`research/PREFLIGHT_CONDITION_CATALOG.md` remains historical evidence. Neither
+catalog overrides this runbook or unlocks a condition.
+
 This runbook prepares one future, Owner-supervised, harmless query-shaped
 `openclaw agent` rehearsal. It creates no token, grants no permission, starts no
 runtime, and authorizes no execution. The governing sources are

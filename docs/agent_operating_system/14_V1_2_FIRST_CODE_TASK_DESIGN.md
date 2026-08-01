@@ -141,6 +141,9 @@ Git is the code rollback boundary. The accepted task should form one reviewable 
 commit whose parent is the reviewed candidate state. Its rollback target is that exact
 commit, not a branch name, moving HEAD, guessed hash, or broad file checkout.
 
+> **PLANNING ONLY, NOT AUTHORIZED.** The rollback sequence below is descriptive
+> design evidence, not a command list. A copied excerpt has no Git authority.
+
 The rollback rehearsal design is:
 
 1. record the accepted code commit and its parent;
@@ -175,6 +178,10 @@ The initial v1.2 rehearsal remains single-worker/sequential even after role lang
 used. Multi-worker routing requires O1/O2 decisions, assignment contracts, idempotent
 claim/cancel/revoke controls, and separate authorization. A `role` field records
 provenance; it does not prove identity or confer capability.
+
+> **PLANNING ONLY, NOT AUTHORIZED.** The following stop conditions and signoff
+> list describe a future package; they do not authorize code changes, Git
+> operations, execution, dispatch, or acceptance.
 
 ## 8. Stop conditions
 

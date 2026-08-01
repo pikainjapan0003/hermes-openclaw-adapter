@@ -46,3 +46,15 @@ not fixed in this review package. A future repair must preserve the historical
 record, add an explicit current/historical boundary at the point of use, and
 run the documentation drift and cross-reference tests. Any repair that would
 touch a current route, schema, token contract, or runtime remains out of scope.
+
+## Later resolution — NIGHT-BATCH-19 package 4
+
+| Finding | Resolution |
+|---|---|
+| R10-01 | Fixed at the README opening with an in-place historical-topology and no-runtime warning before the diagram. |
+| R10-02 | Fixed at the API table with a local historical-v0.4 warning that denies dispatch, worker, token, and runtime authority. |
+| R10-03 | Fixed with bidirectional routing between the Phase-9 runbook, original catalog, and v2 catalog; the runbook remains authoritative. |
+| R10-04 | Fixed by repeating `PLANNING ONLY, NOT AUTHORIZED` boundaries immediately before the imperative token, rehearsal, rollback, and stop/signoff excerpts. |
+
+These documentation repairs choose no option and change no product, route,
+schema, token, writer, dispatch, persistence, or runtime behavior.

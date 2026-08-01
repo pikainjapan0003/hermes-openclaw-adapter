@@ -1,5 +1,10 @@
 # Hermes → Adapter → OpenClaw
 
+> **HISTORICAL TOPOLOGY ONLY — NOT THE CURRENT AUTHORIZED RUNTIME.** The
+> following diagram describes the early v0.4 concept. Current authority begins
+> at 「目前狀態」 below: no dispatch, real OpenClaw call, runtime connection, or
+> persistent result path is authorized.
+
 把任務從 **Hermes 主腦**送到 **OpenClaw 執行端**的中間轉接層（Adapter）。
 Hermes 透過 MCP 工具呼叫 Adapter，Adapter 在背景用 **OpenClaw CLI** 執行，完成後把結果寫進 `results.jsonl`，Hermes 再查回結果。
 
@@ -252,6 +257,12 @@ hermes-openclaw-adapter/
 ---
 
 ## API 速查
+
+> **Historical v0.4 API reference, not current authorization.** The POST route
+> and adapter token below document an earlier implementation surface. They are
+> not an instruction to dispatch, start a worker, issue a token, or reconnect a
+> runtime; current permitted surfaces are governed by the status section and
+> `docs/agent_operating_system/05_VERIFIED_LONG_TERM_PLAN.md`.
 
 | 方法 | 路徑 | 說明 |
 |---|---|---|
