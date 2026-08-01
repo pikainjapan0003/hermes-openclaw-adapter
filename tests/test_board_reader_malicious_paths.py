@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -98,3 +99,45 @@ def test_reader_structurally_rejects_hostile_entry_shapes(tmp_path: Path) -> Non
     serialized = json.dumps(result, ensure_ascii=False)
     assert "nested payload must not be read" not in serialized
     assert "illegal contract filename payload" not in serialized
+
+
+def test_reader_accepts_hardlink_and_marks_shared_inode(tmp_path: Path) -> None:
+    source = tmp_path.parent / f"{tmp_path.name}-hardlink-source.json"
+    source.write_text(
+        json.dumps(_fixture("task_draft"), ensure_ascii=False, sort_keys=True),
+        encoding="utf-8",
+    )
+    target = tmp_path / "0001_task_draft.json"
+    try:
+        target.hardlink_to(source)
+    except OSError as exc:
+        pytest.skip(f"platform cannot create test hardlink: {type(exc).__name__}")
+
+    result = read_blackboard_board(tmp_path)
+
+    assert result["valid"] is True
+    assert result["entry_count"] == 1
+    assert result["errors"] == []
+    entry = result["entries"][0]
+    assert entry["shared_inode"] is True
+    assert entry["message"]["message_type"] == "task_draft"
+
+
+def test_reader_rejects_fifo_as_nonregular_entry(tmp_path: Path) -> None:
+    fifo = tmp_path / "0001_task_draft.json"
+    try:
+        os.mkfifo(fifo)
+    except (AttributeError, NotImplementedError, OSError) as exc:
+        pytest.skip(f"platform cannot create test fifo: {type(exc).__name__}")
+
+    result = read_blackboard_board(tmp_path)
+
+    assert result["valid"] is False
+    assert result["entries"] == []
+    assert result["errors"] == [
+        {
+            "filename": fifo.name,
+            "code": "unexpected_entry",
+            "message": "nested or non-file entry is not allowed",
+        }
+    ]

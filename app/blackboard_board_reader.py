@@ -183,6 +183,10 @@ def read_blackboard_board(directory: str | Path) -> dict[str, Any]:
             "valid": validation["valid"],
             "errors": validation["errors"],
         }
+        if child.stat().st_nlink > 1:
+            # A hardlink is the same inode, not a redirect.  Keep the read
+            # boundary unchanged but expose the shared-inode fact for review.
+            entry["shared_inode"] = True
         if validation["valid"]:
             entry["message"] = dict(cast(Mapping[str, Any], decoded))
         else:

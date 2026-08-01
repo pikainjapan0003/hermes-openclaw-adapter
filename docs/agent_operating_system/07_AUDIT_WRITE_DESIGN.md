@@ -78,6 +78,9 @@ one LF byte. Requirements:
   writer;
 - no arbitrary filename, environment override, symlink escape, or caller-selected
   directory;
+- a future writer must reject any existing or target file whose `st_nlink` is greater
+  than one (hardlinks are not an authorized append target); the read-only board reader
+  may accept a hardlink and report `shared_inode: true` as informational metadata;
 - a failed validation or chain check performs zero append bytes.
 
 Before every append, the future writer must acquire exclusive local process/file
