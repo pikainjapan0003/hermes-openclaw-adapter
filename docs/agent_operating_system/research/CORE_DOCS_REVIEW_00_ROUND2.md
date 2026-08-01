@@ -46,4 +46,3 @@ listed below and was not edited.
 
 No P0/P1 finding was found. The direct edits in 00 only remove stale
 environment assumptions; they do not resolve these four safety-semantic items.
-

@@ -107,4 +107,3 @@ def test_differs_means_ancestry_unknown_in_both_content_directions(
 
     assert [entry.status for entry in entries] == [mirror.DIFFERS, mirror.DIFFERS]
     assert all("ancestry unknown" in entry.detail for entry in entries)
-

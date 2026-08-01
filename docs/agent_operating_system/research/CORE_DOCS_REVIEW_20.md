@@ -48,4 +48,3 @@ A repair package should preserve all existing authorization semantics, add
 cross-references rather than duplicate 05/40, and never turn Fable 5 review
 into permission for Phase 7 or Phase 9. R-11 must say local/GitHub hashes can
 align while Replit remains reachability-only with deployed hash unknown.
-

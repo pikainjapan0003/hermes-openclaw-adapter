@@ -103,4 +103,3 @@ def test_readonly_report_renderers_leave_designated_research_directory_empty(
     )
 
     assert list(generated_research.iterdir()) == []
-

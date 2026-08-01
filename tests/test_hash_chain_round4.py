@@ -95,4 +95,3 @@ def test_null_values_and_extreme_unicode_keys_have_stable_order() -> None:
         b'{"":null,"\\u0000":null,"a":{"":null,"\\u0000":null,'
         b'"\xf4\x8f\xbf\xbf":null},"\xf4\x8f\xbf\xbf":null}'
     )
-

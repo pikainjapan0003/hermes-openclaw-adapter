@@ -182,4 +182,3 @@ def test_semantically_unsafe_flag_combinations_fail_closed(
             with pytest.raises(RollbackPreviewBuildError, match="safe profile"):
                 output = build_rollback_preview(audit, bundle, result)
         assert output is None, label
-

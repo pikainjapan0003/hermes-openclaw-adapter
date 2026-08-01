@@ -94,4 +94,3 @@ def test_v4_inventory_covers_each_required_family() -> None:
     assert any(path.startswith("fixtures/hash_chain_vectors/") for path in paths)
     assert any(path.startswith("fixtures/local_mock_data/") for path in paths)
     assert all("/research/" not in path for path in paths)
-
