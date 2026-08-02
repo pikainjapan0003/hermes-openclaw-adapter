@@ -14,7 +14,7 @@ This round reviews the renderer's `oneOf`/`anyOf`/`allOf` paths and the closed a
 |---|---|---|---|
 | ESR7-01 | — | Pass | Composite renderer branches expose derived type labels (`string | null`, `string & number`) but omit hidden `$comment`, `examples`, and `default` payloads. Malformed non-object roots raise a fixed reason plus path, not raw JSON content. |
 | ESR7-02 | P2 | Open/local-only | Artifact inventory errors can include the filesystem path supplied to `Path.read_bytes()`. More importantly, pytest assertion rewriting of the bare-CR check includes the failing bytes expression, so raw artifact bytes can appear in a failed-test report. This helper must remain local and must not be wired to a dashboard, remote report, or untrusted exposure. |
-| ESR7-03 | P3 | Specification drift | Contrary to NIGHT-BATCH-21 package 5's proposed factual sentence, `docs/schemas/remote_readonly_projection.schema.json:124` already uses `allOf`. Package 5 correctly remained HOLD rather than publishing that false statement. |
+| ESR7-03 | P3 | Corrected specification drift | `docs/schemas/remote_readonly_projection.schema.json:124` already uses root-level `allOf` as an `if`/`then` conditional rule. The renderer's current type-composition label is only a display convention and does not render that root conditional; package 4 is the explicitly scoped stdout-only change for presenting it. Package 3 records this fact and does not alter renderer logic. |
 
 ## Reverse-test evidence
 

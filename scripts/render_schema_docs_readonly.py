@@ -1,4 +1,9 @@
-"""Render repository JSON Schemas as Markdown tables on stdout only."""
+"""Render repository JSON Schemas as Markdown tables on stdout only.
+
+Type composition labels are display conventions, not JSON Schema semantic
+merges. Root-level ``allOf``/``if``/``then``/``else`` conditional rules are
+not rendered by this version; package 4 owns that explicitly scoped addition.
+"""
 
 from __future__ import annotations
 
