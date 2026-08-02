@@ -3,15 +3,17 @@
 Status: **MEASUREMENT ONLY - NO PRODUCT, TEST, RUNTIME, ARCHIVE, OR OWNER-GATE AUTHORIZATION**
 
 This report records recomputable repository health at the NIGHT-BATCH-22
-package-22 starting point (`9f4e8a3`). It does not authorize persistence,
+final HEAD (`bcdb24b`). It does not authorize persistence,
 execution, dispatch, remote wiring, an archive move, Phase 7, or Phase 9.
 
 ## Reproducibility and environment
 
 The accepted baseline is master `fa1ffb8`; this branch is not an accepted phase
 state until its independent review and merge. Test timing was measured with
-Python 3.12.3 in WSL2. The complete run used the current worktree with full
-Git history so the reproducibility test could resolve `9d26477`.
+Python 3.12.3 in WSL2. The fast run used an ext4-native archive of the final
+HEAD (fast selection deselects the Git-dependent timing test); the complete run
+used the current worktree with full Git history so the reproducibility test
+could resolve `9d26477`.
 
 ```text
 # PowerShell, repository root
@@ -36,12 +38,12 @@ environment lacks FastAPI and collection stops with `ModuleNotFoundError`.
 |---|---:|---:|---:|
 | Test files | 95 (prior report) | 99 | +4 files |
 | Test source lines (UTF-8 `splitlines`) | not measured with this command | 15,486 | Baseline not recomputed; do not infer a percentage |
-| Collected outcomes | 2,121 (prior report) | 2,304 collected / 2,283 active after 21 deselections | +183 full outcomes |
-| Default fast | `2085 passed, 1 skipped, 21 deselected, 14 xfailed in 304.26s` | `2268 passed, 1 skipped, 21 deselected, 14 xfailed in 135.89s` | Green; +183 passes |
-| Complete | `2106 passed, 1 skipped, 14 xfailed in 759.87s` | `2289 passed, 1 skipped, 14 xfailed in 716.78s` | Green; +183 passes |
+| Collected outcomes | 2,121 (prior report) | 2,306 collected / 2,285 active after 21 deselections | +185 full outcomes |
+| Default fast | `2085 passed, 1 skipped, 21 deselected, 14 xfailed in 304.26s` | `2270 passed, 1 skipped, 21 deselected, 14 xfailed in 191.39s` | Green; +185 passes |
+| Complete | `2106 passed, 1 skipped, 14 xfailed in 759.87s` | `2291 passed, 1 skipped, 14 xfailed in 783.22s` | Green; +185 passes |
 
-The arithmetic is exact: 2,268 fast-path passes plus 21 deliberately
-deselected slow tests equals 2,289 complete-path passes. The skip and 14
+The arithmetic is exact: 2,270 fast-path passes plus 21 deliberately
+deselected slow tests equals 2,291 complete-path passes. The skip and 14
 expected failures are unchanged. The fast and complete runs both finished
 green; the complete run is the authoritative Git-dependent measurement.
 
@@ -99,10 +101,10 @@ remains blank.
 
 ## Change shape and test-to-code ratio
 
-For `fa1ffb8..9f4e8a3`, the measured diff is:
+For `fa1ffb8..bcdb24b`, the measured diff is:
 
 ```text
-29 files changed, 1416 insertions(+), 8 deletions(-)
+30 files changed, 1545 insertions(+), 8 deletions(-)
 ```
 
 The additions break down as 711 test lines, 68 read-only script lines, and
