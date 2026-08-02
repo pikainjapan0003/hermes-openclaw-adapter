@@ -29,6 +29,20 @@ recorded as environment-specific evidence, not converted to an xfail and not
 repaired under this marker/report-only package. A native-WSL clone rerun is the
 required disposition before batch acceptance.
 
+### Native-WSL disposition
+
+The committed package was then cloned to the ext4-native checkout
+`/tmp/hermes-nb20-native.IPftxs/repo` and rerun with the same disposable venv:
+
+| Profile | Native result |
+|---|---|
+| Default fast | `1960 passed, 1 skipped, 21 deselected, 14 xfailed in 133.83s (0:02:13)` |
+| Full | `1981 passed, 1 skipped, 14 xfailed in 616.98s (0:10:16)` |
+
+The arithmetic is exact: 1,960 fast-path passes plus 21 explicitly deselected
+slow tests equals the 1,981 full-path passes. The mounted-worktree timeout did
+not recur; the native full profile is green.
+
 ## Default fast path — slowest 15 calls
 
 | Seconds | Node |
@@ -86,9 +100,30 @@ explicit contract-layer marker plus a function-level slow marker so the
 existing AST inventory can recognize exactly one layer. No assertion or
 product behavior changed.
 
+## Native full path — slowest 15 calls
+
+| Seconds | Node |
+|---:|---|
+| 260.14 | `test_main_coverage_floor.py::test_main_branch_coverage_does_not_regress` |
+| 83.36 | `test_metrics_reproducibility.py::test_runtime_metrics_report_round_trips_only_recomputed_values` |
+| 45.18 | `test_board_reader_stress.py::test_board_reader_stress_measures_200_complete_boards` |
+| 31.28 | `test_hash_chain_round4.py::test_verify_one_hundred_thousand_entry_chain_records_runtime_without_gate` |
+| 17.45 | `test_board_reader_capacity.py::test_reader_capacity_probe_reports_runtime_and_peak_memory` |
+| 9.19 | `test_research_report_generation_no_leak.py::test_product_and_script_sources_have_no_research_report_write_target` |
+| 7.65 | `test_dependency_declaration_sync.py::test_literal_third_party_imports_have_a_declared_distribution` |
+| 6.63 | `test_hash_chain_round4.py::test_binary_prefix_search_locates_arbitrary_nonterminal_tamper[4094]` |
+| 6.15 | `test_dependency_declaration_sync.py::test_declared_without_literal_import_baseline_does_not_silently_grow` |
+| 5.38 | `test_board_reader_concurrency_round2.py::test_eight_concurrent_readers_return_the_same_500_file_result` |
+| 4.69 | `test_hash_chain_round4.py::test_binary_prefix_search_locates_arbitrary_nonterminal_tamper[2048]` |
+| 3.68 | `test_mirror_drift_round2.py::test_five_hundred_files_keep_all_four_states_and_do_not_mutate_inputs` |
+| 3.58 | `test_queue_claim_guard.py::test_app_import_all_dashboard_gets_and_approve_never_claim` |
+| 3.50 | `test_error_surface_no_leak.py::test_fixture_loader_pytest_report_redacts_sensitive_markers[missing_path]` |
+| 3.48 | `test_slow_marker_integrity.py::test_slow_assignments_remain_compatible_with_exactly_one_layer` |
+
 ## Conclusion
 
 The default profile remains mathematically complete relative to the full
-profile: the 21 deselected outcomes are the 21 explicit slow items. Current
-mounted-worktree timings show why environment labels matter. Native-WSL full
-green evidence remains mandatory before accepting this batch.
+profile: the 21 deselected outcomes are the 21 explicit slow items. Mounted
+and native timings show why environment labels matter. The required native-WSL
+rerun is green; final-HEAD acceptance still requires the separately mandated
+last full-suite run after package 22.
