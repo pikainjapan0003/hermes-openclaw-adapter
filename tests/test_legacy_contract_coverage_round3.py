@@ -49,6 +49,17 @@ def _callback() -> dict[str, object]:
     }
 
 
+def test_contract_schema_loader_accepts_supported_name_suffixes() -> None:
+    for name in (
+        "task_envelope_v0_7",
+        "task_envelope_v0_7.schema.json",
+        "task_envelope_v0_7.json",
+    ):
+        schema = contracts.load_json_schema(name)
+        assert isinstance(schema, dict)
+        assert schema["title"]
+
+
 @pytest.mark.parametrize(
     "field",
     (

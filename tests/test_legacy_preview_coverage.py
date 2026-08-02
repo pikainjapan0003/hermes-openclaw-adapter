@@ -55,6 +55,14 @@ def test_full_loop_loader_rejects_non_object_root(
         full_loop.load_full_loop_rehearsal_fixture()
 
 
+def test_full_loop_loader_accepts_the_reviewed_object_fixture() -> None:
+    loaded = full_loop.load_full_loop_rehearsal_fixture()
+
+    assert isinstance(loaded, dict)
+    assert loaded["fixture_kind"] == "full_blackboard_loop_rehearsal"
+    assert isinstance(loaded["timeline"], list)
+
+
 def test_full_loop_load_failure_is_fail_closed(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
