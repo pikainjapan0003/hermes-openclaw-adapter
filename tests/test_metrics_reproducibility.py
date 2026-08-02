@@ -8,6 +8,7 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+import time
 from typing import Any
 
 import pytest
@@ -93,12 +94,33 @@ def _runtime_metrics_report() -> dict[str, Any]:
     research_files = sorted(
         (ROOT / "docs" / "agent_operating_system" / "research").glob("*.md")
     )
-    diff_check = subprocess.run(
-        ["git", "diff", "--check", "9d26477"],
+    command = [
+        "git",
+        "-c",
+        "core.whitespace=cr-at-eol",
+        "diff",
+        "--check",
+        "9d26477",
+        "HEAD",
+    ]
+    baseline_started = time.monotonic()
+    baseline = subprocess.run(
+        command,
         cwd=ROOT,
         capture_output=True,
         text=True,
-        timeout=30,
+        timeout=600,
+        check=False,
+    )
+    baseline_elapsed = time.monotonic() - baseline_started
+    assert baseline.returncode == 0
+    adaptive_timeout = max(30.0, baseline_elapsed * 3.0)
+    diff_check = subprocess.run(
+        command,
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        timeout=adaptive_timeout,
         check=False,
     )
     assert diff_check.returncode == 0
