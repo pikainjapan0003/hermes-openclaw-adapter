@@ -114,3 +114,13 @@
 - 缺的規則：L-008 只約束設計與實作者檢查欄位存在性，沒有要求派工方在派出 contract-field package 前附實物證據。
 - 新增規則：40 F8；任何依賴 contract 欄位的派工包，派出前都必須附欄位到實際 schema／fixture 的 file:line 證據，證據缺漏則該包不得派出。
 - 驗收：NIGHT-BATCH-21 package 0 已先產 contract/spec precheck；下一批不得再出現同型 HOLD。
+
+## L-013 防錯規則本身太窄：F8 只管欄位
+
+- 日期：2026-08-02
+- 範圍：NIGHT-BATCH-21 package 5 的 schema-keyword 主張與 package 10 的行為前置主張
+- 症狀：package 5 的 `allOf` 缺席主張與 package 10 的 detached／shallow fail-closed 主張都未被 F8 或 precheck 攔下，兩包最後只能 HOLD。
+- 根因：F8 只要求 contract 欄位存在性證據，沒有涵蓋 schema keyword 的存在／缺席，也沒有涵蓋工具或模組行為前置。
+- 缺的規則：派工前的事實查證不能只掃欄位名稱；schema 組合語義與行為前置同樣必須有實際 file:line 證據。
+- 新增規則：40 F8 擴為三類——欄位存在性、schema keyword 存在／缺席、行為前置主張；任一類缺證據即不得派出。
+- 驗收：本批 package 0 型自檢覆蓋三類；下一批不得再出現同型 HOLD。
