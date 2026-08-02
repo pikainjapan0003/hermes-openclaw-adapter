@@ -137,11 +137,40 @@ def _validate_event(event: Mapping[str, Any]) -> dict[str, Any]:
     result = validate_blackboard_message(candidate, "audit_event")
     if not result.get("valid"):
         raise AuditWriterError("audit event schema rejected")
+    _validate_persistence_posture(candidate)
     try:
         canonical_json(candidate)
     except HashChainError as exc:
         raise AuditWriterError("audit event has unsupported canonical values") from exc
     return candidate
+
+
+def _validate_persistence_posture(entry: Mapping[str, Any]) -> None:
+    """Apply the design's extra boundary for events labelled persisted."""
+
+    if entry.get("audit_status") != "persisted":
+        return
+    if (
+        entry.get("persistence_target") != "data/audit_dev.jsonl"
+        or entry.get("preview_only") is not False
+    ):
+        raise AuditWriterError("persisted audit posture is invalid")
+    flags = entry.get("safety_flags")
+    if not isinstance(flags, Mapping) or flags.get("audit_trail_write_allowed") is not True:
+        raise AuditWriterError("persisted audit posture is unauthorized")
+    forbidden_true = (
+        "blackboard_write_allowed",
+        "queue_write_allowed",
+        "worker_dispatch_allowed",
+        "openclaw_call_allowed",
+        "hermes_runtime_allowed",
+        "connector_call_allowed",
+        "google_sheets_write_allowed",
+        "external_side_effects_allowed",
+        "external_side_effects_occurred",
+    )
+    if any(flags.get(name) is not False for name in forbidden_true):
+        raise AuditWriterError("persisted audit posture is unsafe")
 
 
 def _validate_entries(entries: list[dict[str, Any]]) -> str | None:
@@ -151,6 +180,7 @@ def _validate_entries(entries: list[dict[str, Any]]) -> str | None:
     for index, entry in enumerate(entries):
         if not validate_blackboard_message(entry, "audit_event").get("valid"):
             raise AuditWriterError("audit file contains a schema-invalid event", entry_index=index)
+        _validate_persistence_posture(entry)
         audit_id = entry.get("audit_id")
         event_id = entry.get("event_id")
         if audit_id in seen_audit_ids or event_id in seen_event_ids:
