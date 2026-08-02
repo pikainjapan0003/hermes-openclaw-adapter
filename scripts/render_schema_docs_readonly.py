@@ -21,7 +21,35 @@ def _constraint(schema: Mapping[str, Any]) -> str:
     for key in ("format", "pattern", "minimum", "maximum", "minLength", "maxLength"):
         if key in schema:
             parts.append(f"{key}={schema[key]}")
-    return "; ".join(parts) or "—"
+    for keyword in ("oneOf", "anyOf", "allOf"):
+        branches = schema.get(keyword)
+        if not isinstance(branches, list):
+            continue
+        for branch in branches:
+            if not isinstance(branch, Mapping):
+                continue
+            nested = _constraint(branch)
+            if nested != "—":
+                parts.extend(nested.split("; "))
+    return "; ".join(dict.fromkeys(parts)) or "—"
+
+
+def _json_type(value: Any) -> str:
+    if value is None:
+        return "null"
+    if isinstance(value, bool):
+        return "boolean"
+    if isinstance(value, int):
+        return "integer"
+    if isinstance(value, float):
+        return "number"
+    if isinstance(value, str):
+        return "string"
+    if isinstance(value, list):
+        return "array"
+    if isinstance(value, Mapping):
+        return "object"
+    return "unspecified"
 
 
 def _type_name(schema: Mapping[str, Any]) -> str:
@@ -31,7 +59,22 @@ def _type_name(schema: Mapping[str, Any]) -> str:
     if isinstance(value, str):
         return value
     if "const" in schema:
-        return type(schema["const"]).__name__
+        return _json_type(schema["const"])
+    enum = schema.get("enum")
+    if isinstance(enum, list) and enum:
+        return " | ".join(dict.fromkeys(_json_type(item) for item in enum))
+    for keyword, separator in (("oneOf", " | "), ("anyOf", " | "), ("allOf", " & ")):
+        branches = schema.get(keyword)
+        if not isinstance(branches, list) or not branches:
+            continue
+        names = [
+            _type_name(branch)
+            for branch in branches
+            if isinstance(branch, Mapping)
+        ]
+        names = [name for name in dict.fromkeys(names) if name != "unspecified"]
+        if names:
+            return separator.join(names)
     return "unspecified"
 
 

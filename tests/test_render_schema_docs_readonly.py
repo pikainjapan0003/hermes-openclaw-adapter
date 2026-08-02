@@ -130,7 +130,7 @@ def test_renderer_covers_closed_type_and_constraint_edges() -> None:
     assert "pattern=safe\\|preview" in rendered
     assert "minimum=0; maximum=9; minLength=1; maxLength=10" in rendered
     assert "left\\|right" in rendered
-    assert "`constant` | NoneType | no | const=null" in rendered
+    assert "`constant` | null | no | const=null" in rendered
     assert "`untyped` | unspecified | no | —" in rendered
     assert "`malformed` | unspecified | no | —" in rendered
     assert "Closed object: no/unspecified" in rendered
