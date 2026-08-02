@@ -31,6 +31,14 @@ MEASURED_OVER_TWO_SECONDS = frozenset(
     }
 )
 
+MEASURED_OVER_TWO_SECONDS_ROUND2 = frozenset(
+    {
+        "tests/test_artifact_integrity_v5.py::test_v5_inventory_is_closed_and_extends_all_v4_artifacts",
+        "tests/test_artifact_integrity_v5.py::test_v5_normalized_manifest_digest_is_unchanged",
+        "tests/test_board_reader_concurrency_round2.py::test_eight_concurrent_readers_return_the_same_500_file_result",
+    }
+)
+
 
 def _base_nodeid(nodeid: str) -> str:
     return nodeid.split("[", 1)[0].replace("\\", "/")
@@ -108,7 +116,9 @@ def _layer_for_source(nodeid: str) -> str:
 def test_every_measured_over_two_second_test_is_marked_slow() -> None:
     slow_nodes = {_base_nodeid(nodeid) for nodeid in _slow_nodes_from_sources()}
 
-    assert MEASURED_OVER_TWO_SECONDS <= slow_nodes
+    assert (
+        MEASURED_OVER_TWO_SECONDS | MEASURED_OVER_TWO_SECONDS_ROUND2
+    ) <= slow_nodes
 
 
 def test_slow_assignments_remain_compatible_with_exactly_one_layer() -> None:

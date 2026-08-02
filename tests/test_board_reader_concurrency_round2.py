@@ -15,7 +15,7 @@ from app.blackboard_board_reader import read_blackboard_board
 from app.blackboard_validators import SCHEMA_FILES
 
 
-pytestmark = [pytest.mark.contract, pytest.mark.slow]
+pytestmark = pytest.mark.contract
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURES = ROOT / "fixtures" / "blackboard_contract"
 
@@ -35,6 +35,7 @@ def _fingerprints(board: Path) -> dict[str, str]:
     }
 
 
+@pytest.mark.slow
 def test_eight_concurrent_readers_return_the_same_500_file_result(
     tmp_path: Path,
 ) -> None:

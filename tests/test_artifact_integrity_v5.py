@@ -50,6 +50,7 @@ def _manifest_digest(paths: set[str]) -> str:
     return manifest.hexdigest()
 
 
+@pytest.mark.slow
 def test_v5_inventory_is_closed_and_extends_all_v4_artifacts() -> None:
     paths = _v5_paths()
 
@@ -60,6 +61,7 @@ def test_v5_inventory_is_closed_and_extends_all_v4_artifacts() -> None:
     assert "docs/schemas/blackboard/INDEX.md" in paths
 
 
+@pytest.mark.slow
 def test_v5_normalized_manifest_digest_is_unchanged() -> None:
     paths = _v5_paths()
 
