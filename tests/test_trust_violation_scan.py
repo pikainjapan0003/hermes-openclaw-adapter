@@ -138,7 +138,9 @@ def _audit_text_violations(sources: dict[str, str]) -> list[str]:
     violations: list[str] = []
     for filename, source in sources.items():
         if filename.endswith("/audit_writer_local.py"):
-            violations.append(f"{filename}: forbidden audit writer module")
+            # Phase 7 is explicitly authorized; its exact write scope is guarded
+            # by test_audit_write_scope_proof.py.
+            continue
         for line_number, line in enumerate(source.splitlines(), start=1):
             if AUDIT_TARGET in line.replace("\\", "/"):
                 violations.append(
@@ -239,9 +241,9 @@ def test_execution_token_remains_null_in_schema_ast_and_source_text() -> None:
     }
 
 
-def test_no_phase7_audit_writer_or_audit_dev_target_exists_in_app() -> None:
+def test_phase7_audit_writer_is_the_only_authorized_audit_surface() -> None:
     assert _audit_text_violations(_app_sources()) == []
-    assert not (APP_DIR / "audit_writer_local.py").exists()
+    assert (APP_DIR / "audit_writer_local.py").exists()
 
 
 def test_post_route_inventory_is_exact_and_rejects_new_surface() -> None:

@@ -23,7 +23,6 @@ PATH_REFERENCE = re.compile(
 # These references are deliberately absent and are locked here so that the guard
 # distinguishes planning/history from an accidental broken current-state link.
 INTENTIONALLY_ABSENT_PATH_REFERENCES = {
-    "app/audit_writer_local.py": "Phase 7 design target; writer is not authorized",
     "app/connector_scope_gate.py": "Phase 10 future output",
     "data/audit_dev.jsonl": "Phase 7 target; formal data path must remain absent",
     "data/blackboard_dev/": "planning-only board layout",

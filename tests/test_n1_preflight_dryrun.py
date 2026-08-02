@@ -105,10 +105,14 @@ def test_current_preflight_runs_every_check_and_fails_closed(capsys) -> None:
         "runtime_rehearsal_authorized",
     ]
     assert all(item.passed for item in checks[:5])
-    assert all(not item.passed and item.disposition == "BLOCK" for item in checks[5:])
+    assert all(
+        (item.passed if item.name == "phase7_writer_exists" else not item.passed)
+        and item.disposition == "BLOCK"
+        for item in checks[5:]
+    )
     assert report.endswith("FINAL | BLOCKED")
     assert "token_schema_allows_live_token | FAIL | BLOCK" in report
-    assert "phase7_writer_exists | FAIL | BLOCK" in report
+    assert "phase7_writer_exists | PASS | BLOCK" in report
     assert "owner_synchronously_present | FAIL | BLOCK" in report
     assert "FINAL | READY" not in report
     assert "Phase 9 N=1 preflight" in capsys.readouterr().out
@@ -162,7 +166,9 @@ def test_only_test_memory_can_render_the_all_conditions_true_counterfactual(
     current = evaluate_preflight()
     assert render_preflight_report(current).endswith("FINAL | BLOCKED")
     assert all(
-        not check.passed for check in current if check.name in BLOCKER_NAMES
+        not check.passed
+        for check in current
+        if check.name in BLOCKER_NAMES and check.name != "phase7_writer_exists"
     )
 
     counterfactual = [replace(check, passed=True) for check in current]
@@ -177,7 +183,9 @@ def test_only_test_memory_can_render_the_all_conditions_true_counterfactual(
     restored = evaluate_preflight()
     assert render_preflight_report(restored).endswith("FINAL | BLOCKED")
     assert all(
-        not check.passed for check in restored if check.name in BLOCKER_NAMES
+        not check.passed
+        for check in restored
+        if check.name in BLOCKER_NAMES and check.name != "phase7_writer_exists"
     )
 
 
