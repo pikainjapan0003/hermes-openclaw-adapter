@@ -92,7 +92,7 @@
 - 症狀：Codex 自報 `git diff --check` 無輸出，Fable 5 在待審 branch 的實際狀態重跑卻得到一行輸出；「綠」的文字主張與可重算證據不一致
 - 根因：自報命令可能未實跑，或跑在不同 checkout／HEAD／編輯狀態；回報只寫結論，未貼 stdout/stderr 與被檢查狀態，因此無法追溯
 - 缺的規則：逐 package 的 diff-check 原始輸出與 active-checkout/state 證據
-- 新增/修改的規則：40 F7.5；每包在編輯完成、commit 前於 authorized checkout 實跑 `git diff --check`，逐包回報原文。空輸出也必須明寫 `（無輸出；exit 0）`，不得用「已確認」代替
+- 新增/修改的規則：40 F7 第 5 條；每包在編輯完成、commit 前於 authorized checkout 實跑 `git diff --check`，逐包回報原文。空輸出也必須明寫 `（無輸出；exit 0）`，不得用「已確認」代替
 - 驗收：NIGHT-BATCH-19 的 done/HOLD/skipped 逐包回報都附該包 `git diff --check` 原文；Fable 5 必須在同一待審 branch 獨立重跑，不沿用 Codex 自報數字
 
 ## L-011 路徑間接不等於逃逸：邊界必須寫成可機械檢查的不變式

@@ -9,10 +9,10 @@ Purpose: preserve every consumed-package entry removed from the active backlog d
 | Before location | Entry count | After location | Semantic change |
 |---|---:|---|---|
 | Backlog NB-18 completed table | 22 package rows | NB-18 table below + one-line backlog index | None |
-| Backlog NB-19 consumed table | 19 package rows | NB-19 table below + one-line backlog index | None; HOLD evidence retained |
+| Backlog NB-19 consumed table | 22 package rows after R12-01 closeout | NB-19 table below + one-line backlog index | None; HOLD and correction evidence retained |
 | Backlog NB-20 consumed table | 19 package rows | NB-20 table below + one-line backlog index | None; HOLD/correction evidence retained |
 
-The mapping is one-to-one: 60 input rows map to 60 rows below. No active-stock row, Owner-gate row, boundary, finding, or authorization sentence was moved or removed.
+The mapping is one-to-one: the 60 rows moved by package 4 remain present, and R12-01 adds the three previously omitted NB-19 closeout rows. No active-stock row, Owner-gate row, boundary, finding, or authorization sentence was moved or removed.
 
 ## NB-18 table
 
@@ -64,6 +64,9 @@ The mapping is one-to-one: 60 input rows map to 60 rows below. No active-stock r
 | 17 | v1.0 readiness fifth pass | `85fd7e2` |
 | 18 | Phase-7 implementation package spec v2 | `3f4d1f4` |
 | 19 | Unified 65-artifact integrity inventory | `b9375c1` |
+| 20 | Backlog refill Round 9 | `3b82cc3` |
+| 21 | Lesson L-010 and diff-check evidence rule | `c62ff6b`; correction `26ded83` |
+| 22 | Phase-11 health report 2026-08-02 | `97080e1` |
 
 ## NB-20 table
 

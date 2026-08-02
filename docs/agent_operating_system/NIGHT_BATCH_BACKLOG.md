@@ -392,9 +392,9 @@ blockers remain the Phase 7 exact instruction and Phase 9 Owner presence.
 | Phase 7 audit writer | Exact active instruction still absent | No writer, formal `data/`, or persistent append |
 | Phase 9 N=1 | Owner presence and prior Phase 7 closeout absent | Token remains null; preflight stays blocked |
 
-### NIGHT-BATCH-19 consumed through package 19
+### NIGHT-BATCH-19 consumed through package 22
 
-Packages 1–19 (including HOLD evidence for 6/9/11) are consumed; the exact result/commit index is preserved in `research/NIGHT_BATCH_BACKLOG_COMPACTION_CROSSWALK_20260804.md` (NB-19 table).
+Packages 1–22 (including HOLD evidence for 6/9/11 and the package-21 correction) are consumed; the exact result/commit index is preserved in `research/NIGHT_BATCH_BACKLOG_COMPACTION_CROSSWALK_20260804.md` (NB-19 table).
 
 Older NIGHT-BATCH-17 stock for hardlinks, active-checkout portability,
 coverage-floor layering, test-layer markers, and fixture hash portability is
@@ -415,9 +415,9 @@ Packages 1–19 (including HOLD evidence for 8/10) are consumed; the exact resul
 
 | Item | Source | Boundary |
 |---|---|---|
-| Repair the NIGHT-BATCH-19 consumed table so packages 20–22 are traceable | R12-01 | Docs only; preserve historical commits |
-| Replace pseudo-address `F7.5` with `F7 item 5` at point of use | R12-02 | Docs only; rule semantics unchanged |
-| Add later-status metadata to `PHASE11_HEALTH_20260802.md` | R12-03 | Preserve original measurements; append accepted final state |
+| Make NIGHT-BATCH-19 packages 20–22 traceable | R12-01 | 【已完成】NB-21 package 6; historical commits preserved in the compaction crosswalk |
+| Use unambiguous `F7 item 5` references at point of use | R12-02 | 【已完成】NB-21 package 6; rule semantics unchanged |
+| Add later-status metadata to `PHASE11_HEALTH_20260802.md` | R12-03 | 【已完成】NB-21 package 6; original measurements preserved with accepted final state appended |
 | Design explicit schema-version evolution semantics | NIGHT-BATCH-20 package 8 HOLD | Proposal/tests design first; no schema modification without a dedicated authorized package |
 | Design a real approval/evidence cross-contract join | NIGHT-BATCH-20 package 10 HOLD | Start from actual field locations; no test-only validator or invented common shape |
 | Make the metrics subprocess timeout portable across `/mnt/c` and native WSL | package-19 mounted full result | Research/proposal first; do not weaken or xfail the `git diff --check` guard |

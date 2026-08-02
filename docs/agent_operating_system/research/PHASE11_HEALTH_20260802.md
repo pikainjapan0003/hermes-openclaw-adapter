@@ -36,11 +36,20 @@ The first full run was **not** green: `1 failed, 1953 passed, 6 skipped,
 working-tree `git diff --check` had missed while the files were untracked or
 already committed. Commit `26ded83` removed exactly those nine blank lines;
 the metrics/slow guard then passed 6/6 and the full suite was rerun to the green
-result above. This is direct evidence for L-010/F7.5, not a hidden retry.
+result above. This is direct evidence for L-010/F7 item 5, not a hidden retry.
 
 Total full outcomes are 1,974 (`1954 + 6 + 14`), up from the NIGHT-BATCH-18
 baseline of 1,882: **+92 outcomes / +4.89%**. The established 14-xfail
 redaction baseline did not grow.
+
+### Later accepted closeout (metadata only)
+
+The original package-time measurements above remain unchanged. Fable 5 later
+accepted final NIGHT-BATCH-19 HEAD `97080e1` after independently running the
+same two profiles in native WSL: default fast was `1942 passed, 18 deselected,
+14 xfailed in 94.62s`; full was `1960 passed, 14 xfailed in 403.54s`. This note
+is later-status metadata, not a rewrite of the point-in-time rows and not an
+authorization for any runtime or safety-gated work.
 
 ## Coverage
 

@@ -54,3 +54,13 @@ R12-01 requires a docs-only backlog closeout update. R12-02 requires replacing
 the pseudo-address with an unambiguous `F7 item 5` reference. R12-03 requires a
 later-status note that preserves, rather than rewrites, the original
 measurement. Until separately authorized, these remain findings only.
+
+## Later resolution metadata — NIGHT-BATCH-21 package 6
+
+The historical findings above are retained verbatim. Their later disposition is:
+
+| Finding | Resolution location |
+|---|---|
+| R12-01 | `NIGHT_BATCH_BACKLOG.md:395-397` now closes NB-19 through package 22; `research/NIGHT_BATCH_BACKLOG_COMPACTION_CROSSWALK_20260804.md:67-69` preserves packages 20–22 and their commits. |
+| R12-02 | `90_LESSONS_LEARNED.md:95` and `research/PHASE11_HEALTH_20260802.md:39` now say `F7 第 5 條` / `F7 item 5`, not the nonexistent pseudo-address. |
+| R12-03 | `research/PHASE11_HEALTH_20260802.md:45-52` appends accepted final-HEAD metadata while preserving the original point-in-time numbers. |
