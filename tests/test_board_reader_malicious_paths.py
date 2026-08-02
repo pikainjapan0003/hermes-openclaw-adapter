@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import os
+import socket
+import stat
 from pathlib import Path
 
 import pytest
@@ -59,6 +61,50 @@ def test_reader_rejects_symlink_without_reading_outside_board(
     assert read_paths == []
     assert outside.read_text(encoding="utf-8") == outside_marker
     assert outside_marker not in json.dumps(result, ensure_ascii=False)
+
+
+def test_reader_accepts_a_caller_selected_root_symlink(tmp_path: Path) -> None:
+    real_root = tmp_path / "real-board"
+    real_root.mkdir()
+    (real_root / "0001_task_draft.json").write_text(
+        json.dumps(_fixture("task_draft"), ensure_ascii=False, sort_keys=True),
+        encoding="utf-8",
+    )
+    selected_root = tmp_path / "selected-board"
+    try:
+        selected_root.symlink_to(real_root, target_is_directory=True)
+    except OSError as exc:
+        pytest.skip(f"platform cannot create root symlink: {type(exc).__name__}")
+
+    result = read_blackboard_board(selected_root)
+
+    assert selected_root.resolve() == real_root.resolve()
+    assert result["valid"] is True
+    assert result["board_name"] == selected_root.name
+    assert result["entry_count"] == 1
+    assert result["errors"] == []
+
+
+def test_reader_rejects_relative_parent_escape_symlink(tmp_path: Path) -> None:
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    marker = "RELATIVE-PARENT-ESCAPE-MUST-NOT-BE-READ"
+    (outside / "payload.json").write_text(marker, encoding="utf-8")
+    board = tmp_path / "board"
+    board.mkdir()
+    link = board / "0001_task_draft.json"
+    try:
+        link.symlink_to(Path("..") / "outside" / "payload.json")
+    except OSError as exc:
+        pytest.skip(f"platform cannot create relative symlink: {type(exc).__name__}")
+
+    result = read_blackboard_board(board)
+
+    assert link.resolve() == (outside / "payload.json").resolve()
+    assert result["valid"] is False
+    assert result["entries"] == []
+    assert result["errors"][0]["code"] == "symlink_rejected"
+    assert marker not in json.dumps(result, ensure_ascii=False)
 
 
 def test_reader_structurally_rejects_hostile_entry_shapes(tmp_path: Path) -> None:
@@ -141,6 +187,40 @@ def test_reader_rejects_fifo_as_nonregular_entry(tmp_path: Path) -> None:
             "message": "nested or non-file entry is not allowed",
         }
     ]
+
+
+def test_reader_rejects_unix_socket_as_nonregular_entry(tmp_path: Path) -> None:
+    if not hasattr(socket, "AF_UNIX"):
+        pytest.skip("platform has no AF_UNIX filesystem socket support")
+    socket_path = tmp_path / "0001_task_draft.json"
+    listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    try:
+        listener.bind(str(socket_path))
+        result = read_blackboard_board(tmp_path)
+    except OSError as exc:
+        pytest.skip(f"platform cannot create filesystem socket: {type(exc).__name__}")
+    finally:
+        listener.close()
+
+    assert result["valid"] is False
+    assert result["entries"] == []
+    assert result["errors"][0]["code"] == "unexpected_entry"
+
+
+def test_reader_rejects_device_as_nonregular_entry(tmp_path: Path) -> None:
+    if os.name == "nt" or not hasattr(os, "mknod") or not hasattr(os, "makedev"):
+        pytest.skip("device-node creation is unavailable on this platform")
+    device_path = tmp_path / "0001_task_draft.json"
+    try:
+        os.mknod(device_path, stat.S_IFCHR | 0o600, os.makedev(1, 3))
+    except (OSError, PermissionError) as exc:
+        pytest.skip(f"platform cannot create device node: {type(exc).__name__}")
+
+    result = read_blackboard_board(tmp_path)
+
+    assert result["valid"] is False
+    assert result["entries"] == []
+    assert result["errors"][0]["code"] == "unexpected_entry"
 
 
 def test_reader_does_not_recurse_through_recursive_symlink(
