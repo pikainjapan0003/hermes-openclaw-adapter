@@ -30,6 +30,7 @@ GOVERNANCE_FILES = {
     "test_f4_size_thresholds.py",
     "test_n1_preflight_gate.py",
     "test_queue_claim_guard.py",
+    "test_performance_claim_guard.py",
     "test_three_source_readonly.py",
     "test_test_layer_markers.py",
     "test_trust_violation_scan.py",

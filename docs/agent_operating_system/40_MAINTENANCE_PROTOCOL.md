@@ -24,6 +24,19 @@ Verification: run the malicious-path, fixture-integrity, mirror-drift, and full-
 - Required full path before batch acceptance: `python -m pytest -o addopts=""`. This overrides the repository default and includes every `slow` test without deleting or disabling it.
 - A fast-path pass is not evidence that the full path passed. Reports must name the command actually run and preserve both outcomes when a package requires both.
 
+### Performance claim provenance
+
+- Every timing number in a current performance or Phase-11 health report must
+  be accompanied by a report-level environment note covering OS/host, Python,
+  test runner, checkout/commit, and relevant isolation or load conditions.
+- A historical report that lacks those facts must say `environment unknown` and
+  its timing is non-reproducible context, not acceptance evidence. Do not fill
+  in missing facts from memory.
+- The performance-claim guard mechanically checks that every report containing
+  timing output has an environment section and the commands used. A number
+  without that provenance is a documentation finding, not a green performance
+  claim.
+
 ## F8. Contract/spec dispatch precheck
 
 Before dispatching any package whose acceptance criteria depend on a machine

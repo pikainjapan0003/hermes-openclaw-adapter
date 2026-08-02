@@ -2,6 +2,12 @@
 
 Status: NIGHT-BATCH-11 package 15 measurement; report only.
 
+## Environment note
+
+The original package report did not preserve OS, Python, pytest, or checkout
+details. **Environment unknown; timing values below are historical,
+non-reproducible context and are not acceptance evidence.**
+
 ## Acceptance snapshot
 
 ```text
