@@ -1,4 +1,4 @@
-# Phase 7 Local Audit Writer — Implementation Package Draft v4
+# Phase 7 Local Audit Writer — Implementation Package Draft v5
 
 **未取得 Owner 逐字授權句前，本檔不得被當成派工單使用**
 
@@ -6,7 +6,7 @@ Status: **PLANNING ONLY, NOT AUTHORIZED — DRAFT FOR FUTURE OWNER REVIEW**
 
 Authority sources: `07_AUDIT_WRITE_DESIGN.md`,
 `40_MAINTENANCE_PROTOCOL.md` F7 and F8, and
-`90_LESSONS_LEARNED.md` L-011 and L-012. This draft compresses that approved
+`90_LESSONS_LEARNED.md` L-011, L-012, and L-013. This draft compresses that approved
 design into a reviewable future package shape. It does not create a writer,
 open a file, authorize persistence, change Phase 7 status, or satisfy the
 mandatory gate merely by quoting it.
@@ -58,7 +58,28 @@ Forbidden targets include every other `data/` path, caller-selected paths,
 environment-selected paths, production/shared storage, logs as a fallback,
 temporary side-channel persistence, and a second audit file.
 
-### F8/L-012 dispatch evidence
+### F8/L-012/v5 dispatch evidence
+
+Before this draft can become a future dispatch brief, the evidence review must
+cover all three classes of claims, not only named fields:
+
+1. **Field existence and shape:** every field named by the package must be
+   present at the current schema path, with its required/optional status and
+   type composition recorded.
+2. **Schema-keyword claims:** every statement that a keyword is present or
+   absent (for example `oneOf`, `anyOf`, `allOf`, `const`, `enum`, `pattern`,
+   or conditional `if`/`then`/`else`) must be checked by parsing the current
+   schema, not by a fragile text search. A missing or changed keyword makes
+   the package `HOLD`.
+3. **Behavior and precondition claims:** every statement about validation,
+   path resolution, link-count handling, line endings, locking, or chain
+   verification must be reproduced against the current implementation or
+   an explicitly named test. A behavior that is not implemented or testable
+   is a `HOLD`, not an invitation to invent a fallback.
+
+The reviewer must record the command or test and file:line evidence for each
+class. This is a pre-dispatch gate; it does not authorize a writer or any
+persistent write.
 
 Before this draft can become a future dispatch brief, its input contract claim
 must be rechecked against the then-current repository. At this v4 snapshot the
