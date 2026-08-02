@@ -5,15 +5,22 @@
 
 ---
 
-## C0. 本環境已驗證的模型與工具（2026-07-07，Claude Code / VSCode extension 環境）
+## C0. 環境別已驗證的模型與工具
 
-以下為 Fable 5 session 實測驗證：
+下列 Claude Code / VSCode extension 資訊是 Fable 5 session 在
+2026-07-07 至 2026-07-18 的歷史實測快照，不是所有介面的即時可用清單：
 
 - 可用 subagent 類型：`general-purpose`（全工具）、`Explore`（唯讀搜索）、`Plan`（架構規劃）、`claude`、`claude-code-guide`、`openclaw-model-fix`（本機自訂）、`statusline-setup`。
 - Agent tool 可指定 model：`sonnet` / `opus` / `haiku` / `fable`。
 - 模型 ID（2026-07-18 實測更新）：`claude-fable-5`（曾於 2026-07-07 後短暫失效；**自 2026-07-14 起恢復且為主力模型**，本日 session 即 Fable 5）、`claude-opus-4-8`、`claude-sonnet-5`、`claude-haiku-4-5-20251001`。
 - subagent 可用 MCP Google Drive 工具與 Web 工具（本 session 實測成功）。
 - effort / thinking 參數：**無法確認 effort 設定**——subagent 的 reasoning effort 由 agent 定義檔控制，本 session 無法逐一驗證。不要對外宣稱某 subagent 用了某 effort。
+
+2026-08-02 的 NIGHT-BATCH-20 Codex Desktop 工作單則明示施工格位為
+`GPT-5.6 Sol + high`。該介面提供的可選 agent metadata 可見
+`gpt-5.6-sol` 與 `gpt-5.6-terra`，但這項局部觀察不能證明其他介面的
+Luna 或 Fable 可用性，也不能修改 C8 已拍板的五級路由。跨介面模型清單
+若不一致，一律記為環境差異並重新驗證，不自行選新路由。
 
 **每個新環境（尤其 API 直連、CLIProxyAPI、OpenClaw gateway）必須重新驗證上表**，方法：列出實際可用工具與模型，寫進回報；過期資訊不得沿用。若無法查到可用模型，採用此原則：
 
@@ -46,9 +53,14 @@ Use cheaper model only after task shape is fully specified.
 
 ## C3. 顯式指定 model
 
-- 讀取/枚舉/格式轉換 → `haiku`（錯一次立刻升 `sonnet`）。
-- 實作/測試/文件起草 → `sonnet`。
-- 架構取捨、安全審查、最終 review → 可用的最強模型（2026-07-18 驗證為 `fable`＝Fable 5；驗證當下清單見 C0）。
+- 建造層的現行格位只依 C8 五級路由：量產用 `Luna+high`、純 coding 用
+  `Luna+max`、主幹開發用 `Sol+high`、重大設計用 `Sol+xhigh`、關鍵決策
+  用 `Sol+max`。`Sol+ultra` 仍只是 C8 所列的非常規升級終點，不是第六個
+  日常格位。
+- Fable 5 負責建造層的指揮、批審與制度維護；它不因工作單指定了 Codex
+  格位而被替換，也不把批審自動變成 merge/push 授權。
+- C0 的 `haiku`／`sonnet`／`opus` 是特定 Claude 環境的已驗證能力快照，
+  不再作為跨環境的預設建造路由。
 - 規則：**任務形狀未完全指定前，不用便宜模型**。便宜模型的正確用法是「強模型解出模式後的批次套用」。
 
 ## C4. 回報合約
@@ -117,5 +129,11 @@ Sol+ultra 仍卡 → 交回 Fable 5 親自解決；Fable 5 也解不了 → 寫�
 ```
 
 舊路徑「打包 GPT 審查包由 Owner 搬運給 ChatGPT 5.5 裁決」**已廢止**（ChatGPT 審查線 2026-07-14 退場，Dream-system Q56）。
+
+**夜跑體制**：Owner 發出逐包邊界後，Codex 依指定五級格位在獨立
+`night-batch-*` branch 施工並逐包 commit；卡住只能 HOLD/skipped，不得換包。
+Fable 5 依 `05_VERIFIED_LONG_TERM_PLAN.md` §6.13 批審，施工者不得 merge/push。
+這個流程是既有常設指示的操作方式，不新增任何 Phase 7、Phase 9 或其他
+Owner 專屬閘門的授權。
 
 **多審查員硬規則**（Owner 裁決，對應 20 R-13）：高風險審查（安全邊界/寫入路徑/執行閘/Owner 簽核前產物）**絕不指派單一 agent 或單一模型**——至少 2 個不同模型的 fresh-context 審查員交叉審，單一模型自審不得作為通過依據。
