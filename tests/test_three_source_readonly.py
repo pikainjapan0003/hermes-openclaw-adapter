@@ -99,6 +99,38 @@ def test_origin_and_replit_failures_are_unreachable_not_exceptions(monkeypatch) 
     assert "offline" in report.replit.detail
 
 
+def test_non_git_directory_reports_local_unreachable(tmp_path: Path) -> None:
+    """A plain directory cannot claim a local Git HEAD."""
+
+    state = checker.read_local_head(tmp_path)
+
+    assert state.source == "local"
+    assert state.value == "UNREACHABLE"
+    assert state.detail
+
+
+@pytest.mark.parametrize("remote", ("missing", "https://example.invalid/repo.git"))
+def test_remote_lookup_failure_reports_github_unreachable(
+    remote: str, monkeypatch
+) -> None:
+    """Unknown or unreachable remotes fail closed without raising."""
+
+    def failing_ls_remote(command: list[str], **_kwargs: object):
+        assert command[1] == "ls-remote"
+        assert command[2] == remote
+        return subprocess.CompletedProcess(
+            command, 128, "", f"fatal: remote unavailable: {remote}"
+        )
+
+    monkeypatch.setattr(checker.subprocess, "run", failing_ls_remote)
+
+    state = checker.read_origin_head(Path("repo"), remote=remote)
+
+    assert state.source == "github"
+    assert state.value == "UNREACHABLE"
+    assert "remote unavailable" in state.detail
+
+
 def test_main_exit_codes_are_status_only(monkeypatch, capsys) -> None:
     report = checker.ThreeSourceReport(
         checker.SourceState("local", LOCAL_HASH, "local"),
