@@ -46,6 +46,22 @@ def _rehash(bundle: dict[str, Any]) -> None:
     bundle["bundle_hash"] = compute_bundle_hash(bundle)
 
 
+class _SchemaInvalidBoolLike:
+    """Equal to its bool value, but never to a peer instance.
+
+    Valid JSON/schema input cannot have this behavior.  It lets the test reach
+    the retained defense-in-depth comparison without weakening or deleting it.
+    """
+
+    def __init__(self, value: bool) -> None:
+        self.value = value
+
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, bool):
+            return self.value is other
+        return self is other
+
+
 @pytest.mark.parametrize(
     ("target", "field", "value", "error"),
     (
@@ -80,6 +96,21 @@ def test_rollback_rejects_bundle_only_task_and_execution_drift() -> None:
     bundle["task"]["execution_class"] = "OWNER_APPROVAL"
     _rehash(bundle)
     with pytest.raises(RollbackPreviewBuildError, match="execution_class values"):
+        build_rollback_preview(audit, bundle, result)
+
+
+def test_rollback_retains_cross_source_flag_defense_for_nonschema_objects() -> None:
+    audit, bundle, result = _rollback_sources()
+    audit["safety_flags"] = {
+        key: _SchemaInvalidBoolLike(value)
+        for key, value in audit["safety_flags"].items()
+    }
+    result["safety_flags"] = {
+        key: _SchemaInvalidBoolLike(value)
+        for key, value in result["safety_flags"].items()
+    }
+
+    with pytest.raises(RollbackPreviewBuildError, match="source safety_flags must match$"):
         build_rollback_preview(audit, bundle, result)
 
 
