@@ -83,6 +83,65 @@ def _type_name(schema: Mapping[str, Any]) -> str:
     return "unspecified"
 
 
+def _literal(value: Any) -> str:
+    return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+
+
+def _condition_terms(schema: Mapping[str, Any], prefix: str = "") -> list[str]:
+    terms: list[str] = []
+    properties = schema.get("properties")
+    if not isinstance(properties, Mapping):
+        return terms
+    for field, detail in properties.items():
+        if not isinstance(detail, Mapping):
+            continue
+        name = f"{prefix}.{field}" if prefix else str(field)
+        if "const" in detail:
+            terms.append(f"{name} == {_literal(detail['const'])}")
+        elif isinstance(detail.get("enum"), list):
+            terms.append(f"{name} in {_literal(detail['enum'])}")
+        elif isinstance(detail.get("not"), Mapping):
+            negated = detail["not"]
+            if "const" in negated:
+                terms.append(f"{name} != {_literal(negated['const'])}")
+        terms.extend(_condition_terms(detail, name))
+    return terms
+
+
+def _conditional_rule_lines(schema: Mapping[str, Any]) -> list[str]:
+    """Describe root conditional rules without claiming full schema semantics."""
+
+    rules: list[Mapping[str, Any]] = []
+    all_of = schema.get("allOf")
+    if isinstance(all_of, list):
+        rules.extend(item for item in all_of if isinstance(item, Mapping))
+    if isinstance(schema.get("if"), Mapping):
+        rules.append(schema)
+
+    lines: list[str] = []
+    for rule in rules:
+        condition = rule.get("if")
+        then = rule.get("then")
+        otherwise = rule.get("else")
+        if not isinstance(condition, Mapping) or not isinstance(then, Mapping):
+            continue
+        condition_terms = _condition_terms(condition)
+        then_terms = _condition_terms(then)
+        if not condition_terms or not then_terms:
+            continue
+        lines.append(
+            "- if "
+            + " and ".join(condition_terms)
+            + " then "
+            + " and ".join(then_terms)
+        )
+        if isinstance(otherwise, Mapping):
+            else_terms = _condition_terms(otherwise)
+            if else_terms:
+                lines.append("- otherwise " + " and ".join(else_terms))
+    return lines
+
+
 def render_schema_markdown(schema: Mapping[str, Any], source_name: str) -> str:
     """Return one deterministic Markdown section without writing a file."""
 
@@ -121,6 +180,9 @@ def render_schema_markdown(schema: Mapping[str, Any], source_name: str) -> str:
         "Closed object: "
         + ("yes" if schema.get("additionalProperties") is False else "no/unspecified")
     )
+    conditional_rules = _conditional_rule_lines(schema)
+    if conditional_rules:
+        lines.extend(["", "### Conditional rules", "", *conditional_rules])
     return "\n".join(lines)
 
 
