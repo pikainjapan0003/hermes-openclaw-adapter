@@ -393,9 +393,9 @@ blockers remain the Phase 7 exact instruction and Phase 9 Owner presence.
 
 | Item | Source | Boundary |
 |---|---|---|
-| Reject a board-root symlink in `blackboard_board_reader` | NB-19 package 6 HOLD | Product fix plus regression tests; do not weaken F7, follow the link, or create a formal board/data directory |
-| Decide the Replit response-body contract for three-source checking | NB-19 package 9 HOLD | Choose reachability-only (remove body cases) or a bounded/parsed body contract before code; no remote write/deploy |
-| Extend schema renderer for `$ref`, deep properties, `oneOf` and `anyOf` | NB-19 package 11 HOLD | Read-only stdout tool plus tests; no generated file persistence and no schema changes |
+| 【已裁決】Board-root symlink contract | NB-19 package 6 HOLD → Fable 5 C, 2026-08-02 | Root is the caller-selected trust anchor; reject board-entry symlinks and enforce the F7 realpath invariant |
+| 【已裁決】Replit response-body contract | NB-19 package 9 HOLD → Fable 5 A, 2026-08-02 | Reachability-only; response body and deployed revision are not read or claimed |
+| 【已裁決】Schema renderer `oneOf` fidelity | NB-19 package 11 HOLD → Fable 5 A, 2026-08-02 | Fix the stdout-only renderer and add exhaustive tests; no generated-file persistence or schema changes |
 | Repair NB-18 correction-commit traceability and add F7/L-009 point-of-use links | R11-01/R11-02 | Docs only; preserve historical commit content and all gates |
 | Add later-status metadata to the dated 2026-08-01 health snapshot | R11-03 | Docs only; do not rewrite point-in-time measurements |
 | Repair 20 R-05/R-11 and nightly cross-references | `CORE_DOCS_REVIEW_20.md` findings 01–06 | Dedicated rubric docs package; preserve authorization precedence and §6.13 limits |
