@@ -26,7 +26,28 @@ Verification: run the malicious-path, fixture-integrity, mirror-drift, and full-
 
 ## F8. Contract/spec dispatch precheck
 
-Before dispatching any package whose acceptance criteria depend on contract fields, the dispatch brief must include a field-by-field evidence table that maps every claimed field to the actual schema or fixture `file:line` where it exists. The dispatcher must inspect the repository artifact itself; inference from another contract, a builder name, an earlier report, or memory is not evidence. If any required field lacks this evidence, the package is not dispatchable and must remain HOLD until the brief is corrected (90 L-012).
+Before dispatching any package whose acceptance criteria depend on a machine
+contract or a factual tool/module precondition, the dispatch brief must include
+file:line evidence from the actual repository artifact. The dispatcher must
+inspect the artifact at the authorized HEAD; inference from another contract,
+a builder name, an earlier report, or memory is not evidence. F8 has three
+mandatory evidence classes:
+
+1. **Field existence:** every claimed field is mapped to the actual schema or
+   fixture line where it exists (90 L-012).
+2. **Schema-keyword claims:** every claim that a schema does or does not use a
+   keyword or composition (`oneOf`, `anyOf`, `allOf`, `$ref`, `if`/`then`/`else`,
+   `not`, or a future equivalent) is mapped to the inspected schema lines that
+   establish presence or absence.
+3. **Behaviour preconditions:** every claim that a tool or module fail-closes,
+   exposes a state, supports a mode, or rejects a condition is mapped to the
+   implementation/test lines that establish that behaviour; if it has not been
+   verified, the brief must say **待驗證** instead of asserting it as fact.
+
+If any applicable class lacks evidence, the package is not dispatchable and
+must remain HOLD until the brief is corrected. A package may not turn an
+uncited fact into a test assertion, invented field, schema change, or weakened
+acceptance rule.
 
 ## F1. 可以自行修改（改動落於工作區並在回報中註明；commit 需 Owner 指示。視情況記入 90）
 
