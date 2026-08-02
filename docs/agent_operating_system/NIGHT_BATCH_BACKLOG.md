@@ -460,7 +460,7 @@ Phase 7 instruction, Phase 9 permission, or Owner option selection.
 | 4 | HTTP reachability-only semantics documented | `bd16530` |
 | 5 | Three NIGHT-BATCH-19 HOLD decisions recorded | `ad145eb` |
 | 6 | L-011 records path-indirection specification debt | `c1f94ee` |
-| 7 | Lowest managed legacy modules receive tests without deleting defensive branches | `3b3c587`; independent coverage remeasurement remains acceptance evidence |
+| 7 | Lowest managed legacy modules receive tests without deleting defensive branches | `3b3c587`, correction `aba025b`; independent coverage: rollback 100%, full-loop 99% |
 | 8 | **HOLD**: current schemas permit non-`1.0` `schema_version`; tests-only scope cannot create version-evolution semantics | Direct 90-case evidence; no commit |
 | 9 | Eight concurrent readers over one 500-file board return identical results without mutation | `64fe49b` |
 | 10 | **HOLD**: approval packet and evidence bundle do not expose the requested four fields at a common shape and no cross-builder gate exists | Direct builder evidence; no commit |
@@ -472,7 +472,7 @@ Phase 7 instruction, Phase 9 permission, or Owner option selection.
 | 16 | v1.0 readiness sixth pass with estimates and sole gatekeepers | `8b64962` |
 | 17 | Phase-7 implementation package draft v3; still twice marked unauthorized | `3744a61` |
 | 18 | Closed 278-item normalized artifact inventory | `50ae4f7` |
-| 19 | Fast/full performance Round 2 and markers for new expensive tests | `8cd34c1` |
+| 19 | Fast/full performance Round 2 and markers for new expensive tests | `8cd34c1`, native-measurement correction `98fbcf5` |
 
 ### Next night-run stock
 
@@ -483,13 +483,12 @@ Phase 7 instruction, Phase 9 permission, or Owner option selection.
 | Add later-status metadata to `PHASE11_HEALTH_20260802.md` | R12-03 | Preserve original measurements; append accepted final state |
 | Design explicit schema-version evolution semantics | NIGHT-BATCH-20 package 8 HOLD | Proposal/tests design first; no schema modification without a dedicated authorized package |
 | Design a real approval/evidence cross-contract join | NIGHT-BATCH-20 package 10 HOLD | Start from actual field locations; no test-only validator or invented common shape |
-| Re-run managed coverage in a native WSL checkout and classify retained defensive branches | NIGHT-BATCH-20 package 7 | Measurement/report only unless a later package names exact test changes |
 | Make the metrics subprocess timeout portable across `/mnt/c` and native WSL | package-19 mounted full result | Research/proposal first; do not weaken or xfail the `git diff --check` guard |
 | Audit fast-path tests that exceed two seconds in native WSL | package-19 durations | Only newly demonstrated native regressions may receive a later marker package |
 | Resolve Round-12 findings after fresh-context confirmation | `research/GOVERNANCE_AUDIT_ROUND12.md` | Findings are not self-authorizing fixes |
 | Refresh the accepted Phase-11 metrics after NIGHT-BATCH-20 review | package 22 input | Report only; all numbers must be recomputable |
 
-The ten bounded items above are sufficient material for another night batch;
+The nine bounded items above are sufficient material for another night batch;
 none requires inventing execution or persistence work.
 
 ### Owner gates remain blank
