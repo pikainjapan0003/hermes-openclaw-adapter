@@ -18,6 +18,7 @@ FUZZ_FILES = {
     "test_board_reader_file_fuzz.py",
     "test_builder_input_fuzz.py",
     "test_contract_mutation_resistance.py",
+    "test_remote_projection_conditional_mutation.py",
     "test_schema_fuzz.py",
 }
 GOVERNANCE_FILES = {
