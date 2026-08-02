@@ -24,6 +24,10 @@ Verification: run the malicious-path, fixture-integrity, mirror-drift, and full-
 - Required full path before batch acceptance: `python -m pytest -o addopts=""`. This overrides the repository default and includes every `slow` test without deleting or disabling it.
 - A fast-path pass is not evidence that the full path passed. Reports must name the command actually run and preserve both outcomes when a package requires both.
 
+## F8. Contract/spec dispatch precheck
+
+Before dispatching any package whose acceptance criteria depend on contract fields, the dispatch brief must include a field-by-field evidence table that maps every claimed field to the actual schema or fixture `file:line` where it exists. The dispatcher must inspect the repository artifact itself; inference from another contract, a builder name, an earlier report, or memory is not evidence. If any required field lacks this evidence, the package is not dispatchable and must remain HOLD until the brief is corrected (90 L-012).
+
 ## F1. 可以自行修改（改動落於工作區並在回報中註明；commit 需 Owner 指示。視情況記入 90）
 
 F1 的「自行修改」指工作區檔案編輯，屬 01 §4 第 5 條的任務授權範圍。git commit / push 永遠需要 Owner 指示，不隨 F1 附帶。
