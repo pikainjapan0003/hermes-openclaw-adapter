@@ -189,7 +189,7 @@ def _exclusive_append(handle: Any) -> Iterator[None]:
         else:
             import fcntl
 
-            fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX)  # type: ignore[attr-defined]
         yield
     except (OSError, ImportError) as exc:
         raise AuditWriterError("audit append lock unavailable") from exc
@@ -203,7 +203,7 @@ def _exclusive_append(handle: Any) -> Iterator[None]:
             else:
                 import fcntl
 
-                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)  # type: ignore[attr-defined]
         except (OSError, ImportError):
             # The append result is already ambiguous if unlock itself fails.
             pass
