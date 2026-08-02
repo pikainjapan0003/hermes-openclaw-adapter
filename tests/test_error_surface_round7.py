@@ -47,6 +47,50 @@ def test_renderer_composite_branches_do_not_echo_hidden_metadata() -> None:
     assert SECRET not in rendered
 
 
+def test_renderer_conditional_branch_does_not_echo_hidden_metadata_or_paths() -> None:
+    hidden = "FAKE-SECRET-CONDITIONAL-ROUND8"
+    rendered = render_schema_markdown(
+        {
+            "title": "Conditional display",
+            "type": "object",
+            "properties": {"status": {"type": "string"}},
+            "allOf": [
+                {
+                    "if": {
+                        "properties": {
+                            "status": {
+                                "const": "decided",
+                                "$comment": hidden,
+                                "examples": [hidden],
+                            }
+                        }
+                    },
+                    "then": {
+                        "properties": {
+                            "phase": {
+                                "const": "owner_decided",
+                                "default": hidden,
+                            }
+                        }
+                    },
+                    "else": {
+                        "properties": {
+                            "phase": {"not": {"const": "owner_decided"}}
+                        }
+                    },
+                }
+            ],
+        },
+        "synthetic.schema.json",
+    )
+
+    assert "### Conditional rules" in rendered
+    assert 'if status == "decided" then phase == "owner_decided"' in rendered
+    assert hidden not in rendered
+    assert "C:\\Users\\" not in rendered
+    assert "/home/" not in rendered
+
+
 def test_renderer_invalid_root_error_does_not_echo_raw_payload(
     tmp_path: Path,
 ) -> None:
