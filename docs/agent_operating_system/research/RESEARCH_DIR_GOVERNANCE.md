@@ -1,4 +1,4 @@
-# `research/` Directory Governance Proposal — Version 3
+# `research/` Directory Governance Proposal — Version 4
 
 Status: **PLANNING ONLY, NOT AUTHORIZED — OWNER DECISION BLANK**
 
@@ -8,11 +8,12 @@ an automatic cleanup threshold. This document does not create an archive,
 move, rename, compact, or delete any file, and it does not change the authority
 of `00/01/05/10/20/30/40/90/99` or any Owner gate.
 
-Version 3 turns the original alternatives into a mechanically staged SOP
+Version 4 turns the original alternatives into a mechanically staged SOP
 without executing it. It incorporates the Round 8 rule that historical
 findings remain unchanged while later disposition is recorded separately and
-visibly, and specifies the inventory/link checks a future authorized package
-would have to pass.
+visibly, specifies the inventory/link checks a future authorized package would
+have to pass, and adds an exact candidate-path list plus a one-sentence Owner
+response format. The candidate list is evidence only, not movement authority.
 
 ## 1. Proposed classifications
 
@@ -298,11 +299,59 @@ of that single move commit; no cleanup script deletes originals or evidence.
   retention dates and orphan checks. It reports drift but never auto-moves or
   auto-repairs a file.
 
+## 6.4 Exact proposed candidate list at the v4 snapshot
+
+The following is the complete proposed candidate list at 2026-08-04. It lists
+only superseded readiness/measurement snapshots for which a newer current
+source exists. It deliberately excludes every Owner-choice source, active
+design, unresolved review/finding, current readiness report, latest two
+comparable measurements, compaction crosswalk, and current governance report.
+
+```text
+docs/agent_operating_system/research/PHASE11_HEALTH_20260721.md
+docs/agent_operating_system/research/PHASE11_HEALTH_20260722.md
+docs/agent_operating_system/research/PHASE11_HEALTH_20260723.md
+docs/agent_operating_system/research/PHASE11_HEALTH_20260724.md
+docs/agent_operating_system/research/PHASE11_HEALTH_20260725.md
+docs/agent_operating_system/research/PHASE11_HEALTH_20260726.md
+docs/agent_operating_system/research/PHASE11_HEALTH_20260727.md
+docs/agent_operating_system/research/PHASE11_HEALTH_20260728.md
+docs/agent_operating_system/research/PHASE11_HEALTH_20260729.md
+docs/agent_operating_system/research/PHASE11_HEALTH_20260801.md
+docs/agent_operating_system/research/TEST_PERFORMANCE_20260729.md
+docs/agent_operating_system/research/TEST_SUITE_PROFILE_20260723.md
+docs/agent_operating_system/research/V1_0_READINESS_20260725.md
+docs/agent_operating_system/research/V1_0_READINESS_20260727.md
+docs/agent_operating_system/research/V1_0_READINESS_20260728.md
+docs/agent_operating_system/research/V1_0_READINESS_20260729.md
+docs/agent_operating_system/research/V1_0_READINESS_20260802.md
+docs/agent_operating_system/research/V1_0_READINESS_20260803.md
+```
+
+All 18 paths remain **MOVEMENT HOLD** today: none has completed the applicable
+180-day retention period, no tested old-path → new-path map or incoming-link
+ledger exists, and the Owner decision is blank. A future package must recompute
+the list at its own HEAD; for example, a newly added health report changes
+which two health snapshots are retained at stable paths. A stale copy of this
+list is not authority to move anything.
+
+This package does not create `research/archive/`, move, rename, rewrite,
+compress, or delete any listed file.
+
 ## 7. Recommendation and Owner decision
 
 Recommendation: **Option B**, because it keeps unresolved/current material
 stable while providing a reversible, manifest-gated route for old resolved
 evidence. This recommendation is not a selection and creates no archive task.
+
+Owner can select the planning route with this exact one-sentence response:
+
+`研究目錄治理選 B；授權下一個 docs-only 包只產生 v4 §6.4 的重算候選清單、path map 與 incoming-reference ledger，不授權建 archive、搬檔、改檔或刪檔。`
+
+That sentence authorizes only the listed planning artifacts in a future
+package. An actual move would still require retention eligibility, all §6
+preconditions, a reviewed exact destination map, and a separate instruction
+naming that map.
 
 Owner decision: **________**
 
