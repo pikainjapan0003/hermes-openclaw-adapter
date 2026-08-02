@@ -1,14 +1,15 @@
-# Phase 7 Local Audit Writer — Implementation Package Draft v3
+# Phase 7 Local Audit Writer — Implementation Package Draft v4
 
 **未取得 Owner 逐字授權句前，本檔不得被當成派工單使用**
 
 Status: **PLANNING ONLY, NOT AUTHORIZED — DRAFT FOR FUTURE OWNER REVIEW**
 
 Authority sources: `07_AUDIT_WRITE_DESIGN.md`,
-`40_MAINTENANCE_PROTOCOL.md` F7, and `90_LESSONS_LEARNED.md` L-011. This draft compresses that
-approved design into a reviewable future package shape. It does not create a
-writer, open a file, authorize persistence, change Phase 7 status, or satisfy
-the mandatory gate merely by quoting it.
+`40_MAINTENANCE_PROTOCOL.md` F7 and F8, and
+`90_LESSONS_LEARNED.md` L-011 and L-012. This draft compresses that approved
+design into a reviewable future package shape. It does not create a writer,
+open a file, authorize persistence, change Phase 7 status, or satisfy the
+mandatory gate merely by quoting it.
 
 ## 1. Activation gate
 
@@ -57,6 +58,24 @@ Forbidden targets include every other `data/` path, caller-selected paths,
 environment-selected paths, production/shared storage, logs as a fallback,
 temporary side-channel persistence, and a second audit file.
 
+### F8/L-012 dispatch evidence
+
+Before this draft can become a future dispatch brief, its input contract claim
+must be rechecked against the then-current repository. At this v4 snapshot the
+closed input is one `audit_event`, with these required-field sources:
+
+| Claimed field group | Actual contract evidence |
+|---|---|
+| Nine common fields: `schema_version`, `message_type`, `created_at`, `safety_flags`, `prev_entry_hash`, `execution_class`, `produced_by`, `parent_task_id`, `role` | `docs/schemas/blackboard/audit_event.schema.json:9-17` |
+| Audit identity and links: `audit_id`, `event_id`, `task_id`, `related_result_id` | `docs/schemas/blackboard/audit_event.schema.json:18-21` |
+| Audit content/state: `event_type`, `event_notes`, `audit_status`, `persistence_target`, `preview_only` | `docs/schemas/blackboard/audit_event.schema.json:22-26` |
+| Closed-object boundary | `docs/schemas/blackboard/audit_event.schema.json:6-8` and `:205` |
+
+These lines are evidence for this dated draft only. The future dispatcher must
+regenerate the table at its actual HEAD; copying this table without rechecking
+is not F8 evidence. Any missing or changed field makes the package HOLD before
+implementation.
+
 ## 4. Required writer contract
 
 The future writer must:
@@ -71,7 +90,7 @@ The future writer must:
    traversal, path overrides, a repository-root mismatch, and any
    existing/target inode with `st_nlink > 1`; repeat containment, file type and
    link-count checks inside exclusive append protection immediately before
-   writing. F7.2's caller-selected reader-root rule does not authorize path
+   writing. F7 item 2's caller-selected reader-root rule does not authorize path
    indirection for this fixed writer target;
 4. decode the complete existing file as UTF-8 JSONL with duplicate-key
    rejection and require a final LF when non-empty;
@@ -104,7 +123,7 @@ verification, and failure before the append boundary must perform zero writes.
 emitted by binary append (`canonical_json(event) + b"\n"`). Existing audit
 bytes containing CRLF or a bare CR are rejected, never rewritten or normalized
 in place. JSON string control characters remain part of canonical JSON and are
-escaped by the encoder; they are not physical record delimiters. F7.4's
+escaped by the encoder; they are not physical record delimiters. F7 item 4's
 CRLF-to-LF normalization for fixture-inventory hashing does not authorize
 normalizing or repairing an audit file.
 
