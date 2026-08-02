@@ -448,3 +448,60 @@ inventing persistence or execution work.
 | Research-directory governance | **Blank; no archive/move/delete authority** |
 | Phase 7 audit writer | Exact active Owner instruction still absent |
 | Phase 9 N=1 | Owner presence and Phase 7 closeout still absent |
+
+## NIGHT-BATCH-22 backlog refill - 2026-08-05 (Round 12)
+
+This section records the bounded work completed on the NIGHT-BATCH-22 branch
+through package 19. It is bookkeeping only. The branch is not an accepted
+phase-state change until the normal independent review and merge; this section
+does not grant merge, persistence, execution, dispatch, runtime, remote, or
+Owner-gate authority.
+
+### Consumed in NIGHT-BATCH-22 (packages 1-19)
+
+- F8 was broadened to require evidence for field existence, schema-keyword
+  presence/absence, and behavior or precondition claims. Missing evidence is a
+  HOLD; it is never filled with an invented field or behavior.
+- L-013 and the corrected renderer brief are recorded. The schema renderer now
+  displays conditional `if`/`then`/`else` rules without implying that the
+  display is a runtime authorization.
+- Three-source tests cover the observable non-git and unreachable-remote
+  cases. Detached-HEAD and shallow-clone semantics remain an explicit design
+  gap because the current tool/schema do not expose those states.
+- Inventory digests, conditional projection mutation tests, second-round
+  realpath fuzzing, mirror edge tests, error-surface Round 8, and governance
+  Round 14 are recorded as tests/reviews only. No product writer or runtime
+  path was added.
+- The performance-claim provenance rule now requires an environment, command,
+  commit, and isolation note for timing numbers. The current report records
+  `2268 passed, 1 skipped, 21 deselected, 14 xfailed` for fast and
+  `2289 passed, 1 skipped, 14 xfailed` for complete, with both profiles
+  reconciled.
+- Legacy coverage rotation and the conditional full-chain rehearsal remain
+  test-only. The readiness v8 and Phase 7 package v5 documents preserve the
+  exact Owner gate and all planning-only warnings.
+
+### Findings and bounded next stock
+
+| Item | Source | Boundary |
+|---|---|---|
+| Recheck every future package against F8's three evidence classes | NB-22 package 1 / L-012 | Review/precheck only; a precheck cannot authorize the package or invent missing contract evidence |
+| Decide detached-HEAD and shallow-clone reporting fields | NB-22 three-source partial guard | Owner/design proposal only until the tool and schema contract are changed by an authorized package |
+| Keep renderer conditional documentation synchronized with schema keywords | NB-22 packages 3-5 | Read-only renderer/tests; no generated-file persistence or schema edits |
+| Preserve four-state mirror classification and human-review warning | NB-22 package 11 | Read-only tool/tests; never overwrite either copy automatically |
+| Continue the next coverage rotation without deleting defensive branches | NB-22 package 15 | Tests only; keep the three excluded modules and their exclusion rationale |
+| Repeat full-chain conditional rehearsal after any contract decision | NB-22 package 16 | In-memory tests only; no writer, queue, dispatch, or runtime |
+| Maintain timing provenance and fast/complete arithmetic | NB-22 package 19 | Reports/markers only; no bulk hiding of tests |
+| Run the research-governance v5 review and the Phase 11 health report | NB-22 packages 21-22 | Docs/report only; numbers must be recomputable from recorded commands |
+
+### Owner gates remain unchanged
+
+| Gate | State | Boundary |
+|---|---|---|
+| AUD / v1.1 audit record | **Blank** | No schema extension and no audit writer |
+| RB / rollback Git binding | **Blank** | No Git rollback execution |
+| PB / `produced_by` policy | **Blank** | Provenance remains non-authorizing |
+| ROOT / root projection direction | **Blank; no placeholder option selected** | No direct root projection |
+| Research-directory governance | **Blank** | No archive, move, rename, compression, or deletion |
+| Phase 7 audit writer | Exact active Owner instruction still absent | No writer, formal `data/`, or persistent append |
+| Phase 9 N=1 | Owner presence and Phase 7 closeout still absent | Token remains null; preflight stays blocked |
