@@ -36,6 +36,9 @@ EXPECTED_GOVERNANCE_PATHS = frozenset(
     }
 )
 EXPECTED_V6_PATH_COUNT = 297
+EXPECTED_V6_PATH_SET_SHA256 = (
+    "83c6d61ab243390a3825fedfa55b7eba52f754dfdbbb978fe066348c4cad1e22"
+)
 EXPECTED_GOVERNANCE_PATH_MANIFEST_SHA256 = (
     "fd6cb7f07fd1d1fe668ff03438a23ddcf284df0efe4d1fe6acef9c03703e73a1"
 )
@@ -55,6 +58,10 @@ def _path_manifest_digest(paths: set[str] | frozenset[str]) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
+def _v6_path_set() -> set[str]:
+    return _v5_paths() | set(EXPECTED_GOVERNANCE_PATHS)
+
+
 def test_v6_inventory_is_closed_and_extends_v5_with_governance_docs() -> None:
     actual_governance = _governance_paths()
     expected_all = _v5_paths() | set(EXPECTED_GOVERNANCE_PATHS)
@@ -72,6 +79,14 @@ def test_v6_governance_path_manifest_is_pinned() -> None:
         _path_manifest_digest(EXPECTED_GOVERNANCE_PATHS)
         == EXPECTED_GOVERNANCE_PATH_MANIFEST_SHA256
     )
+
+
+def test_v6_collection_path_set_digest_is_pinned() -> None:
+    """The membership digest complements, but does not replace, content hashes."""
+
+    paths = _v6_path_set()
+    assert len(paths) == EXPECTED_V6_PATH_COUNT
+    assert _path_manifest_digest(paths) == EXPECTED_V6_PATH_SET_SHA256
 
 
 @pytest.mark.parametrize("relative_path", sorted(EXPECTED_GOVERNANCE_PATHS))
