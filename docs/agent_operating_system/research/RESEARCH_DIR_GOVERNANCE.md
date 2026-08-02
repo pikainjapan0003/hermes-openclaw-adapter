@@ -1,4 +1,4 @@
-# `research/` Directory Governance Proposal — Version 4
+# `research/` Directory Governance Proposal — Version 5
 
 Status: **PLANNING ONLY, NOT AUTHORIZED — OWNER DECISION BLANK**
 
@@ -14,6 +14,30 @@ findings remain unchanged while later disposition is recorded separately and
 visibly, specifies the inventory/link checks a future authorized package would
 have to pass, and adds an exact candidate-path list plus a one-sentence Owner
 response format. The candidate list is evidence only, not movement authority.
+
+### Version 5 change record - 2026-08-05
+
+Version 5 does not move, rename, delete, compress, or archive any file. It
+records the current measurement and tightens the bookkeeping boundary after
+NIGHT-BATCH-22:
+
+- the first-level inventory at this branch is **97 Markdown files and 7,410
+  lines**; both proposed review-request triggers are exceeded, so the result
+  is `REVIEW REQUEST ELIGIBLE — MOVEMENT HOLD`;
+- path-set and normalized-content inventory checks are evidence of a closed
+  inventory, not permission to edit or relocate a file;
+- an unmerged night-batch branch is review evidence, not an accepted current
+  governance source; after merge, the exact commit and path set must be
+  recorded before any candidate list is recomputed; and
+- the four Owner choices (AUD, RB, PB, and ROOT), current readiness sources,
+  unresolved reviews, and the latest comparable measurements remain excluded
+  from any movement candidate until their status and retention are explicitly
+  verified.
+
+The v4 candidate list in section 6.4 remains a historical snapshot. A v5
+inventory must be generated from the actual HEAD immediately before any future
+proposal; the changed count above is not a candidate list and grants no
+movement authority.
 
 ## 1. Proposed classifications
 
