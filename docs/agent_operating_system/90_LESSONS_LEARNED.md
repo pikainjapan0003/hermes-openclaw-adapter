@@ -104,3 +104,13 @@
 - 缺的規則：任何路徑邊界都必須一次寫成可機械檢查的不變式，不能用「間接」「外部」等含糊詞推定危險。
 - 新增/修改的規則：40 F7 第 2 條——先取 `R = realpath(root)`；root 本身可以是呼叫端指定的 symlink；每個 entry 的 `realpath` 必須位於 `R` 之下，板內 symlink 一律在讀取前拒絕。reader 可接受 hardlink 並標 `shared_inode=true`，未來 writer 仍必須拒絕 `st_nlink > 1`。
 - 驗收：NIGHT-BATCH-20 包3 的 root-symlink、板內 symlink、相對 `../` 逃逸、hardlink、FIFO、socket 與 device 邊界測試全綠或依主機能力明示 skip；沒有修改 reader 行為。
+
+## L-012 派工方未自檢跨 contract 欄位存在性（L-008 的再犯）
+
+- 日期：2026-08-04
+- 範圍：NIGHT-BATCH-20 package 10 的 approval packet／evidence bundle 交叉不變式
+- 症狀：派工單要求兩個 builder 產物共享 `task_id`、`schema_version`、`safety_flags`、`execution_class`，但實際 evidence bundle contract 沒有 `safety_flags`；package 只能 HOLD。
+- 根因：派工方在下單前沒有先 dump／grep 實際 schema 與 fixture，直接把推測中的共同 shape 寫成機械驗收事實。
+- 缺的規則：L-008 只約束設計與實作者檢查欄位存在性，沒有要求派工方在派出 contract-field package 前附實物證據。
+- 新增規則：40 F8；任何依賴 contract 欄位的派工包，派出前都必須附欄位到實際 schema／fixture 的 file:line 證據，證據缺漏則該包不得派出。
+- 驗收：NIGHT-BATCH-21 package 0 已先產 contract/spec precheck；下一批不得再出現同型 HOLD。
