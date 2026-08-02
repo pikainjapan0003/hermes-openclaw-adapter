@@ -443,3 +443,63 @@ Older NIGHT-BATCH-17 stock for hardlinks, active-checkout portability,
 coverage-floor layering, test-layer markers, and fixture hash portability is
 consumed by NIGHT-BATCH-18/19 and must not be reopened under the old wording.
 The Owner choices above intentionally remain blank.
+
+## NIGHT-BATCH-20 backlog refill — 2026-08-03 (Round 10)
+
+This section records package outcomes through package 19 on the unmerged
+`night-batch-20` branch. It is inventory, not a new assignment, merge decision,
+Phase 7 instruction, Phase 9 permission, or Owner option selection.
+
+### Consumed in NIGHT-BATCH-20
+
+| Package | Result | Commit/evidence |
+|---:|---|---|
+| 1 | Renderer supports `oneOf`/`anyOf`/`allOf` and const-only types; current unspecified count is zero | `a3206f8` |
+| 2 | Exhaustive renderer type-fidelity guard | `3e4e949` |
+| 3 | F7 resolved-root invariant and filesystem-boundary tests | `53f52be` |
+| 4 | HTTP reachability-only semantics documented | `bd16530` |
+| 5 | Three NIGHT-BATCH-19 HOLD decisions recorded | `ad145eb` |
+| 6 | L-011 records path-indirection specification debt | `c1f94ee` |
+| 7 | Lowest managed legacy modules receive tests without deleting defensive branches | `3b3c587`; independent coverage remeasurement remains acceptance evidence |
+| 8 | **HOLD**: current schemas permit non-`1.0` `schema_version`; tests-only scope cannot create version-evolution semantics | Direct 90-case evidence; no commit |
+| 9 | Eight concurrent readers over one 500-file board return identical results without mutation | `64fe49b` |
+| 10 | **HOLD**: approval packet and evidence bundle do not expose the requested four fields at a common shape and no cross-builder gate exists | Direct builder evidence; no commit |
+| 11 | Twelve preflight catalog citations are line-verified | `e90e5ce` |
+| 12 | Renderer and mirror stdout redaction Round 6 | `ae1b47d` |
+| 13 | Governance audit Round 12 | `5869b25` |
+| 14 | Non-safety delegation-template workflow refresh | `cbd6270` |
+| 15 | Environment snapshots, five-level routing and nightly workflow rechecked | `439b8e1` |
+| 16 | v1.0 readiness sixth pass with estimates and sole gatekeepers | `8b64962` |
+| 17 | Phase-7 implementation package draft v3; still twice marked unauthorized | `3744a61` |
+| 18 | Closed 278-item normalized artifact inventory | `50ae4f7` |
+| 19 | Fast/full performance Round 2 and markers for new expensive tests | `8cd34c1` |
+
+### Next night-run stock
+
+| Item | Source | Boundary |
+|---|---|---|
+| Repair the NIGHT-BATCH-19 consumed table so packages 20–22 are traceable | R12-01 | Docs only; preserve historical commits |
+| Replace pseudo-address `F7.5` with `F7 item 5` at point of use | R12-02 | Docs only; rule semantics unchanged |
+| Add later-status metadata to `PHASE11_HEALTH_20260802.md` | R12-03 | Preserve original measurements; append accepted final state |
+| Design explicit schema-version evolution semantics | NIGHT-BATCH-20 package 8 HOLD | Proposal/tests design first; no schema modification without a dedicated authorized package |
+| Design a real approval/evidence cross-contract join | NIGHT-BATCH-20 package 10 HOLD | Start from actual field locations; no test-only validator or invented common shape |
+| Re-run managed coverage in a native WSL checkout and classify retained defensive branches | NIGHT-BATCH-20 package 7 | Measurement/report only unless a later package names exact test changes |
+| Make the metrics subprocess timeout portable across `/mnt/c` and native WSL | package-19 mounted full result | Research/proposal first; do not weaken or xfail the `git diff --check` guard |
+| Audit fast-path tests that exceed two seconds in native WSL | package-19 durations | Only newly demonstrated native regressions may receive a later marker package |
+| Resolve Round-12 findings after fresh-context confirmation | `research/GOVERNANCE_AUDIT_ROUND12.md` | Findings are not self-authorizing fixes |
+| Refresh the accepted Phase-11 metrics after NIGHT-BATCH-20 review | package 22 input | Report only; all numbers must be recomputable |
+
+The ten bounded items above are sufficient material for another night batch;
+none requires inventing execution or persistence work.
+
+### Owner gates remain blank
+
+| Gate | State |
+|---|---|
+| AUD — v1.1 audit record | **Blank** |
+| RB — rollback Git binding | **Blank** |
+| PB — `produced_by` policy | **Blank** |
+| ROOT — projection direction | **Blank; no placeholder option selected** |
+| Research-directory governance | **Blank; no archive/move/delete authority** |
+| Phase 7 audit writer | Exact active Owner instruction still absent |
+| Phase 9 N=1 | Owner presence and Phase 7 closeout still absent |
