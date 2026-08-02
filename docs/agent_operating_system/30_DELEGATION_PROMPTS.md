@@ -20,6 +20,37 @@
 
 ---
 
+## 共用現況 overlay
+
+下列區塊只補現行委派流程事實，不取代 `01_SAFETY_BOUNDARIES.md`、
+`05_VERIFIED_LONG_TERM_PLAN.md` 或各工作單的安全邊界。
+
+```text
+[建造層路由]
+任務類型：<主幹／量產／純 coding／重大設計／關鍵決策>
+指定格位：<Sol+high／Luna+high／Luna+max／Sol+xhigh／Sol+max>
+選擇理由：<一行；必須對得上 10_MODEL_ORCHESTRATION.md C8>
+失敗軌跡：<無，或先前模型/格位、錯誤、已試方法>
+升級規則：只依 C8；不得因趕時間跳級或把升級當授權。
+```
+
+只有 Owner 已派出 `05` §6.13 夜跑批單時，才附下列區塊：
+
+```text
+[夜跑包邊界]
+批次／包：<NIGHT-BATCH-N／pkgN，逐字抄批單>
+branch／base：<branch>／<immutable base hash>
+本包允許檔案：<exact paths>
+本包禁止事項：<逐字抄批單與全批紅線>
+commit：本包測試與 git diff --check 綠後，只建一個
+  night-batch-N-pkgN-<short-name> commit。
+HOLD/skipped：卡住照實標記、零替代工作；批單允許時才繼續下一包。
+merge/push：施工者禁止；Fable 5 批審依 05 §6.13 處理。
+不得自行從 backlog 加包、換包、合包或拆出未授權產品工作。
+```
+
+---
+
 ## T-01 搜尋 / repo scan（用 Explore 型 subagent）
 
 ```text
@@ -36,10 +67,15 @@ HOLD：範圍內檔案超過 <N> 個無法窮盡 → 回報實際覆蓋率，不
 ```text
 背景：<Phase 編號 + 一句話動機，引用 05 計劃表對應節>
 目標：實作 <明確產物，含檔案路徑>
+建造層路由：<附共用現況 overlay>
+若為夜跑：<附夜跑包邊界 overlay>
 規格：<欄位/行為/介面，越具體越好；有樣本就給樣本>
 不做：不改 <明列不可碰檔案，尤其 mock/real 對側檔>；不「順便」重構鄰近代碼；不新增 route/endpoint
 允許修改：<白名單路徑>
-驗收：<測試命令> 全綠；含至少 <N> 個反例測試；lint 過
+驗收：<精確的 targeted test 命令> 全綠；含至少 <N> 個反例測試；lint 過；
+  日常快跑 `python -m pytest` 與批次收件完整路徑
+  `python -m pytest -o addopts=""` 的實跑範圍分開回報；
+  `git diff --check` 無輸出並附原文
 HOLD：規格與既有代碼衝突 → 停，回報衝突點，不自行取捨
 ```
 
@@ -174,5 +210,7 @@ HOLD：發現計劃與 01 安全正本衝突 → 最高優先回報
 ## 使用備註
 
 - 「研究」與「web research」共用 T-04；「審查」細分為 T-05（一般）/T-06（read-back）/T-07（adversarial），按 20_JUDGMENT_RUBRICS.md R-09 選擇。
+- 建造層一律依 `10_MODEL_ORCHESTRATION.md` C8 的五級路由選格位；夜跑批次在施工者完成後交 Fable 5 批審，merge/push 仍依 `05` §6.13，不由模板自行擴權。
+- `python -m pytest` 是日常快跑；批次收件必跑 `python -m pytest -o addopts=""`。兩者結果不得互相代替。
 - 沒有一個模板完全符合時：選最近的模板改造，但**三件套（目標/驗收/回報格式）與共用約束不可省**。
 - 模板本身的增修屬 40 F1（可自行改），但改動後要在 90 記一筆原因。
