@@ -1,4 +1,4 @@
-# `research/` Directory Governance Proposal — Version 2
+# `research/` Directory Governance Proposal — Version 3
 
 Status: **PLANNING ONLY, NOT AUTHORIZED — OWNER DECISION BLANK**
 
@@ -8,9 +8,11 @@ an automatic cleanup threshold. This document does not create an archive,
 move, rename, compact, or delete any file, and it does not change the authority
 of `00/01/05/10/20/30/40/90/99` or any Owner gate.
 
-Version 2 turns the original alternatives into a reviewable SOP without
-executing it. It incorporates the Round 8 rule that historical findings remain
-unchanged while later disposition is recorded separately and visibly.
+Version 3 turns the original alternatives into a mechanically staged SOP
+without executing it. It incorporates the Round 8 rule that historical
+findings remain unchanged while later disposition is recorded separately and
+visibly, and specifies the inventory/link checks a future authorized package
+would have to pass.
 
 ## 1. Proposed classifications
 
@@ -169,6 +171,12 @@ The request should also be allowed when onboarding review proves that historical
 search noise causes a concrete misread. Crossing a number grants no movement or
 deletion authority. A proposal may instead conclude that no archive is needed.
 
+At the NIGHT-BATCH-20 package-21 checkpoint, the exact first-level measurement
+was **80 Markdown files and 6,225 lines**. Both proposed review-request triggers
+are therefore crossed. Because the Owner decision in §7 remains blank, the
+mechanical result is `REVIEW REQUEST ELIGIBLE — MOVEMENT HOLD`, not permission
+to create `archive/` or change any path.
+
 ### 5.1 Trigger-evaluation SOP
 
 1. Count only first-level `research/*.md` files and their byte newline totals;
@@ -233,6 +241,62 @@ later work order are satisfied:
   resolution on `resolved`, retention arithmetic, and orphaned incoming refs.
 - An archived file returning to active/unresolved status requires a separately
   reviewed restoration map; copying it to two active paths is forbidden.
+
+## 6.3 Exact link-preservation SOP (not authorized)
+
+A future movement proposal must produce these review artifacts before any
+filesystem operation:
+
+1. **Closed source inventory:** every first-level research Markdown path,
+   normalized SHA-256, class, status, open IDs, resolution, retention date and
+   incoming-reference count. The inventory path set must equal the Git-tracked
+   path set; untracked or ignored files do not silently enter the proposal.
+2. **Candidate inventory:** a strict subset selected only from resolved,
+   retention-expired rows. Active designs, blank Owner decisions, open
+   findings, current readiness, current governance, and the latest two
+   comparable measurements are mechanically absent.
+3. **Path map:** one unique old path and one unique proposed path per candidate.
+   It rejects case-folding collisions, duplicate destinations, `..`, absolute
+   paths, and destinations outside the exact future authorized archive root.
+4. **Incoming-reference ledger:** enumerate Markdown destinations, inline-code
+   paths, plain repository-relative paths, `file:line` citations, test string
+   literals, index rows and backlog references. Each hit records source file,
+   line, old text and proposed replacement; ambiguous text is HOLD.
+5. **Anchor ledger:** for every Markdown link with `#fragment`, render or
+   mechanically derive the destination headings before and after the proposed
+   move. A missing or duplicate anchor is HOLD even if the file path resolves.
+6. **Pre-move simulation:** apply the path map and reference ledger only in an
+   isolated temporary copy, then run path, docs-drift, cross-reference,
+   contract-index, onboarding and compaction guards. The repository working
+   tree remains unchanged during this stage.
+7. **Fresh-context sign-off:** a reviewer receives the inventories and simulated
+   diff without the author's reasoning. Every candidate, link and preserved
+   digest must pass; partial approval is removed from the map rather than
+   guessed.
+
+Only a later work order that names the accepted map may authorize an atomic
+docs-only move. After such a move, the same closed inventory and ledgers are
+recomputed from the real worktree. Any extra/missing path, changed content hash
+outside approved path-only reference edits, broken link, stale old-path
+reference, or guard failure rejects the commit. Recovery is a reviewed revert
+of that single move commit; no cleanup script deletes originals or evidence.
+
+### Index transaction rules
+
+- The active index update is in the same commit as the exact moves and reference
+  edits; an index-only promise before movement and an unindexed move are both
+  invalid states.
+- Each moved row preserves its pre-move normalized hash, records the new path,
+  and keeps both `supersedes`/`successor` directions where applicable.
+- The index has a closed path-set test: every governed research Markdown file
+  appears once, every indexed path exists, and every archive path is traceable
+  from exactly one old path.
+- A new research file after the transaction must add its index row in the same
+  package. A resolution update changes status metadata only; it never erases
+  the original finding text.
+- Quarterly maintenance recomputes counts, hashes, incoming references,
+  retention dates and orphan checks. It reports drift but never auto-moves or
+  auto-repairs a file.
 
 ## 7. Recommendation and Owner decision
 
