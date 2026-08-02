@@ -2,8 +2,11 @@
 """Report local/GitHub/Replit state without changing any source.
 
 This Phase 0 helper only reads local Git state, runs ``git ls-remote``, and checks
-the configured Replit HTTP endpoint.  It never attempts pull, push, reset,
-checkout, deploy, or drift repair.
+the configured Replit HTTP endpoint. ``REACHABLE`` means only that an HTTP status
+code was reachable: the helper neither reads nor parses the response body and
+makes no claim about its contents, size, or deployed version. Consequently,
+``deployed_hash`` remains null/``UNKNOWN``. The helper never attempts pull, push,
+reset, checkout, deploy, or drift repair.
 """
 
 from __future__ import annotations

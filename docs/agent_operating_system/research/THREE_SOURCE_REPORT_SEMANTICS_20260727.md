@@ -9,7 +9,7 @@ script, synchronization, deployment, or repair behavior is changed.
 |---|---|
 | `sources.local.value` | Local `git rev-parse HEAD`, or `UNREACHABLE` when it cannot be read as a 40-character hash. |
 | `sources.github.value` | `git ls-remote` hash for the selected remote branch, or `UNREACHABLE`. |
-| `sources.replit.value` | HTTP reachability only: `REACHABLE` for status 200–399, otherwise `UNREACHABLE`. It is not a revision identifier. |
+| `sources.replit.value` | HTTP reachability only: `REACHABLE` for status 200–399, otherwise `UNREACHABLE`. The probe does not read or parse the response body, so it makes no claim about body content, body size, or deployed version. It is not a revision identifier. |
 | each `detail` | Diagnostic description produced by the corresponding read-only probe. It is not authority or proof of synchronization. |
 
 ## Explicit unknown placeholders
@@ -23,8 +23,11 @@ deployed_hash_status = "UNKNOWN"
 deployed_hash_verified = false
 ```
 
-These fields mean “not measured.” HTTP reachability must never be rewritten as
-a deployed hash, alignment proof, or GitHub→Replit synchronization result.
+These fields mean “not measured.” The script deliberately does not consume the
+response body, so malformed, truncated, or large body content is outside this
+reachability-only contract. HTTP reachability must never be rewritten as a
+content-validity claim, deployed hash, alignment proof, or GitHub→Replit
+synchronization result.
 
 ## Verdict produced by the current script
 
