@@ -69,6 +69,7 @@ CONTRACT_FILES = {
     "test_evidence_bundle.py",
     "test_fixture_conventions.py",
     "test_full_chain_contract_rehearsal.py",
+    "test_full_chain_contract_rehearsal_v7.py",
     "test_hash_chain.py",
     "test_hash_chain_long_chain.py",
     "test_hash_chain_vectors.py",
