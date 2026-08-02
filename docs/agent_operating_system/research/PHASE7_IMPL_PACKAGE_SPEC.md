@@ -1,11 +1,11 @@
-# Phase 7 Local Audit Writer — Implementation Package Draft v2
+# Phase 7 Local Audit Writer — Implementation Package Draft v3
 
 **未取得 Owner 逐字授權句前，本檔不得被當成派工單使用**
 
 Status: **PLANNING ONLY, NOT AUTHORIZED — DRAFT FOR FUTURE OWNER REVIEW**
 
-Authority sources: `07_AUDIT_WRITE_DESIGN.md` and
-`40_MAINTENANCE_PROTOCOL.md` F7. This draft compresses that
+Authority sources: `07_AUDIT_WRITE_DESIGN.md`,
+`40_MAINTENANCE_PROTOCOL.md` F7, and `90_LESSONS_LEARNED.md` L-011. This draft compresses that
 approved design into a reviewable future package shape. It does not create a
 writer, open a file, authorize persistence, change Phase 7 status, or satisfy
 the mandatory gate merely by quoting it.
@@ -64,11 +64,15 @@ The future writer must:
 1. accept one in-memory `audit_event` mapping, never a command or arbitrary
    serialized line;
 2. validate the exact closed `audit_event` schema before touching the target;
-3. resolve an internal repository constant to exactly
-   `data/audit_dev.jsonl` and reject symlinks, traversal, path overrides, a
-   repository-root mismatch, and any existing/target inode with
-   `st_nlink > 1`; the link-count check must be repeated inside the exclusive
-   append protection immediately before writing;
+3. resolve the authorized checkout root exactly once as `R = realpath(root)`;
+   resolve the fixed target parent and, when present, target beneath `R`, then
+   require the lexical and resolved target to be exactly
+   `data/audit_dev.jsonl`. Reject a symlink or junction in the target path,
+   traversal, path overrides, a repository-root mismatch, and any
+   existing/target inode with `st_nlink > 1`; repeat containment, file type and
+   link-count checks inside exclusive append protection immediately before
+   writing. F7.2's caller-selected reader-root rule does not authorize path
+   indirection for this fixed writer target;
 4. decode the complete existing file as UTF-8 JSONL with duplicate-key
    rejection and require a final LF when non-empty;
 5. reject malformed lines, schema-invalid events, duplicate audit/event IDs,
@@ -103,6 +107,15 @@ in place. JSON string control characters remain part of canonical JSON and are
 escaped by the encoder; they are not physical record delimiters. F7.4's
 CRLF-to-LF normalization for fixture-inventory hashing does not authorize
 normalizing or repairing an audit file.
+
+### Four hard rules and their acceptance evidence
+
+| Hard rule | Required mechanical acceptance |
+|---|---|
+| Writer realpath invariant | Tests resolve one authorized checkout root `R`, prove the fixed parent/target stays under `R`, and reject target/parent symlinks, junctions, traversal, root mismatch and any argument/environment override. The same assertions run again inside the mocked exclusive append boundary. |
+| Hardlink rejection | Tests create or simulate `st_nlink > 1` before validation and after lock acquisition; both reject before append and preserve exact pre-call bytes. Reader acceptance with `shared_inode=true` is included as negative proof that read permission is not write permission. |
+| CRLF handling | Windows and WSL tests prove new records contain exactly one binary LF; existing CRLF, bare CR or missing-final-LF inputs reject without normalization or byte changes. |
+| Hash-chain break detection | Golden-chain tests tamper genesis, first, middle and tail predecessor links; every case returns the exact structured break location and leaves the complete file byte-identical. A clean suffix truncation remains explicitly outside what an unanchored chain can detect. |
 
 ## 5. Required tests and acceptance
 
