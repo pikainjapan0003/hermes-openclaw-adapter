@@ -94,3 +94,13 @@
 - 缺的規則：逐 package 的 diff-check 原始輸出與 active-checkout/state 證據
 - 新增/修改的規則：40 F7.5；每包在編輯完成、commit 前於 authorized checkout 實跑 `git diff --check`，逐包回報原文。空輸出也必須明寫 `（無輸出；exit 0）`，不得用「已確認」代替
 - 驗收：NIGHT-BATCH-19 的 done/HOLD/skipped 逐包回報都附該包 `git diff --check` 原文；Fable 5 必須在同一待審 branch 獨立重跑，不沿用 Codex 自報數字
+
+## L-011 路徑間接不等於逃逸：邊界必須寫成可機械檢查的不變式
+
+- 日期：2026-08-02
+- 任務：Blackboard reader 的 hardlink、board-root symlink 與板內逃逸邊界
+- 症狀：批單三度把 hardlink 或 caller-selected root symlink 直接等同「逃出板面」，造成兩次不必要的 HOLD；實際上 root 是呼叫端指定的信任錨點，而板內 symlink 才能把 entry 解析到錨點外。
+- 根因：規格只寫自然語言「永不逃出板面目錄」，沒有先定義 root、entry 與解析後路徑之間的可判定關係。
+- 缺的規則：任何路徑邊界都必須一次寫成可機械檢查的不變式，不能用「間接」「外部」等含糊詞推定危險。
+- 新增/修改的規則：40 F7 第 2 條——先取 `R = realpath(root)`；root 本身可以是呼叫端指定的 symlink；每個 entry 的 `realpath` 必須位於 `R` 之下，板內 symlink 一律在讀取前拒絕。reader 可接受 hardlink 並標 `shared_inode=true`，未來 writer 仍必須拒絕 `st_nlink > 1`。
+- 驗收：NIGHT-BATCH-20 包3 的 root-symlink、板內 symlink、相對 `../` 逃逸、hardlink、FIFO、socket 與 device 邊界測試全綠或依主機能力明示 skip；沒有修改 reader 行為。
