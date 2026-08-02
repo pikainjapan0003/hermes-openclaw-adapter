@@ -401,32 +401,41 @@ coverage-floor layering, test-layer markers, and fixture hash portability is
 consumed by NIGHT-BATCH-18/19 and must not be reopened under the old wording.
 The Owner choices above intentionally remain blank.
 
-## NIGHT-BATCH-20 backlog refill — 2026-08-03 (Round 10)
+## NIGHT-BATCH-21 backlog refill — 2026-08-04 (Round 11)
 
-This section records package outcomes through package 19 on the unmerged
-`night-batch-20` branch. It is inventory, not a new assignment, merge decision,
-Phase 7 instruction, Phase 9 permission, or Owner option selection.
+NIGHT-BATCH-20 packages 1–22, including HOLD evidence for 8/10, are consumed
+on accepted master `7cd2d98`. NIGHT-BATCH-21 packages 0–22 are allocated to the
+current batch and therefore are not future stock; their final done/HOLD status
+belongs in the batch report. This inventory grants no merge, write, execution,
+Phase 7, Phase 9, or Owner-option authority.
 
-### Consumed in NIGHT-BATCH-20
+### Consumed or resolved in NIGHT-BATCH-21
 
-Packages 1–19 (including HOLD evidence for 8/10) are consumed; the exact result/commit index is preserved in `research/NIGHT_BATCH_BACKLOG_COMPACTION_CROSSWALK_20260804.md` (NB-20 table).
+- Round-12 traceability, F7-reference and dated-health fixes: package 6.
+- Schema-version and real cross-builder relationship proposals: packages 1–2;
+  their Owner decision fields remain blank.
+- Portable metrics timeout, coverage residual, nested evidence mutations,
+  realpath fuzz, mirror/error reviews and artifact inventory: packages 3, 7–9,
+  11–12 and 18–19.
+- L-012, F8, readiness seven and Phase-7 spec v4: packages 14–17.
+- Package 5 and package 10 remain HOLD; no replacement work was substituted.
 
 ### Next night-run stock
 
 | Item | Source | Boundary |
 |---|---|---|
-| Make NIGHT-BATCH-19 packages 20–22 traceable | R12-01 | 【已完成】NB-21 package 6; historical commits preserved in the compaction crosswalk |
-| Use unambiguous `F7 item 5` references at point of use | R12-02 | 【已完成】NB-21 package 6; rule semantics unchanged |
-| Add later-status metadata to `PHASE11_HEALTH_20260802.md` | R12-03 | 【已完成】NB-21 package 6; original measurements preserved with accepted final state appended |
-| Design explicit schema-version evolution semantics | NIGHT-BATCH-20 package 8 HOLD | Proposal/tests design first; no schema modification without a dedicated authorized package |
-| Design a real approval/evidence cross-contract join | NIGHT-BATCH-20 package 10 HOLD | Start from actual field locations; no test-only validator or invented common shape |
-| Make the metrics subprocess timeout portable across `/mnt/c` and native WSL | package-19 mounted full result | Research/proposal first; do not weaken or xfail the `git diff --check` guard |
-| Audit fast-path tests that exceed two seconds in native WSL | package-19 durations | Only newly demonstrated native regressions may receive a later marker package |
-| Resolve Round-12 findings after fresh-context confirmation | `research/GOVERNANCE_AUDIT_ROUND12.md` | Findings are not self-authorizing fixes |
-| Refresh the accepted Phase-11 metrics after NIGHT-BATCH-20 review | package 22 input | Report only; all numbers must be recomputable |
+| Broaden dispatch precheck beyond field names to schema keywords and behavior preconditions | R13-01/R13-02 | F8 design/review first; do not reopen HOLD packages with invented evidence |
+| Correct renderer composition brief from the actual existing `allOf` contract | NB-21 package 5 HOLD | Fresh schema dump first; proposal/tests only unless separately authorized |
+| Design explicit detached-HEAD and shallow-clone reporting semantics | NB-21 package 10 HOLD | Do not fake fail-closed evidence with monkeypatch-only tests |
+| Redact artifact-inventory assertion paths/raw bytes | R13-05 / ESR7-02 | Local test-tool surface only; keep the 14-xfail product baseline unchanged |
+| Profile aggregate fast-path cost by file | package 19, fast `304.26s` | Performance proposal first; do not hide coverage by bulk marker changes |
+| Refresh stale current-document status without rewriting dated reports | R13-04 | Backlog bookkeeping only; preserve historical evidence |
+| Review F8 effectiveness against the next dispatch brief | L-012 acceptance | Review/report only; zero same-shape HOLD is the target |
+| Re-run governance and error-surface audits after the above dispositions | Round 13 | Findings do not self-authorize fixes |
+| Continue Phase-11 health and test-growth measurement | package 22 handoff | Report only; recomputable numbers required |
 
-The nine bounded items above are sufficient material for another night batch;
-none requires inventing execution or persistence work.
+The bounded stock above is sufficient for another night batch without
+inventing persistence or execution work.
 
 ### Owner gates remain blank
 
