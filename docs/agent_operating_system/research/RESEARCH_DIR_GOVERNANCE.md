@@ -21,7 +21,7 @@ Version 5 does not move, rename, delete, compress, or archive any file. It
 records the current measurement and tightens the bookkeeping boundary after
 NIGHT-BATCH-22:
 
-- the first-level inventory at this branch is **97 Markdown files and 7,410
+- the first-level inventory at this branch is **97 Markdown files and 9,606
   lines**; both proposed review-request triggers are exceeded, so the result
   is `REVIEW REQUEST ELIGIBLE — MOVEMENT HOLD`;
 - path-set and normalized-content inventory checks are evidence of a closed
