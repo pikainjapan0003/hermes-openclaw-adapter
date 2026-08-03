@@ -293,9 +293,9 @@ Owner 在場進行 Phase 9 N=1。表格按 Phase 數字排列，不以列序推�
 | 4 | **完成** | 2026-07-19 | approval packet schema＋純函式 builder＋GET-only 顯示（`d305ff8`）；token const null 三重鎖；雙審查員通過（Fable 5 全項驗收＋Opus fresh-context 對抗審查「packet→execution 零路徑」） |
 | 5 | **完成** | 2026-07-19 | evidence bundle schema＋builder＋hash 重算/篡改/洩漏反向測試（`88bf8b2`，NIGHT-BATCH-1） |
 | 6 | **完成** | 2026-07-19 | 動態 route 盤點＋七條 POST 白名單＋注入 button 必紅＋approve 行為測試（`9f79657`）；queue-claim guard 二版於 NIGHT-BATCH-3 補強（已知風險：approve→queued 後若外部啟動 worker 可被 claim，execution gate 屬 Phase 9） |
-| 7 | **已授權，實作中** | 2026-08-03 | 設計＝`07_AUDIT_WRITE_DESIGN.md`（NIGHT-BATCH-2）。**Owner 已於 2026-08-03 逐字給出授權句「允許寫入 data/audit_dev.jsonl（local dev append-only）」（見 §6.15）**；實作範圍嚴格限該一檔，完成後仍需 Owner 檢視實際 audit 檔內容簽核才算完成 |
+| 7 | **完成** | 2026-08-03 | 設計＝`07_AUDIT_WRITE_DESIGN.md`；Owner 逐字授權句見 §6.15；writer＝`app/audit_writer_local.py`（NB-23，append-only／拒 hardlink／realpath 鎖定／hash-chain 前置驗證）。**Owner 已於 2026-08-03 檢視實際 `data/audit_dev.jsonl` 三筆內容後簽核**（`research/PHASE7_OWNER_ACCEPTANCE.md`）。簽核只關閉 Phase 7，**不解鎖 Phase 9**：token schema、live token、execution gate、Owner 在場、fresh token、runtime 授權六項仍 fail-closed |
 | 8 | **規劃完成** | 2026-07-19 | docs 方案＋OWASP 對照（`3edbc0b`）；離線 projection contract（`51f657f`，超包，Owner 2026-07-19 追認）；遠端接線／remote API 仍未授權 |
-| 9–11 | 未開始 | — | 本列僅為表格壓縮：Phase 9 需 Owner 同步在場，且與 Phase 7 實作構成 v1.0 最後兩關；Phase 10 的 scope 研究與 Phase 11 的健康報告都不構成實作解鎖 |
+| 9–11 | 未開始 | — | 本列僅為表格壓縮：**Phase 9 是 v1.0 唯一剩餘關卡**，需 Owner 同步在場＋另案 token/gate 授權；Phase 7 簽核不解鎖它。Phase 10 的 scope 研究與 Phase 11 的健康報告都不構成實作解鎖 |
 
 ---
 

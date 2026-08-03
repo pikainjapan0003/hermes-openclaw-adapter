@@ -48,7 +48,7 @@ def test_approval_packet_token_is_structurally_locked_to_null() -> None:
     assert token_schema["const"] is None
 
 
-def test_phase7_audit_persistence_is_authorized_but_not_signed_off() -> None:
+def test_phase7_audit_persistence_is_signed_off_with_committed_evidence() -> None:
     assert AUDIT_WRITER.exists(), "Phase 7 writer should exist after authorization"
     acceptance = OWNER_ACCEPTANCE.read_text(encoding="utf-8")
     assert all(f"RECORD_{index}=" in acceptance for index in range(1, 4))
@@ -56,39 +56,39 @@ def test_phase7_audit_persistence_is_authorized_but_not_signed_off() -> None:
         "FILE_SHA256=eef4d7db225c5df929abcc92e4152aa2aaf14cccc17f5bdd86361bbedc85efc2"
         in acceptance
     )
-    assert _phase7_status().replace("**", "") != "完成"
+    # Owner sign-off recorded 2026-08-03; every acceptance box must be checked.
+    assert "[ ]" not in acceptance
+    assert "已由 Owner 於 2026-08-03 簽核" in acceptance
 
 
-def test_phase7_plan_status_has_not_reached_completion() -> None:
-    status = _phase7_status()
+def test_phase7_plan_status_is_complete() -> None:
+    status = _phase7_status().replace("**", "")
 
-    assert status.replace("**", "") == "已授權，實作中"
-    assert "完成" not in status
+    assert status == "完成"
 
 
-def test_runbook_records_all_three_current_blockers() -> None:
+def test_phase7_signoff_does_not_unlock_phase9() -> None:
+    """Phase 7 closing must leave every Phase 9 blocker fail-closed."""
+
     runbook_text = RUNBOOK.read_text(encoding="utf-8")
     normalized_runbook = re.sub(r"\s+", " ", runbook_text)
-    blockers = {
-        "token_locked_null": "approval-packet token remains structurally null"
-        in normalized_runbook,
-        "audit_writer_absent": "Phase 7 audit persistence is incomplete"
-        in normalized_runbook,
-        "phase7_not_complete": (
-            _phase7_status() != "完成" and not AUDIT_WRITER.exists()
-        ),
-    }
-    # The writer and evidence file now exist under the explicit Phase 7
-    # authorization, but Owner sign-off has not closed the phase yet.
-    blockers["phase7_not_complete"] = True
+    schema = json.loads(APPROVAL_SCHEMA.read_text(encoding="utf-8"))
 
-    assert blockers == {
-        "token_locked_null": True,
-        "audit_writer_absent": True,
-        "phase7_not_complete": True,
+    blockers = {
+        "token_locked_null": schema["properties"]["single_use_execution_token"][
+            "const"
+        ]
+        is None,
+        "runbook_states_not_ready": "The present repository is not ready to run"
+        " this procedure" in normalized_runbook,
+        "signoff_not_an_unlock": "does not unlock Phase 9" in normalized_runbook,
+        "owner_not_present": "the Owner is not synchronously present"
+        in normalized_runbook,
+        "no_fresh_token": "no fresh single-use token has been issued"
+        in normalized_runbook,
+        "runtime_not_authorized": "runtime rehearsal is not authorized"
+        in normalized_runbook,
     }
-    assert (
-        "The present repository is not ready to run this procedure"
-        in normalized_runbook
-    )
+
+    assert all(blockers.values()), blockers
     assert "If any Phase 7 item is incomplete, stop" in normalized_runbook

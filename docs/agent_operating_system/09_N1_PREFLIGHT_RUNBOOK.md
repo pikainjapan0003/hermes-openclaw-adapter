@@ -23,9 +23,12 @@ runtime, and authorizes no execution. The governing sources are
 - A successful rehearsal is evidence for this single call only. It is not
   standing permission and does not unlock v1.1 or later actions.
 
-The present repository is not ready to run this procedure: Phase 7 audit
-persistence is incomplete, the approval-packet token remains structurally null,
-and no Phase 9 execution gate has been authorized or implemented.
+The present repository is not ready to run this procedure. Phase 7 audit
+persistence is complete and Owner-signed as of 2026-08-03, but that sign-off
+does not unlock Phase 9: the approval-packet token remains structurally null,
+no Phase 9 execution gate has been authorized or implemented, the Owner is not
+synchronously present, no fresh single-use token has been issued, and runtime
+rehearsal is not authorized.
 
 ## 2. Preconditions: all must be true
 

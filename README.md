@@ -24,14 +24,14 @@ data/results.jsonl  ──(GET /tasks/{id}/result)──────────
 
 ## 目前狀態（2026-08-03 更新 — 本節取代下方所有舊版本狀態描述）
 
-- Phase 2（v1.0 Definition Freeze）與 Phase 3–6 已完成；Phase 7 已授權、writer 已實作，待 Owner 檢視 audit 檔簽核；Phase 8 規劃與離線 projection contract 已完成，remote 接線仍未授權。正確狀態與 commit 證據見 `docs/agent_operating_system/05_VERIFIED_LONG_TERM_PLAN.md` 第 5 節。
+- Phase 2（v1.0 Definition Freeze）與 Phase 3–7 已完成（Phase 7 audit write 已由 Owner 於 2026-08-03 簽核）；Phase 8 規劃與離線 projection contract 已完成，remote 接線仍未授權。正確狀態與 commit 證據見 `docs/agent_operating_system/05_VERIFIED_LONG_TERM_PLAN.md` 第 5 節。
 - 全套測試與 mypy 白名單目前全綠；實際測試數量以 CI 或當次本機實跑輸出為準，不在本檔寫死浮動數字。
-- v1.0 仍未簽核完成：Phase 7 的逐字授權與 writer 實作已完成，仍待 Owner 檢視 audit 檔簽核；Phase 9 N=1 需 Owner 在場與另案 token/gate。仍然無 Worker dispatch、無 real OpenClaw call、無 Hermes runtime activation、無 connector call、無外部副作用。
+- v1.0 仍未完成：**唯一剩餘關卡是 Phase 9 N=1**，需 Owner 本人同步在場與另案 token/gate 授權。Phase 7 已於 2026-08-03 簽核完成，但其簽核**不解鎖 Phase 9**。仍然無 Worker dispatch、無 real OpenClaw call、無 Hermes runtime activation、無 connector call、無外部副作用。
 - 治理制度與長期路線圖已建立於 **`docs/agent_operating_system/`**：
   - 入口索引：`README.md`｜安全邊界正本：`01_SAFETY_BOUNDARIES.md`｜Phase 0–11 計劃表：`05_VERIFIED_LONG_TERM_PLAN.md`
   - 任何 AI session 開工前，先讀 `CLAUDE.md` 第 12 節路由。
 - 現況的唯一權威鏈：`CLAUDE.md` §12 → `docs/agent_operating_system/README.md` → `05_VERIFIED_LONG_TERM_PLAN.md` 第 5 節狀態表。**本檔以下章節與其他 166 份 docs 均為歷史紀錄**，與現況不符處以上述權威鏈為準。
-- 下一步：Owner 檢視 `data/audit_dev.jsonl` 與驗收文件並簽核 Phase 7；其後進入需 Owner 本人在場的 Phase 9。
+- 下一步：**Phase 9 N=1 需 Owner 在場**——一次無害查詢型 `openclaw agent` 真實調用（零寫入、單次 token），成功即 v1.0 達成。此前不得發出 token 或啟動任何執行。
 
 ---
 

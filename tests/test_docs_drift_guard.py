@@ -78,10 +78,12 @@ def test_readme_current_phase_claims_match_plan_status_table() -> None:
     current = readme.split("## 目前狀態", 1)[1].split("\n---", 1)[0]
     rows = _phase_rows(PLAN.read_text(encoding="utf-8"))
 
-    assert "Phase 2（v1.0 Definition Freeze）與 Phase 3–6 已完成" in current
-    assert all(rows[str(phase)] == "完成" for phase in range(2, 7))
-    assert "Phase 7 已授權、writer 已實作，待 Owner 檢視 audit 檔簽核" in current
-    assert rows["7"] == "已授權，實作中"
+    assert "Phase 2（v1.0 Definition Freeze）與 Phase 3–7 已完成" in current
+    assert all(rows[str(phase)] == "完成" for phase in range(2, 8))
+    assert "Phase 7 audit write 已由 Owner 於 2026-08-03 簽核" in current
+    # Phase 7 sign-off must never be readable as a Phase 9 unlock.
+    assert "唯一剩餘關卡是 Phase 9 N=1" in current
+    assert "不解鎖 Phase 9" in current
     assert "Phase 8 規劃與離線 projection contract 已完成" in current
     assert rows["8"] == "規劃完成"
     assert "Phase 9 N=1 需 Owner 在場" in current
