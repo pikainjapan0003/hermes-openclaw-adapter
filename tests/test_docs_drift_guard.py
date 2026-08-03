@@ -80,8 +80,8 @@ def test_readme_current_phase_claims_match_plan_status_table() -> None:
 
     assert "Phase 2（v1.0 Definition Freeze）與 Phase 3–6 已完成" in current
     assert all(rows[str(phase)] == "完成" for phase in range(2, 7))
-    assert "Phase 7 audit write 設計已備但 writer 尚未授權" in current
-    assert rows["7"] == "設計已備"
+    assert "Phase 7 已授權、writer 已實作，待 Owner 檢視 audit 檔簽核" in current
+    assert rows["7"] == "已授權，實作中"
     assert "Phase 8 規劃與離線 projection contract 已完成" in current
     assert rows["8"] == "規劃完成"
     assert "Phase 9 N=1 需 Owner 在場" in current
