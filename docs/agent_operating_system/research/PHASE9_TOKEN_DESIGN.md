@@ -35,20 +35,86 @@ The raw token is authentication material, not Blackboard content. The present
 approval-packet field remains structurally `null` until the Owner chooses and
 authorizes a Phase 9 schema design.
 
-## 2. Who produces the token — three options
+## 2. Owner authorization channel (out-of-band)
+
+Token production and Owner authorization are separate facts. All token options
+require an **Owner-controlled, model-inaccessible ingress channel**: the raw
+token or authenticator response reaches the future gate without entering model
+context, model-visible terminal output, chat, argv, environment variables,
+clipboard history, fixtures, reports, or audit plaintext. A model-visible
+instruction may name the frozen action and a redacted token reference, but it
+must never carry the raw token.
+
+The following are candidates only. This document does not select one:
+
+| Channel candidate | Mechanical separation required | Principal risks | Implementability |
+|---|---|---|---|
+| OOB-A — one-read Owner deposit | Owner writes the secret to an exact, separately authorized ingress object; the gate can read it once, while OS identity/ACL and handle-inheritance tests prove the model process cannot list, read, replace, or inherit it | creates a new secret-handling path; ACL, race, cleanup, and crash behavior need a separate contract and path authorization | selectable only if every permission and one-read invariant is mechanically tested |
+| OOB-B — separate Owner device | an authenticated Owner-held device sends a response directly to the local gate over an exact separately authorized channel that is absent from model context | introduces device identity, pairing, transport, loss, and recovery concerns | selectable only after the device/channel contract and failure behavior are approved |
+| OOB-C — isolated terminal input | Owner types into a dedicated gate-controlled TTY/stdin with echo disabled; process/descriptor checks prove the model is neither attached to nor able to inherit, inspect, inject into, or replay that input | terminal ownership can be misconfigured; screen capture, process inspection, and inherited descriptors can leak the secret | selectable only if isolation and Owner authentication are mechanically demonstrated |
+
+If no candidate can prove that separation, **every token-production option is
+不可實作**. “The model promises not to use what it saw” is not separation.
+
+### 2.1 Mechanical definition of `owner_synchronously_present`
+
+`owner_synchronously_present` is a computed gate result, never a caller-supplied
+boolean. It is true only when all of the following frozen predicates are true:
+
+1. `owner_channel_contract_approved`: the Owner has selected one exact OOB
+   channel and separately authorized its implementation and use.
+2. `model_exclusion_attested`: channel-specific ACL, process identity, terminal,
+   and file-descriptor/handle tests pass and prove the model process has no read,
+   write, inject, list, inherit, or replay access.
+3. `fresh_challenge_bound`: the gate generated a cryptographically unpredictable,
+   single-session challenge bound to the rehearsal id, packet digest, action
+   digest, and a short deadline.
+4. `owner_response_authenticated`: before that deadline, the chosen OOB channel
+   delivered the correct response using an Owner-held authenticator or secret;
+   the gate retains only response/challenge digests.
+5. `final_presence_reconfirmed`: immediately before token burn, a second fresh
+   bound challenge succeeds through the same still-isolated channel.
+6. `channel_continuity_green`: the channel has not closed, changed identity,
+   become model-accessible, timed out, or crossed the synchronous session
+   boundary.
+
+The value is `false` if any predicate is absent, unknown, stale, or changes. A
+chat reply, dashboard click, copied token value, or human-readable claim cannot
+set it to true.
+
+### 2.2 Reconciliation with the frozen Owner-instruction rules
+
+`05_VERIFIED_LONG_TERM_PLAN.md` Phase 9 says the token is provided by an “Owner
+instruction”; `09_N1_PREFLIGHT_RUNBOOK.md` says “Only the Owner provides the
+fresh token.” This design treats the authorization as a two-part Owner act:
+
+1. the Owner's verbatim instruction authorizes the exact frozen packet/action
+   and cites only the redacted token digest/reference; and
+2. the Owner supplies the matching raw secret or authenticated response through
+   the selected OOB channel.
+
+Neither half is sufficient alone. The instruction creates no reusable secret,
+and possession of the secret without the exact Owner instruction creates no
+authority. Therefore only the Owner provides the token, while the raw value
+never becomes model-readable. The Owner must approve this interpretation and
+the selected channel before implementation; until then Phase 9 remains HOLD.
+
+## 3. Who produces the token — three options
 
 | Option | Owner experience | Strengths | Weak-model / security risks | Verdict |
 |---|---|---|---|---|
-| T-A — Owner invents and types it | Owner creates a fresh secret and places it in the synchronous instruction | Authority visibly originates with Owner; no generator trust | Human entropy and reuse are likely; raw secret may enter chat history; hard to prove it was fresh | Not recommended |
-| T-B — System generates once, Owner repeats it | After all evidence is frozen, an authorized local generator shows one random token once; Owner copies it into the exact execution instruction | Strong entropy plus explicit Owner act; easy binding to displayed packet digest | Generator/display must be separately authorized; clipboard/chat exposure; model must not treat generation as approval | **Recommended, subject to Owner decision** |
-| T-C — System challenge, Owner confirms a derived approval response | System displays a random challenge and frozen-action summary; Owner returns a response produced by an approved authenticator/process | Raw bearer token need not be typed; can strongly bind human confirmation | Highest complexity; authenticator, key custody, and recovery become new systems; weak models may confuse challenge display with authorization | Defer beyond N=1 unless Owner prefers it |
+| T-A — Owner invents and supplies it | Owner creates a fresh secret and sends it only through the selected OOB channel | Authority visibly originates with Owner; no generator trust | Human entropy and reuse are likely; unsafe if copied through chat or model-visible terminal | Not recommended; **不可實作** without §2 separation |
+| T-B — System generates once, Owner returns it OOB | After evidence is frozen, a separately authorized generator delivers one random token only to the Owner; the Owner returns it through the selected OOB channel | Strong entropy plus explicit Owner act; easy binding to displayed packet digest | Generator/display and return channel both require model exclusion; clipboard/chat exposure invalidates the token | May be selected only if §2 separation is mechanically proven; not unconditionally recommended |
+| T-C — System challenge, Owner confirms with an authenticator | Gate creates a bound challenge; an approved Owner-held authenticator returns the response through the selected OOB channel | Raw bearer token need not be typed; strongest binding to live Owner confirmation | Highest complexity; authenticator, key custody, and recovery become new systems | May be selected only if §2 separation is mechanically proven |
 
 For T-B, “system generates” is not self-authorization. Generation may occur only
 after a separate Owner instruction authorizes that exact local generator step.
-The token becomes active only when the Owner returns it in the synchronous
-instruction that names the exact packet and action.
+The token becomes eligible only when the Owner returns it through the selected
+OOB channel and separately gives the exact action instruction described in
+§2.2. If the generator display or return path is model-visible, T-B is
+**不可實作**.
 
-## 3. Binding contract
+## 4. Binding contract
 
 The token verifier should compare a canonical binding record, not free text.
 The proposed binding fields are:
@@ -70,7 +136,7 @@ Changing a prompt space, target, timeout, agent id, session id, output mode, or
 capability posture invalidates the binding. The verifier must not normalize an
 unexpected runtime value to make it match.
 
-## 4. “Use once” persistence — three options
+## 5. “Use once” persistence — three options
 
 | Option | Mechanical rule | Crash/restart behavior | Risks | Verdict |
 |---|---|---|---|---|
@@ -88,7 +154,7 @@ but that does not automatically make it a token ledger. Before implementation,
 the Owner must approve a machine contract able to represent the burn without
 free-text encoding or raw-token leakage.
 
-## 5. Token lifecycle and failure semantics
+## 6. Token lifecycle and failure semantics
 
 | State | Entry condition | Allowed next state | Runtime allowed? |
 |---|---|---|---|
@@ -106,7 +172,7 @@ burned when a later gate fails. An unknown or forged string has no authoritative
 token record to burn, but its presentation is denied and may be recorded using
 only a non-reversible fingerprint.
 
-## 6. Replay tests that count
+## 7. Replay tests that count
 
 A token is not “single-use” merely because a function returns an error twice.
 The implementation package must include all of these mechanical proofs:
@@ -133,7 +199,12 @@ The controlled test executor must be an in-memory counter, never OpenClaw. The
 replay assertion is: **two presentations, one durable burn identity, at most one
 executor invocation, and zero real runtime calls.**
 
-## 7. Owner decision record
+## 8. Owner decision record
+
+Owner-controlled OOB channel (`OOB-A`, `OOB-B`, `OOB-C`, or separately reviewed
+alternative): ____________________
+
+Required channel-specific exclusion/authentication evidence: ________________
 
 Token-production option (`T-A`, `T-B`, or `T-C`): ____________________
 

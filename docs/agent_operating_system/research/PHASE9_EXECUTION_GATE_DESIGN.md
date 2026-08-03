@@ -45,13 +45,22 @@ Before token issuance, the coordinator freezes and hashes this set:
 | Rollback preview | valid descriptive record; N=1 outcome is `NOT_REQUIRED` unless an incident is observed |
 | Phase 7 audit chain | complete and valid at the exact pre-call tail hash |
 | CLI facts sheet | executable/interface/output/timeout/state-write facts verified with no unknowns |
-| Owner session | synchronous presence, explicit exact-action instruction, fresh token ceremony selected by Owner |
+| Owner authorization channel | exact Owner-selected OOB channel contract; model-exclusion attestation; no raw token in model-visible instruction/output |
+| Owner session | computed `owner_synchronously_present`; exact-action instruction; fresh bound challenge and authenticated response; immediate pre-burn reconfirmation |
 | Capability posture | worker, queue, connector, follow-up, write tools, background mode, and second-call paths disabled |
 
 Every field that can change argv or behavior belongs in the canonical action
 hash. Runtime values are compared field-for-field or byte-for-byte immediately
 before the process start. The gate must not coerce, default, trim, repair, or
 substitute a mismatching value.
+
+`owner_synchronously_present` is not an input flag. The gate computes it as the
+logical AND of the six predicates defined in `PHASE9_TOKEN_DESIGN.md` §2.1:
+approved channel contract, model-exclusion attestation, fresh bound challenge,
+authenticated Owner response, immediate pre-burn reconfirmation, and unchanged
+channel continuity. The frozen evidence contains each predicate result and its
+non-secret digest/reference. Missing, stale, caller-asserted, or unverifiable
+evidence makes the result false.
 
 ## 4. State machine
 
@@ -77,7 +86,8 @@ The future implementation must preserve this order:
 3. Recompute bundle, packet, action, and audit-tail hashes independently.
 4. Prove the exact Phase 9 contract/version is accepted; v1 Phase 4 packets
    cannot carry a token.
-5. Prove Owner synchronous presence and exact instruction for this action.
+5. Recompute `owner_synchronously_present` from the frozen OOB-channel evidence
+   and prove the exact redacted Owner instruction for this action.
 6. Verify token freshness, expiry, session, packet, action, target, and attempt
    bindings without logging the raw token.
 7. Recheck all preflight conditions and the CLI facts sheet at the last possible
