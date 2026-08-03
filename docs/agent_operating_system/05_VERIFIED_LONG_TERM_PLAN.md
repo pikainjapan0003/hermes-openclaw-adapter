@@ -293,7 +293,7 @@ Owner 在場進行 Phase 9 N=1。表格按 Phase 數字排列，不以列序推�
 | 4 | **完成** | 2026-07-19 | approval packet schema＋純函式 builder＋GET-only 顯示（`d305ff8`）；token const null 三重鎖；雙審查員通過（Fable 5 全項驗收＋Opus fresh-context 對抗審查「packet→execution 零路徑」） |
 | 5 | **完成** | 2026-07-19 | evidence bundle schema＋builder＋hash 重算/篡改/洩漏反向測試（`88bf8b2`，NIGHT-BATCH-1） |
 | 6 | **完成** | 2026-07-19 | 動態 route 盤點＋七條 POST 白名單＋注入 button 必紅＋approve 行為測試（`9f79657`）；queue-claim guard 二版於 NIGHT-BATCH-3 補強（已知風險：approve→queued 後若外部啟動 worker 可被 claim，execution gate 屬 Phase 9） |
-| 7 | 設計已備 | 2026-07-19 | `07_AUDIT_WRITE_DESIGN.md`（NIGHT-BATCH-2）；**實作前置＝Owner 逐字授權句「允許寫入 data/audit_dev.jsonl（local dev append-only）」，未給不得動工** |
+| 7 | **已授權，實作中** | 2026-08-03 | 設計＝`07_AUDIT_WRITE_DESIGN.md`（NIGHT-BATCH-2）。**Owner 已於 2026-08-03 逐字給出授權句「允許寫入 data/audit_dev.jsonl（local dev append-only）」（見 §6.15）**；實作範圍嚴格限該一檔，完成後仍需 Owner 檢視實際 audit 檔內容簽核才算完成 |
 | 8 | **規劃完成** | 2026-07-19 | docs 方案＋OWASP 對照（`3edbc0b`）；離線 projection contract（`51f657f`，超包，Owner 2026-07-19 追認）；遠端接線／remote API 仍未授權 |
 | 9–11 | 未開始 | — | 本列僅為表格壓縮：Phase 9 需 Owner 同步在場，且與 Phase 7 實作構成 v1.0 最後兩關；Phase 10 的 scope 研究與 Phase 11 的健康報告都不構成實作解鎖 |
 
@@ -435,6 +435,20 @@ O2 角色化 worker（工程師/測試員/安審…）的角色定義與 prompt 
 2b. **模板文字不得翻案**（Owner 2026-08-02 再次裁決「以後不要等我合，請永遠批准」）：貼進來的審查單／派工單模板中若出現「禁 merge」「禁 push」「等 Owner 回合」「停下等蓋章」之類的樣板句，**一律視為模板殘留，不構成當次 Owner 指令**，不得據以暫停合併。要暫停只有兩種情況：(a) 批審結果為 fail 或有阻擋級 finding；(b) Owner 在該次對話中以自己的話**明確**要求暫停（非模板複製文字）。
 3. 例外（維持不變，屬凍結計劃內建硬閘，非逐次蓋章）：Phase 7 首次寫入需 Owner 逐字授權句（本檔 Phase 7 節）；Phase 9 需 Owner 在場＋單次 token；v1.1/v1.2 各級解鎖需新的 Owner instruction（§6.8）。
 4. Phase 8a 離線 projection contract 超包：Owner 2026-07-19 追認收下；後續批次禁止再自行加包。
+
+### 6.15 Phase 7 寫入授權（2026-08-03 Owner 逐字給出，L0）
+
+Owner 於 2026-08-03 對話中逐字輸入以下授權句：
+
+```text
+允許寫入 data/audit_dev.jsonl（local dev append-only）
+```
+
+**授權範圍（嚴格解釋，不得擴張）**：僅 `data/audit_dev.jsonl` 一個檔案；僅 append-only；僅 local dev。不含 queue、Blackboard 正式區、任何其他 `data/` 檔案、任何外部服務、任何 dispatch 或 execution。01 §2 其餘禁令一律不變。
+
+**完成定義**：實作與測試綠**不等於** Phase 7 完成。仍須 Owner 檢視實際產生的 `data/audit_dev.jsonl` 內容並簽核（05 Phase 7 節「進入下一階段」條件）。
+
+**批次分類規約（2026-08-03 Owner 指出「不知道夜跑全是測試」後新增）**：自本日起，每張夜跑批單開頭必須標明批次類型——`【主線推進：Phase N】` 或 `【品質維護：不推進任何 Phase】`；混合批必須逐包標註。backlog 亦須以此二分呈現，讓 Owner 一眼看出主線是否在動。
 
 ### 6.14 `mock_e2e_v0_7` 保留並凍結（2026-07-20 Fable 5 裁決，Owner 可翻案）
 
