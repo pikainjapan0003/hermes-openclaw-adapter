@@ -43,34 +43,94 @@ authorizes a Phase 9 schema design.
 ## 2. Owner authorization channel (out-of-band)
 
 Token production and Owner authorization are separate facts. All token options
-require an **Owner-controlled, model-inaccessible ingress channel**: the raw
-token or authenticator response reaches the future gate without entering model
-context, model-visible terminal output, chat, argv, environment variables,
-clipboard history, fixtures, reports, or audit plaintext. A model-visible
-instruction may name the frozen action and a redacted token reference, but it
-must never carry the raw token.
+require both an **Owner-controlled, model-inaccessible ingress channel** and a
+model-inaccessible **egress/display channel**. The raw token or authenticator
+response reaches the future gate, and any secret/challenge/digest reaches the
+Owner, without entering model context, model-visible terminal output, chat,
+argv, environment variables, clipboard history, fixtures, reports, or audit
+plaintext. A model-visible instruction may name the frozen action and a safe
+token reference, but it must never carry the raw token.
 
-The following are candidates only. This document does not select one:
+### 2.1 Hard OS-principal prerequisite
 
-| Channel candidate | Mechanical separation required | Principal risks | Implementability |
+The gate and every local ingress/egress endpoint that handles raw token material
+**must run as an OS principal different from the model principal**, or the whole
+secret-bearing channel must be moved off the local host. A different process,
+terminal, filename, or window under the same principal is not separation.
+
+Fable 5 measured the current WSL review environment as model session
+`uid=1000(lnovo)`, `gid=1000(lnovo)`, Linux `ptrace_scope=1`, with same-uid
+visibility into the model principal's own `/proc/<pid>/fd`; `/usr/bin/openclaw`
+is a root-owned symbolic link. These facts are evidence, not authorization. The
+root ownership of the OpenClaw link does not isolate a gate launched by the
+model's `lnovo` principal.
+
+**Same uid/principal = 不可實作.** Under the same uid, an ACL/mode check may
+report the expected owner and permissions while the model still has the same
+effective access, `/proc` visibility, inherited descriptors, terminal access,
+or ability to replace/connect to an endpoint. Such a result is a **false pass**
+and must never count as model-exclusion evidence. A usable design needs a
+distinct uid/SID with no shared access-granting group or elevation path, or an
+off-host channel whose secret never reaches the model's OS principal.
+
+### 2.2 Mandatory platform-separation preflight
+
+All checks are performed from both the gate principal and the model principal;
+metadata inspection alone is insufficient. Any unknown or model-side success is
+fail-closed:
+
+| Check | Required evidence | Fail-closed condition |
+|---|---|---|
+| uid/gid or SID comparison | gate, ingress, egress, generator, and model effective identities are recorded; gate identity differs from model and shares no access-granting supplementary group | same uid/SID, unresolved identity, shared group grants access, or model can switch/elevate to gate identity |
+| ACL/mode traversal | model-principal probes cannot list parent paths, open/read/write/replace the endpoint, or discover secret metadata; gate-principal probes can perform only the contracted operation | ACL evaluated only as gate user, model probe succeeds, parent directory permits replacement, or ownership changes |
+| `ptrace_scope` and process inspection | current policy is recorded, and an actual model-principal probe cannot ptrace, inspect memory/environment, or use `/proc/<gate-pid>` to reach secret state | relying on `ptrace_scope=1` alone, same-principal trace/read remains possible, or result is unknown |
+| `/proc` visibility | model-principal probes of gate `fd`, `fdinfo`, `environ`, `mem`, and process metadata fail at the required boundary | any secret-bearing fd/target or environment value is readable/discoverable |
+| descriptor/handle inheritance | child-process table proves secret fds/handles are close-on-exec/non-inheritable; model and OpenClaw receive none | an unplanned child inherits, duplication is possible, or inheritance cannot be enumerated |
+| TTY/console ownership | exact tty/session owner, controlling process, mode/ACL, echo state, readers, and input-injection rights are recorded; model-side open/read/write/ioctl probes fail | tty belongs to model uid, model is attached, echo/screen capture is enabled, injection/read succeeds, or owner changes |
+
+The exclusion checks run once before the channel opens and are later repeated as
+specified in §2.5. Passing on one machine or one earlier session is not reusable
+evidence.
+
+### 2.3 Ingress candidates re-evaluated for the measured host
+
+The following remain Owner choices; this document selects none:
+
+| Channel candidate | Same-uid local result | Conditions for possible use | Endpoint-specific requirements |
 |---|---|---|---|
-| OOB-A — one-read Owner deposit | Owner writes the secret to an exact, separately authorized ingress object; the gate can read it once, while OS identity/ACL and handle-inheritance tests prove the model process cannot list, read, replace, or inherit it | creates a new secret-handling path; ACL, race, cleanup, and crash behavior need a separate contract and path authorization | selectable only if every permission and one-read invariant is mechanically tested |
-| OOB-B — separate Owner device | an authenticated Owner-held device sends a response directly to the local gate over an exact separately authorized channel that is absent from model context | introduces device identity, pairing, transport, loss, and recovery concerns | selectable only after the device/channel contract and failure behavior are approved |
-| OOB-C — isolated terminal input | Owner types into a dedicated gate-controlled TTY/stdin with echo disabled; process/descriptor checks prove the model is neither attached to nor able to inherit, inspect, inject into, or replay that input | terminal ownership can be misconfigured; screen capture, process inspection, and inherited descriptors can leak the secret | selectable only if isolation and Owner authentication are mechanically demonstrated |
+| OOB-A — one-read Owner deposit | **不可實作** when the deposit and gate are reachable as `uid=1000(lnovo)` | gate/deposit owned by a distinct non-model principal, or deposit entirely off-host; model cannot traverse, list, read, replace, link, inherit, or race the object | exact separately authorized object/path; atomic one-read semantics; anti-replacement and anti-hardlink/symlink checks; no fallback copy; crash/cleanup contract |
+| OOB-B — separate Owner device | a separate device is **not sufficient** if its local socket/pipe receiver runs as the model uid; that arrangement is **不可實作** | distinct-principal local receiver or an endpoint wholly outside the model host; cryptographic device authentication binds the Owner device to the rehearsal | exact socket/pipe ownership and mode; exclusive non-model bind; peer credential check for the local receiver; mutual device authentication; anti-squatting/anti-takeover; bound nonce/deadline; replay cache or durable burn; one accepted connection; no unauthenticated fallback |
+| OOB-C — isolated terminal input | **不可實作** when the tty/gate is owned by or attached to `uid=1000(lnovo)` | distinct-principal gate owns a dedicated tty/console and the model cannot open, read, inject, inspect, ptrace, or inherit it; otherwise terminal is off-host | echo disabled; controlling-session and tty ownership frozen; exclusive reader; non-inheritable stdin; screen/log capture disabled; model-side tty probes fail |
 
-If no candidate can prove that separation, **every token-production option is
+If no candidate satisfies §2.1–§2.3, **every token-production option is
 不可實作**. “The model promises not to use what it saw” is not separation.
 
-### 2.1 Mechanical definition of `owner_synchronously_present`
+### 2.4 OOB egress/display requirements
+
+Ingress isolation does not protect a token that the generator displays to the
+model. The Owner must select and authorize one exact egress with the ingress:
+
+| Egress candidate | Who starts/generates | Display destination | Required proof that the model cannot read it |
+|---|---|---|---|
+| E-A — distinct-principal isolated tty | an already authorized gate/generator running only as the distinct gate principal | exact gate-owned tty/console viewed directly by Owner | §2.2 tty/process probes pass; tty is not the model terminal; no stdout/stderr tee, scrollback sharing, screen capture, inherited fd, or model-readable log |
+| E-B — paired separate Owner device | distinct-principal gate generator, or approved Owner-device authenticator | authenticated paired device display; raw secret is encrypted only to that device | mutual endpoint authentication, device/rehearsal binding, model-host output contains only non-secret references, and model-side socket/process probes cannot recover plaintext |
+| E-C — off-host Owner authenticator | authenticator generates or derives the response on the Owner device | that device only; local gate receives only the authenticated response over approved ingress | raw token never exists on the model host; challenge, device identity, packet/action binding, and replay protection verify without a model-readable secret |
+
+For every egress the design records who launched the generator, its OS
+principal, exact output device/tty, all copy/log/clipboard sinks, and the
+model-principal negative probes. A model-visible display invalidates the token
+and ceremony.
+
+### 2.5 Mechanical definition of `owner_synchronously_present`
 
 `owner_synchronously_present` is a computed gate result, never a caller-supplied
 boolean. It is true only when all of the following frozen predicates are true:
 
 1. `owner_channel_contract_approved`: the Owner has selected one exact OOB
    channel and separately authorized its implementation and use.
-2. `model_exclusion_attested`: channel-specific ACL, process identity, terminal,
-   and file-descriptor/handle tests pass and prove the model process has no read,
-   write, inject, list, inherit, or replay access.
+2. `model_exclusion_attested`: the distinct-principal/off-host rule and every
+   applicable §2.2 ingress and egress check pass and prove the model process has
+   no read, write, inject, list, inspect, inherit, or replay access.
 3. `fresh_challenge_bound`: the gate generated a cryptographically unpredictable,
    single-session challenge bound to the rehearsal id, packet digest, action
    digest, and a short deadline.
@@ -79,15 +139,16 @@ boolean. It is true only when all of the following frozen predicates are true:
    the gate retains only response/challenge digests.
 5. `final_presence_reconfirmed`: immediately before token burn, a second fresh
    bound challenge succeeds through the same still-isolated channel.
-6. `channel_continuity_green`: the channel has not closed, changed identity,
-   become model-accessible, timed out, or crossed the synchronous session
+6. `channel_continuity_green`: ingress and egress identities, ACLs, endpoints,
+   tty/device ownership, descriptors, and model exclusion have not drifted; the
+   channel has not closed, timed out, or crossed the synchronous session
    boundary.
 
 The value is `false` if any predicate is absent, unknown, stale, or changes. A
 chat reply, dashboard click, copied token value, or human-readable claim cannot
 set it to true.
 
-### 2.2 Reconciliation with the frozen Owner-instruction rules
+### 2.6 Reconciliation with the frozen Owner-instruction rules
 
 `05_VERIFIED_LONG_TERM_PLAN.md` Phase 9 says the token is provided by an “Owner
 instruction”; `09_N1_PREFLIGHT_RUNBOOK.md` says “Only the Owner provides the
@@ -104,7 +165,7 @@ authority. Therefore only the Owner provides the token, while the raw value
 never becomes model-readable. The Owner must approve this interpretation and
 the selected channel before implementation; until then Phase 9 remains HOLD.
 
-### 2.3 Phase 9 authorization-citation masking
+### 2.7 Phase 9 authorization-citation masking
 
 The Owner's original instruction must be written without the raw token. Its
 token reference uses exactly this human-visible form:
@@ -144,7 +205,7 @@ For T-B, “system generates” is not self-authorization. Generation may occur 
 after a separate Owner instruction authorizes that exact local generator step.
 The token becomes eligible only when the Owner returns it through the selected
 OOB channel and separately gives the exact action instruction described in
-§2.2. If the generator display or return path is model-visible, T-B is
+§2.6. If the generator display or return path is model-visible, T-B is
 **不可實作**.
 
 ## 4. Binding contract
@@ -245,8 +306,13 @@ executor invocation, and zero real runtime calls.**
 
 ## 8. Owner decision record
 
-Owner-controlled OOB channel (`OOB-A`, `OOB-B`, `OOB-C`, or separately reviewed
+Owner-controlled OOB ingress (`OOB-A`, `OOB-B`, `OOB-C`, or separately reviewed
 alternative): ____________________
+
+Owner-controlled OOB egress (`E-A`, `E-B`, `E-C`, or separately reviewed
+alternative): ____________________
+
+Gate/generator OS principal or off-host location: ___________________________
 
 Required channel-specific exclusion/authentication evidence: ________________
 
