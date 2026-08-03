@@ -88,6 +88,7 @@ future contract requirement, not permission to encode them in free text.
 | 14 | Second start request, follow-up, or automatic retry path appears | start counter >1 request, reused capability, scheduler/worker activity, or follow-up flag | reject request and freeze the session; treat any actual second start as a safety incident | original token already burned; no new authority exists | replay/second-start attempt, source, executor count | atomic one-use bit and durable burn deny; all schedulers off |
 | 15 | Raw token appears in any persistent or model-visible output | redaction scan finds token bytes in Owner instruction, report, commit/closeout text, audit, file, argv/environment evidence, exception, or fixture | stop before any call; restrict further display; do not copy the exposed value into an incident report | revoke the exposed token immediately; require a fresh OOB ceremony | record only leak surface/class, packet/action digests, and a new non-secret incident id | no capability is created or retained; new token and full ceremony required |
 | 16 | OOB principal, endpoint, ACL, `/proc`, descriptor, tty/device, or peer-credential evidence drifts | mandatory isolation probes after Owner response or after the second pre-burn challenge differ from the frozen baseline | stop before burn; close ingress/egress; do not accept a later restoration in the same ceremony | revoke/expire the session token; new ceremony required | changed check ids and old/new attestation digests only, no endpoint secret | six-predicate AND recomputes false; the gate must not enter `BURNING` |
+| 17 | Signs suggest deliberate bypass of the local controls | unexpected root/elevation use, gate or dependency digest changes, burn/frozen-artifact deletion or rollback, OpenClaw configuration tampering, or any evidence inconsistent with accidental drift | **stop immediately**; issue no new call; close the ceremony; preserve existing bytes and bounded in-memory facts without inventing a fallback write; notify Owner that the event is outside the §6.16 defense scope | revoke/expire any token; treat ledger uncertainty as spent/unsafe, never reusable | record only under an already authorized incident/audit path; otherwise present a bounded Owner-visible summary and leave storage unchanged | no claim of containment or resolution; Phase 9 remains HOLD until Owner chooses a new threat model and, if required, an off-host design |
 
 ## 4. Scenario-specific notes
 
@@ -148,6 +149,15 @@ and T-A cannot use one. If any retainable or model-visible surface receives the
 raw value, that token is compromised and revoked. Do not quote it while
 reporting the leak. Close the gate and begin only with a new token, new OOB
 ceremony, and renewed preflight under separate authorization.
+
+### 4.8 Suspected deliberate bypass exceeds this design
+
+Section 6.16 accepts four residual risks; it does not label them solved. If
+runtime evidence suggests someone intentionally exercised one of them, the
+non-adversarial assumptions no longer hold. The runner must stop rather than
+argue that the action was “allowed by the threat model.” Freeze the evidence
+already available, do not create a new persistence location, and tell the Owner
+that continuing would require a different threat model and an off-host channel.
 
 ## 5. Mechanical all-disabled checklist
 
