@@ -450,6 +450,22 @@ Owner 於 2026-08-03 對話中逐字輸入以下授權句：
 
 **批次分類規約（2026-08-03 Owner 指出「不知道夜跑全是測試」後新增）**：自本日起，每張夜跑批單開頭必須標明批次類型——`【主線推進：Phase N】` 或 `【品質維護：不推進任何 Phase】`；混合批必須逐包標註。backlog 亦須以此二分呈現，讓 Owner 一眼看出主線是否在動。
 
+### 6.16 Phase 9 威脅模型裁決（2026-08-03 Owner 拍板，L0）
+
+**背景（Fable 5 與 Opus 雙模型實測）**：本機模型 session 可經 `wsl.exe -d Ubuntu -u root` **免密碼取得 uid=0**；預設身分 `uid=1000(lnovo)` 另含 `27(sudo)`；repo、`app/`、`.venv`、`~/.openclaw/` 皆為 lnovo 可寫。**結論：任何裝在本機（含 WSL）的閘門，都無法在機械上排除一個刻意繞過的模型。**
+
+**Owner 裁決**：Phase 9 的威脅模型為——
+
+```text
+在範圍內（設計必須擋住）：模型過度熱心、誤解授權、自作主張、
+                        把顯示當成授權、意外重放、崩潰後誤續跑。
+明確不在範圍內：一個刻意規避的對抗性模型。
+```
+
+**因此**：Phase 9 的安全論述**不得**使用「mechanically proven model exclusion」這類絕對語；應改為「程序約束＋盡力技術隔離，對非對抗性模型有效」。以下為**已知並接受的殘餘風險**，不得再被當成待修缺陷：模型可經 `wsl.exe -u root` 取得 root；gate 程式碼與 `.venv` 對模型可寫；burn ledger 與 frozen artifact 可被有意刪改；`~/.openclaw/` config 可被有意竄改。
+
+**若日後 Owner 改為需要防對抗性模型**：唯一路徑是把 token 通道與 gate 移到**這台 Windows 完全無法觸及**的裝置；屆時本節須由 Owner 明示翻案。
+
 ### 6.14 `mock_e2e_v0_7` 保留並凍結（2026-07-20 Fable 5 裁決，Owner 可翻案）
 
 `app/mock_e2e_v0_7.py` 保留為凍結的 v0.7 legacy rehearsal；其輸出不是 Blackboard contract artifact，不得被解讀為 queue／approval／execution authority，也不得在原檔內改造成新 contract。後續只可用測試鎖住既有行為；若要建立單向 migration adapter 或退役舊件，須另案取得明確欄位政策與 Owner 裁決。本決策可由 Owner 明示翻案。
