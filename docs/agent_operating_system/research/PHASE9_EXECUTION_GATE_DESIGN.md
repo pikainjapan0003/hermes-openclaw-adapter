@@ -11,6 +11,20 @@ later exact instruction must separately authorize implementation; after that
 work passes independent review, another exact Owner-present instruction must
 authorize the one execution. No layer implies the next.
 
+## Threat model
+
+Source: `05_VERIFIED_LONG_TERM_PLAN.md` §6.16, commit `e34ca1c`.
+
+> 在範圍內（設計必須擋住）：模型過度熱心、誤解授權、自作主張、把顯示當授權、意外重放、崩潰後誤續跑。
+>
+> 明確不在範圍內：一個刻意規避的對抗性模型。
+>
+> 已知並接受的殘餘風險（不得再被當成待修缺陷）：模型可經 `wsl.exe -u root` 取得 root；gate 程式碼與 `.venv` 對模型可寫；burn ledger 與 frozen artifact 可被有意刪改；`~/.openclaw/` config 可被有意竄改。
+
+Accordingly, this document relies on **procedural constraint plus best-effort
+technical isolation, effective against a non-adversarial model**. It makes no
+claim that a deliberately evasive model is mechanically excluded.
+
 ## 1. One responsibility
 
 The gate has one responsibility: after independently proving that the frozen
@@ -73,7 +87,7 @@ Before token issuance, the coordinator freezes and hashes this set:
 | Rollback preview | valid descriptive record; N=1 outcome is `NOT_REQUIRED` unless an incident is observed |
 | Phase 7 audit chain | complete and valid at the exact pre-call tail hash |
 | CLI facts sheet | executable/interface/output/timeout/state-write facts verified with no unknowns |
-| Owner authorization channel | exact Owner-selected ingress **and egress** contracts; gate/endpoints run as a different OS principal from the model or entirely off-host; all identity/ACL/ptrace/`/proc`/fd/tty exclusion probes pass; no raw token in model-visible instruction/output |
+| Owner authorization channel | exact Owner-selected ingress **and egress** contracts; gate/endpoints run as a different OS principal from the model or entirely off-host; all identity/ACL/ptrace/`/proc`/fd/tty best-effort isolation probes pass; no raw token in model-visible instruction/output |
 | Owner digest view | complete packet/action digests independently displayed through the selected non-model egress, or read by Owner from frozen bytes through an independently trusted reader; model-only display is invalid |
 | Owner session | computed `owner_synchronously_present`; exact-action instruction; fresh bound challenge and authenticated response; immediate pre-burn reconfirmation |
 | Capability posture | worker, queue, connector, follow-up, write tools, background mode, and second-call paths disabled |
@@ -85,15 +99,17 @@ substitute a mismatching value.
 
 `owner_synchronously_present` is not an input flag. The gate computes it as the
 logical AND of the six predicates defined in `PHASE9_TOKEN_DESIGN.md` §2.5:
-approved channel contract, model-exclusion attestation, fresh bound challenge,
+approved channel contract, best-effort isolation attestation, fresh bound challenge,
 authenticated Owner response, immediate pre-burn reconfirmation, and unchanged
 channel continuity. The frozen evidence contains each predicate result and its
 non-secret digest/reference. Missing, stale, caller-asserted, or unverifiable
 evidence makes the result false.
 
-The current measured `uid=1000(lnovo)` model session cannot host a same-uid
-local gate or secret-bearing endpoint. Same principal is **不可實作**, even when
-mode/ACL output appears restrictive; such output is not separation evidence.
+The current measured `uid=1000(lnovo)` model session must not share its uid or
+terminal with a local gate or secret-bearing endpoint, because ordinary
+same-principal visibility can expose the token accidentally. A different local
+uid/SID is acceptable best-effort isolation for the §6.16 non-adversarial threat
+model; deliberate root elevation or tampering remains an accepted residual risk.
 
 ## 4. State machine
 
@@ -124,17 +140,17 @@ The future implementation must preserve this order:
    the exact redacted Owner instruction names those values.
 6. Verify token freshness, expiry, session, packet, action, target, and attempt
    bindings without logging the raw token; immediately after this first Owner
-   response, rerun the applicable exclusion probes and freeze their attestation
+   response, rerun the applicable isolation probes and freeze their attestation
    digest.
 7. Recheck all preflight conditions and the CLI facts sheet at the last possible
    point before burn.
 8. Issue the **second fresh bound challenge** through the approved egress and
    accept its authenticated response only through the approved ingress. Rerun
-   every applicable identity/ACL/ptrace/`/proc`/fd/tty/endpoint exclusion probe
+   every applicable identity/ACL/ptrace/`/proc`/fd/tty/endpoint isolation probe
    after the response.
 9. Recompute all six `owner_synchronously_present` predicates as one AND from
    evidence produced after step 8. Any drift or stale evidence closes deny;
-   `BURNING` is unreachable until this recomputation is true.
+   the gate must not enter `BURNING` until this recomputation is true.
 10. Acquire the gate/token-audit coordination lock, recheck the chain and absence
    of the token digest, append the pre-call burn/attempt event, fsync, and verify.
 11. Create one process-local capability containing only the action hash and a
@@ -147,7 +163,8 @@ The future implementation must preserve this order:
 15. Append the post-attempt audit event and produce the report. A post-audit
     failure does not reopen or retry the call.
 
-If any step cannot be proven, stop. A later green check cannot repair an earlier
+If any required check is missing, stale, or false, stop. A later green check
+cannot repair an earlier
 failure. A token that was validly issued for the session is burned when a later
 check fails, so “fix and retry” is structurally impossible.
 
@@ -221,7 +238,8 @@ Implementation remains HOLD until the Owner has separately selected and
 authorized:
 
 - token production and durable burn contract;
-- distinct-principal/off-host ingress and egress contracts, including the exact
+- distinct-principal/off-host ingress and egress contracts, accepted as
+  best-effort isolation for the non-adversarial threat model, including the exact
   independent packet/action digest display/reader method;
 - Phase 9 packet/token schema strategy;
 - structured pre/post audit-event representation;

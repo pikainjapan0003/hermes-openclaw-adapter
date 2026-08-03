@@ -12,6 +12,20 @@ exact instruction must separately authorize implementation; after that work
 passes independent review, another exact Owner-present instruction must
 authorize the one execution. No layer implies the next.
 
+## Threat model
+
+Source: `05_VERIFIED_LONG_TERM_PLAN.md` §6.16, commit `e34ca1c`.
+
+> 在範圍內（設計必須擋住）：模型過度熱心、誤解授權、自作主張、把顯示當授權、意外重放、崩潰後誤續跑。
+>
+> 明確不在範圍內：一個刻意規避的對抗性模型。
+>
+> 已知並接受的殘餘風險（不得再被當成待修缺陷）：模型可經 `wsl.exe -u root` 取得 root；gate 程式碼與 `.venv` 對模型可寫；burn ledger 與 frozen artifact 可被有意刪改；`~/.openclaw/` config 可被有意竄改。
+
+Accordingly, this document relies on **procedural constraint plus best-effort
+technical isolation, effective against a non-adversarial model**. It makes no
+claim that a deliberately evasive model is mechanically excluded.
+
 ## 1. Scope in one sentence
 
 Freeze evidence, obtain one exact Owner decision and fresh token, permit one
@@ -160,7 +174,7 @@ independent reviewer observes counters/state.
 1. Re-run all preflight and exact-action comparisons at the final boundary.
 2. Send the second fresh packet/action/rehearsal-bound challenge through the
    approved egress; accept the Owner response only through the approved ingress;
-   then rerun all channel-exclusion probes and recompute the full six-predicate
+   then rerun all channel-isolation probes and recompute the full six-predicate
    `owner_synchronously_present` AND. Any changed result stops before burn.
 3. Under the selected durable mechanism and only after a new verbatim Phase 9
    audit-write authorization, append and verify the pre-call audit burn event
