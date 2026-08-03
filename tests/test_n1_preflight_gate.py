@@ -18,7 +18,13 @@ APPROVAL_SCHEMA = (
 PLAN = ROOT / "docs" / "agent_operating_system" / "05_VERIFIED_LONG_TERM_PLAN.md"
 RUNBOOK = ROOT / "docs" / "agent_operating_system" / "09_N1_PREFLIGHT_RUNBOOK.md"
 AUDIT_WRITER = ROOT / "app" / "audit_writer_local.py"
-AUDIT_FILE = ROOT / "data" / "audit_dev.jsonl"
+OWNER_ACCEPTANCE = (
+    ROOT
+    / "docs"
+    / "agent_operating_system"
+    / "research"
+    / "PHASE7_OWNER_ACCEPTANCE.md"
+)
 
 
 def _phase7_status() -> str:
@@ -44,14 +50,19 @@ def test_approval_packet_token_is_structurally_locked_to_null() -> None:
 
 def test_phase7_audit_persistence_is_authorized_but_not_signed_off() -> None:
     assert AUDIT_WRITER.exists(), "Phase 7 writer should exist after authorization"
-    assert AUDIT_FILE.exists(), "Owner acceptance evidence should be present"
-    assert _phase7_status() != "摰?"
+    acceptance = OWNER_ACCEPTANCE.read_text(encoding="utf-8")
+    assert all(f"RECORD_{index}=" in acceptance for index in range(1, 4))
+    assert (
+        "FILE_SHA256=eef4d7db225c5df929abcc92e4152aa2aaf14cccc17f5bdd86361bbedc85efc2"
+        in acceptance
+    )
+    assert _phase7_status().replace("**", "") != "完成"
 
 
 def test_phase7_plan_status_has_not_reached_completion() -> None:
     status = _phase7_status()
 
-    assert status == "設計已備"
+    assert status.replace("**", "") == "已授權，實作中"
     assert "完成" not in status
 
 
