@@ -133,7 +133,9 @@ After every success or failure, independently assert:
 - token digest is durably burned or the session records deny with no capability;
 - a replay through a fake executor is rejected;
 - process start count is zero or one, never two;
-- worker is not started and queue claim count is zero;
+- worker is not started; queue claim count is zero; queue depth and the set of
+  queued-record identities equal the frozen preflight snapshot; and no new
+  `queued` record exists;
 - connector, target write, follow-up, and background flags remain false;
 - no retry timer/task/process exists;
 - no raw token appears in memory dumpable reports, audit bytes, errors, or files;

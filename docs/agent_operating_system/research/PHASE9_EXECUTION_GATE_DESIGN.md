@@ -21,7 +21,8 @@ tool name, agent name, or prior successful rehearsal is not an allowlist.
 ## 2. Explicit non-goals and separation
 
 - The N=1 call does **not** enter `QueueStore`, become `queued`, call
-  `claim_next`, start `worker.py`, or use dashboard approval routes.
+  `claim_next`, start `worker.py`, or use dashboard approval routes. This is a
+  required rehearsal isolation invariant, not an unowned non-goal.
 - Existing `approval_security_gate_v0_7.py` and `security_gates_v0_7.py` are
   historical/pure decision helpers; they are not a Phase 9 execution gate.
 - Existing mock gateway and dry-run bridge remain mock evidence producers. They
@@ -32,6 +33,28 @@ tool name, agent name, or prior successful rehearsal is not an allowlist.
 - The gate never accepts a result message as follow-up permission.
 - No HTTP route is required for N=1. The future authorized runner is a local,
   foreground, single-shot session controlled by the Owner.
+
+### 2.1 Decision: procedural queue isolation for this N=1 rehearsal
+
+For the N=1 rehearsal, responsibility belongs to the Phase 9 coordinator and
+gate preflight. The Owner decision creates only an inert approval packet. The
+Owner must not click `/dashboard/tasks/{id}/approve`, and no coordinator may call
+that route or any queue-writing equivalent: the existing route can append
+`queued`, which an independently started worker could claim without the Phase 9
+token/gate.
+
+Before token issuance, the coordinator freezes a read-only snapshot of queue
+depth and queued-record identities, proves no worker/claimer is running, and
+binds the rehearsal to identifiers that are never inserted into `QueueStore`.
+Immediately before burn and after closeout, the gate requires the same queue
+depth, the same queued-record identity set, zero claims attributable to the
+rehearsal, and no new queued record. Any drift is HOLD and no process starts (or,
+if already started, is a safety incident with no retry).
+
+This is the selected containment for the single Owner-present rehearsal, not a
+claim that the existing approve route is safe. Any later Phase 9 integration
+with dashboard/queue workflows requires a separately designed, authorized, and
+tested product fix. This docs-only package does not make that change.
 
 ## 3. Frozen input set
 

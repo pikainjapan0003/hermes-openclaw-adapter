@@ -87,6 +87,9 @@ reads the plain-language summary.
    dispatch, queue, connector, and write flag is false.
 6. Freeze the bundle bytes/hash and the exact proposed action hash. No later edit
    is allowed.
+7. Capture a read-only baseline of queue depth and queued-record identities;
+   prove no worker/claimer is running and that no rehearsal id exists in
+   `QueueStore`.
 
 **Owner sees:** action summary, exact target, exact query text digest/display,
 timeout, expected output class, empty side-effect list, rollback `NOT_REQUIRED`,
@@ -106,21 +109,29 @@ selected ceremony; coordinator only displays and validates bindings.
 **Actions:**
 
 1. Display the frozen bundle and exact action hash again.
-2. Owner chooses `approve`, `edit`, `reject`, or `respond`. Anything except a
-   final exact `approve` stops the run; edits require a new Step 1.
+2. Owner chooses `approve`, `edit`, `reject`, or `respond` through the Phase 9
+   instruction flow. The decision creates only an inert approval packet.
+   Anything except a final exact `approve` stops the run; edits require a new
+   Step 1.
 3. Validate the approval packet under the Owner-selected schema strategy.
 4. After final evidence is frozen, perform the selected token ceremony.
 5. Bind token to rehearsal, packet id/hash, bundle hash, action hash, target,
    expiration, and attempt number `1`.
 6. Display the no-retry rule and wait for the Owner's exact go/no-go statement.
 
+The Owner must **not** click `/dashboard/tasks/{id}/approve`, and the coordinator
+must not call that route or any queue-writing route. The existing dashboard
+approve path can create a `queued` task that an external worker may claim,
+bypassing the Phase 9 token and gate.
+
 **Owner sees:** all binding fields, expiry, one-attempt meaning, and the sentence
 “timeout or failure spends this token; there is no automatic retry.”
 
 **Stop immediately if:** Owner is absent/uncertain; packet changed; token is
 missing, stale, reused, exposed, or mismatched; schema choice is unresolved; or
-an unreviewed path/capability is enabled. A known fresh token is burned on any
-later failure.
+an unreviewed path/capability is enabled. Use of a queue-writing approval path or
+any queue-baseline drift is an immediate HOLD. A known fresh token is burned on
+any later failure.
 
 **Artifacts:** proposed inert `02-approval-packet.json` and redacted
 `03-token-receipt.json`. The raw token is memory-only and never enters a file,
@@ -191,8 +202,9 @@ decides whether facts are acceptable.
 2. Validate and classify output without treating parse success as execution
    authority.
 3. Compare before/after target and OpenClaw state inventories.
-4. Assert no business target, connector, queue, worker, follow-up, background
-   task, or second call occurred.
+4. Assert no business target, connector, worker, follow-up, background task, or
+   second call occurred; compare the queue snapshot and prove queue depth and
+   queued-record identities are unchanged, with no new `queued` record.
 5. Present a replay negative check using the fake executor/gate path only; the
    same token must deny without any OpenClaw call.
 6. Verify gate terminal state and audit chain again.
