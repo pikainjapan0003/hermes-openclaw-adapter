@@ -64,6 +64,8 @@ Do not begin the six steps unless all are true:
 - Phase 3, 4, 5, and 7 accepted outputs are present and independently valid;
 - Owner has selected token-generation, burn, schema, and structured audit
   contracts in the applicable decision records;
+- Owner has selected distinct-principal/off-host ingress and egress, plus the
+  independent frozen packet/action digest display or reader method;
 - a separate implementation package has built and independently reviewed the
   gate using only fake executors;
 - exact installed OpenClaw CLI facts have been verified in the Owner-present
@@ -114,16 +116,21 @@ selected ceremony; coordinator only displays and validates bindings.
 
 **Actions:**
 
-1. Display the frozen bundle and exact action hash again.
+1. Present the frozen packet and action digests through the approved non-model
+   egress, or let the Owner read the frozen artifact bytes through the approved
+   independent reader. A model-chat/model-terminal display does not count.
 2. Owner chooses `approve`, `edit`, `reject`, or `respond` through the Phase 9
    instruction flow. The decision creates only an inert approval packet.
    Anything except a final exact `approve` stops the run; edits require a new
    Step 1.
 3. Validate the approval packet under the Owner-selected schema strategy.
 4. After final evidence is frozen, perform the selected token ceremony.
-5. Bind token to rehearsal, packet id/hash, bundle hash, action hash, target,
+5. Immediately after the Owner response, rerun all applicable principal, ACL,
+   endpoint, `/proc`, descriptor, tty/device, and peer-credential exclusion
+   probes; freeze their attestation digest and stop on any drift.
+6. Bind token to rehearsal, packet id/hash, bundle hash, action hash, target,
    expiration, and attempt number `1`.
-6. Display the no-retry rule and wait for the Owner's exact go/no-go statement.
+7. Display the no-retry rule and wait for the Owner's exact go/no-go statement.
 
 The Owner must **not** click `/dashboard/tasks/{id}/approve`, and the coordinator
 must not call that route or any queue-writing route. The existing dashboard
@@ -151,17 +158,21 @@ independent reviewer observes counters/state.
 **Actions:**
 
 1. Re-run all preflight and exact-action comparisons at the final boundary.
-2. Under the selected durable mechanism and only after a new verbatim Phase 9
+2. Send the second fresh packet/action/rehearsal-bound challenge through the
+   approved egress; accept the Owner response only through the approved ingress;
+   then rerun all channel-exclusion probes and recompute the full six-predicate
+   `owner_synchronously_present` AND. Any changed result stops before burn.
+3. Under the selected durable mechanism and only after a new verbatim Phase 9
    audit-write authorization, append and verify the pre-call audit burn event
    using the Phase 7 writer. §6.15 does not authorize this execution-coupled
    append.
-3. Create one in-memory capability for the exact action hash.
-4. Atomically consume that capability before starting the process.
-5. Start exactly one foreground OpenClaw process using only the Owner-verified
+4. Create one in-memory capability for the exact action hash.
+5. Atomically consume that capability before starting the process.
+6. Start exactly one foreground OpenClaw process using only the Owner-verified
    argv contract. The exact argv remains **待驗證** until that session.
-6. Unconditionally return the runner to terminal deny-all at the start boundary,
+7. Unconditionally return the runner to terminal deny-all at the start boundary,
    regardless of success, timeout, exception, cancellation, or ambiguous output.
-7. Capture bounded stdout/stderr, exit/signal state, timestamps, and digests.
+8. Capture bounded stdout/stderr, exit/signal state, timestamps, and digests.
 
 **Owner sees:** final action comparison, durable burn confirmation, start count,
 live stop control, and terminal gate state.
@@ -170,9 +181,10 @@ live stop control, and terminal gate state.
 stop; argv differs; a second start is attempted; output cannot be bounded; or an
 unexpected write/tool/connector appears. Do not retry.
 
-**Artifact:** proposed `04-execution-result.json`; the raw runtime output is
-stored only if its exact redaction/location policy was authorized. Pre-call
-audit evidence is appended to `data/audit_dev.jsonl`.
+**Artifact:** proposed `04-execution-result.json`; the raw runtime output would
+be stored only if its exact redaction/location policy were authorized. Proposed
+pre-call audit evidence would be appended to `data/audit_dev.jsonl` only after
+the new exact Phase 9 audit-write authorization.
 
 ## 8. Step 4 — append and verify the audit chain
 
@@ -196,8 +208,9 @@ attempt count, result class, side-effect result, and chain verification.
 token appears, or a side effect is observed. Post-audit failure is an incident;
 the spent token and disabled gate do not reopen.
 
-**Artifact:** two structured events in `data/audit_dev.jsonl` and their references
-in the proposed session report.
+**Artifact:** proposed two structured events in `data/audit_dev.jsonl`, only
+after the new exact Phase 9 audit-write authorization, and their references in
+the proposed session report.
 
 ## 9. Step 5 — post-run verification
 
@@ -220,7 +233,8 @@ decides whether facts are acceptable.
 7. Scan every persistent and displayed surface, including the verbatim Owner
    instruction citation, report, commit/closeout text, audit bytes, errors,
    argv/environment evidence, and fixtures. The citation must contain only
-   `token=<REDACTED:sha256[0:8]>`, packet/action digests, and no raw token.
+   `token=<REDACTED:hmac-sha256/<key-id>[0:8]>`, packet/action digests, and no raw
+   token.
 
 **Owner sees:** one-page delta: expected vs actual action/output/effects, file
 changes, audit state, replay denial, and remaining unknowns.

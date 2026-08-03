@@ -47,6 +47,12 @@ of those files in this docs-only batch.
 6. Fixtures use clearly synthetic non-secret examples and cannot be accepted by
    the real ceremony/gate.
 7. No option may reinterpret an existing `decision: approve` as permission.
+8. The live-token presentation reaches a gate running as an OS principal
+   different from the model, or through a wholly off-host channel; same-principal
+   ingress/egress is structurally unacceptable regardless of schema validity.
+9. The Owner independently observes the canonical packet/action digests through
+   the approved non-model egress or trusted frozen-artifact reader before the
+   transient presentation can validate at the gate boundary.
 
 ## 3. Option A — dedicated Phase 9 authorization contract
 

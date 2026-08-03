@@ -148,6 +148,14 @@ The value is `false` if any predicate is absent, unknown, stale, or changes. A
 chat reply, dashboard click, copied token value, or human-readable claim cannot
 set it to true.
 
+The applicable §2.2 exclusion probes run at least three times: before channel
+open, immediately after the Owner response, and again after the second fresh
+challenge immediately before burn. The gate compares attestation digests from
+all three runs. Any identity, ACL, endpoint, `/proc`, descriptor, tty, peer, or
+visibility change makes `model_exclusion_attested` and
+`channel_continuity_green` false. Only a fresh six-predicate AND recomputed after
+the final challenge may permit transition to `BURNING`.
+
 ### 2.6 Reconciliation with the frozen Owner-instruction rules
 
 `05_VERIFIED_LONG_TERM_PLAN.md` Phase 9 says the token is provided by an “Owner
@@ -165,27 +173,46 @@ authority. Therefore only the Owner provides the token, while the raw value
 never becomes model-readable. The Owner must approve this interpretation and
 the selected channel before implementation; until then Phase 9 remains HOLD.
 
-### 2.7 Phase 9 authorization-citation masking
+### 2.7 Trusted packet/action digest presentation
+
+Before the Owner authorizes the action, the complete packet digest and action
+digest must be presented independently through the **same approved
+model-inaccessible egress** used by the selected ceremony, or the Owner must
+read the frozen artifact bytes from an independently trusted reader that the
+model cannot alter or impersonate. A digest shown only in model chat, a
+model-owned terminal, or model-generated prose is not evidence.
+
+The Owner response and verbatim safe instruction must name the independently
+observed digests. The gate compares those exact values to its own canonical
+recomputation. Mismatch, unavailable trusted display, or inability to prove the
+reader/egress identity is HOLD before token acceptance. The display method and
+its model-exclusion evidence are mandatory Owner decision inputs in §8.
+
+### 2.8 Phase 9 authorization-citation masking
 
 The Owner's original instruction must be written without the raw token. Its
 token reference uses exactly this human-visible form:
 
-`token=<REDACTED:sha256[0:8]>`
+`token=<REDACTED:hmac-sha256/<key-id>[0:8]>`
 
-Here `sha256[0:8]` is replaced by the first eight hexadecimal characters of the
-raw token's SHA-256 digest. The same instruction must name the full packet digest
-and action digest. The eight-character display is only a human correlation tag;
-the gate compares the complete binding digest/HMAC supplied through the OOB
-ceremony and never treats the short tag as authentication.
+The tag is the first eight hexadecimal characters of an HMAC-SHA-256 computed
+with a per-session gate key that is inaccessible to the model; `<key-id>` is a
+non-secret identifier for that ephemeral key. A bare/public
+`sha256(token)[0:8]` is forbidden because it permits offline guessing,
+especially for human-created T-A values. T-A is **不可實作** with any public
+unkeyed tag. The same instruction must name the full packet digest and action
+digest. The eight-character display is only a human correlation tag; the gate
+compares the complete binding HMAC supplied through the OOB ceremony and never
+treats the short tag as authentication.
 
 This satisfies `20_JUDGMENT_RUBRICS.md` R-06 without copying a secret because
 the **verbatim instruction as originally authored** already contains the
 redacted tag, packet digest, and action digest. Reports, authorization citations,
 commit messages, and closeout text quote that original safe sentence exactly;
 they do not take a raw-token sentence and redact it afterward. The packet/action
-digests identify the exact authorized object, the full non-secret token digest
-in the binding record proves which OOB token matched, and the instruction digest
-ties the citation to the Owner's text.
+digests identify the exact authorized object, the complete keyed binding HMAC
+proves which OOB token matched without publishing a guessable raw-token digest,
+and the instruction digest ties the citation to the Owner's text.
 
 This Phase 9 format still requires an Owner decision before implementation. It
 does not modify `01_SAFETY_BOUNDARIES.md` or `20_JUDGMENT_RUBRICS.md`. If the
@@ -313,6 +340,9 @@ Owner-controlled OOB egress (`E-A`, `E-B`, `E-C`, or separately reviewed
 alternative): ____________________
 
 Gate/generator OS principal or off-host location: ___________________________
+
+Independent packet/action digest presentation method and reader/egress
+evidence: _________________________________________________________________
 
 Required channel-specific exclusion/authentication evidence: ________________
 

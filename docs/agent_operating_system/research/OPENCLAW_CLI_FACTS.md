@@ -110,6 +110,16 @@ definition and a new exact authorization for the revised scope. A model,
 reviewer, or implementation package must not silently broaden §6.8 or infer that
 the earlier Phase 7 audit authorization covers OpenClaw state writes.
 
+### Owner-pending L0 alignment proposal
+
+If execution-day evidence proves an unavoidable OpenClaw local-state write, the
+Owner must decide whether to revise both `05` §6.8 and the corresponding `09`
+runbook zero-write checks. This is a proposal only; this docs-only batch changes
+neither authority. Until an explicit F2/L0 decision exists, the current
+zero-write rule remains controlling and the rehearsal is HOLD.
+
+Owner decision on a future `05`/`09` alignment proposal: ____________________
+
 ## 5. Execution-day evidence record
 
 Before token issuance, the Owner should receive a read-only facts sheet with:

@@ -73,6 +73,7 @@ future contract requirement, not permission to encode them in free text.
 | 13 | Runner crash/cancellation after durable burn but before observed process start | burn exists but start record is absent/ambiguous after restart | classify as spent/ambiguous; do not “complete” the call | burned permanently | burn event plus restart incident, observed start unknown | durable burn denies recreation; new token required |
 | 14 | Second start request, follow-up, or automatic retry path appears | start counter >1 request, reused capability, scheduler/worker activity, or follow-up flag | reject request and freeze the session; treat any actual second start as a safety incident | original token already burned; no new authority exists | replay/second-start attempt, source, executor count | atomic one-use bit and durable burn deny; all schedulers off |
 | 15 | Raw token appears in any persistent or model-visible output | redaction scan finds token bytes in Owner instruction, report, commit/closeout text, audit, file, argv/environment evidence, exception, or fixture | stop before any call; restrict further display; do not copy the exposed value into an incident report | revoke the exposed token immediately; require a fresh OOB ceremony | record only leak surface/class, packet/action digests, and a new non-secret incident id | no capability is created or retained; new token and full ceremony required |
+| 16 | OOB principal, endpoint, ACL, `/proc`, descriptor, tty/device, or peer-credential evidence drifts | mandatory exclusion probes after Owner response or after the second pre-burn challenge differ from the frozen baseline | stop before burn; close ingress/egress; do not accept a later restoration in the same ceremony | revoke/expire the session token; new ceremony required | changed check ids and old/new attestation digests only, no endpoint secret | six-predicate AND recomputes false; `BURNING` remains unreachable |
 
 ## 4. Scenario-specific notes
 
@@ -127,8 +128,9 @@ separately authorized.
 ### 4.7 Raw-token exposure invalidates the ceremony
 
 The Phase 9 Owner instruction must be authored with
-`token=<REDACTED:sha256[0:8]>`; it must never contain a raw token that is later
-masked for reporting. If any retainable or model-visible surface receives the
+`token=<REDACTED:hmac-sha256/<key-id>[0:8]>`; it must never contain a raw token
+that is later masked for reporting. A public unkeyed token hash is forbidden,
+and T-A cannot use one. If any retainable or model-visible surface receives the
 raw value, that token is compromised and revoked. Do not quote it while
 reporting the leak. Close the gate and begin only with a new token, new OOB
 ceremony, and renewed preflight under separate authorization.

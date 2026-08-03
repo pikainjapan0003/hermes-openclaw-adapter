@@ -74,6 +74,7 @@ Before token issuance, the coordinator freezes and hashes this set:
 | Phase 7 audit chain | complete and valid at the exact pre-call tail hash |
 | CLI facts sheet | executable/interface/output/timeout/state-write facts verified with no unknowns |
 | Owner authorization channel | exact Owner-selected ingress **and egress** contracts; gate/endpoints run as a different OS principal from the model or entirely off-host; all identity/ACL/ptrace/`/proc`/fd/tty exclusion probes pass; no raw token in model-visible instruction/output |
+| Owner digest view | complete packet/action digests independently displayed through the selected non-model egress, or read by Owner from frozen bytes through an independently trusted reader; model-only display is invalid |
 | Owner session | computed `owner_synchronously_present`; exact-action instruction; fresh bound challenge and authenticated response; immediate pre-burn reconfirmation |
 | Capability posture | worker, queue, connector, follow-up, write tools, background mode, and second-call paths disabled |
 
@@ -118,22 +119,32 @@ The future implementation must preserve this order:
 3. Recompute bundle, packet, action, and audit-tail hashes independently.
 4. Prove the exact Phase 9 contract/version is accepted; v1 Phase 4 packets
    cannot carry a token.
-5. Recompute `owner_synchronously_present` from the frozen OOB-channel evidence
-   and prove the exact redacted Owner instruction for this action.
+5. Prove the Owner independently observed the exact packet/action digests through
+   the approved non-model egress or trusted frozen-artifact reader; then prove
+   the exact redacted Owner instruction names those values.
 6. Verify token freshness, expiry, session, packet, action, target, and attempt
-   bindings without logging the raw token.
+   bindings without logging the raw token; immediately after this first Owner
+   response, rerun the applicable exclusion probes and freeze their attestation
+   digest.
 7. Recheck all preflight conditions and the CLI facts sheet at the last possible
    point before burn.
-8. Acquire the gate/token-audit coordination lock, recheck the chain and absence
+8. Issue the **second fresh bound challenge** through the approved egress and
+   accept its authenticated response only through the approved ingress. Rerun
+   every applicable identity/ACL/ptrace/`/proc`/fd/tty/endpoint exclusion probe
+   after the response.
+9. Recompute all six `owner_synchronously_present` predicates as one AND from
+   evidence produced after step 8. Any drift or stale evidence closes deny;
+   `BURNING` is unreachable until this recomputation is true.
+10. Acquire the gate/token-audit coordination lock, recheck the chain and absence
    of the token digest, append the pre-call burn/attempt event, fsync, and verify.
-9. Create one process-local capability containing only the action hash and a
+11. Create one process-local capability containing only the action hash and a
    single atomic use bit.
-10. Compare the prospective argv/capability posture to the frozen action one
+12. Compare the prospective argv/capability posture to the frozen action one
     final time.
-11. Atomically consume the use bit and start exactly one foreground process.
-12. Enter `CLOSED_DENY` in an unconditional cleanup boundary before interpreting
+13. Atomically consume the use bit and start exactly one foreground process.
+14. Enter `CLOSED_DENY` in an unconditional cleanup boundary before interpreting
     the runtime result.
-13. Append the post-attempt audit event and produce the report. A post-audit
+15. Append the post-attempt audit event and produce the report. A post-audit
     failure does not reopen or retry the call.
 
 If any step cannot be proven, stop. A later green check cannot repair an earlier
@@ -210,6 +221,8 @@ Implementation remains HOLD until the Owner has separately selected and
 authorized:
 
 - token production and durable burn contract;
+- distinct-principal/off-host ingress and egress contracts, including the exact
+  independent packet/action digest display/reader method;
 - Phase 9 packet/token schema strategy;
 - structured pre/post audit-event representation;
 - exact OpenClaw CLI facts and the one harmless action;
