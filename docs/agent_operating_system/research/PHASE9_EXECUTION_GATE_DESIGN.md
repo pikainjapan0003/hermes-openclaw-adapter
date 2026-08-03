@@ -6,6 +6,11 @@ Date: 2026-08-03
 Scope: a future one-shot gate for one Owner-present harmless query. This design
 creates no module, route, token, runtime permission, or OpenClaw call.
 
+Authorization ladder: an Owner design selection chooses architecture only; a
+later exact instruction must separately authorize implementation; after that
+work passes independent review, another exact Owner-present instruction must
+authorize the one execution. No layer implies the next.
+
 ## 1. One responsibility
 
 The gate has one responsibility: after independently proving that the frozen
@@ -205,6 +210,10 @@ authorized:
 - structured pre/post audit-event representation;
 - exact OpenClaw CLI facts and the one harmless action;
 - allowed operational filesystem effects, if any;
+- a **new verbatim Owner authorization** for the exact Phase 9 pre-call and
+  post-call audit appends; the Phase 7 authorization in §6.15 was local-dev
+  append-only authority and explicitly did not authorize execution-coupled
+  replay-barrier or result writes;
 - implementation paths and the one-time execution session; and
 - an independent high-risk review plan.
 

@@ -6,6 +6,11 @@ Date: 2026-08-03
 Scope: future Owner-present handling for one harmless query attempt. This
 playbook is human-readable policy, not machine input.
 
+Authorization ladder: an Owner design selection chooses policy only; a later
+exact instruction must separately authorize implementation; after that work
+passes independent review, another exact Owner-present instruction must
+authorize the one execution. No layer implies the next.
+
 ## 1. Universal rule
 
 **No retry without a new packet and new token.** A timeout, error, ambiguous
@@ -58,7 +63,7 @@ future contract requirement, not permission to encode them in free text.
 | 3 | Timeout | external bounded timer expires or CLI reports timeout; completion cannot be proven | terminate using only pre-reviewed process/child stop method; do not start another process | burn attempt; token permanently spent | timeout source, configured/observed duration, termination/child ambiguity, output digest | cleanup closes gate; fake replay probe denies |
 | 4 | Nonzero exit code or signal | captured process status is nonzero/signaled | capture bounded redacted stdout/stderr and stop; do not reinterpret partial output as success | burn attempt | exit/signal class, digests, bounded summary, start count one | gate already closed before result interpretation |
 | 5 | Output absent, malformed, oversized, wrong encoding, streaming, or otherwise unparseable | output contract/size/UTF-8/schema validator fails | stop parsing; retain only authorized bounded digest/summary; no fallback parser that changes acceptance | burn attempt | parse failure class, length/digest, truncation indicator; never raw secret | no second parser may call runtime; gate closed |
-| 6 | Pre-call audit burn append or verification fails | append exception, fsync failure, schema failure, tail mismatch, or chain verification false | **do not start OpenClaw**; keep original audit bytes; do not write a fallback file | known token burns/invalidates in session policy; if durable burn cannot be proven, future use still denied and requires new token | audit path itself unavailable, so show in-memory incident to Owner; persist nothing elsewhere | capability is never created; start count zero |
+| 6 | Pre-call audit burn append or verification fails | append exception, fsync failure, schema failure, tail mismatch, or chain verification false | **do not start OpenClaw**; terminate the entire rehearsal and OOB session; keep original audit bytes; do not write a fallback file | session-scoped token expires when the channel/session closes; a later process/session must reject it even if its timestamp remains; new ceremony required | audit path itself unavailable, so show in-memory incident to Owner; persist nothing elsewhere | capability is never created; start count zero; old rehearsal/session binding cannot be recreated |
 | 7 | Token missing, malformed, expired, mismatched, already used, or replayed | token-binding, controlled-clock, digest, or burn-ledger check fails | deny without revealing which secret component matched; do not refresh or ask model to retry | missing/unknown: deny; known expired/used: terminal; known fresh but mismatched: burn deny | redacted reason class, binding hashes, no raw token | no transition beyond checking; fake executor count zero |
 | 8 | A preflight condition turns red after token issuance | final revalidation differs from frozen green report | stop; do not edit packet/evidence in place | burn deny | changed condition id, previous/current result digests, no payload | no burn-attempt capability; gate terminal deny |
 | 9 | Owner says stop, disconnects, or cannot confirm | any Owner stop phrase, lost synchronous channel, or ambiguous response | stop immediately; before start do not call; after start use reviewed termination path | before start: burn deny; after start: burn attempt | Owner-stop class/time, process observation, no chat transcript | cleanup is unconditional; no later “resume” state |
@@ -96,7 +101,11 @@ change the reviewed acceptance rules.
 
 When `data/audit_dev.jsonl` cannot accept/verify the required event, the runner
 must not write a temporary JSONL, database, clipboard log, queue note, or session
-folder as an automatic fallback. Before-call audit failure means no call.
+folder as an automatic fallback. Before-call audit failure means no call and
+terminates the whole synchronous rehearsal. Close the OOB channel; because the
+token is bound to that rehearsal/session and cannot outlive it, no restarted or
+later process may accept the same token. A future attempt needs new Owner
+agreement and a new ceremony.
 After-call audit failure means the call is spent, the phase cannot pass, and the
 Owner receives an on-screen incident summary pending a separate recovery
 instruction.
@@ -153,3 +162,6 @@ review only. A future attempt requires a newly frozen bundle, new approval
 packet, new token, renewed Owner presence, and a fully green preflight.
 
 No sentence in this playbook grants that future authorization.
+
+This document is a checklist, not an execution mechanism. It must never be
+imported, parsed, or treated as dispatch input.

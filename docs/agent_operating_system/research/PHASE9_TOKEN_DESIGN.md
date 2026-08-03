@@ -7,6 +7,11 @@ Scope: one Owner-present N=1 harmless-query attempt. A token authorizes neither
 a worker nor a general action class. It is valid only when every independently
 checked gate condition is green.
 
+Authorization ladder: an Owner design selection chooses an option only; a later
+exact instruction must separately authorize implementation; after that work
+passes independent review, another exact Owner-present instruction must
+authorize the one execution. No layer implies the next.
+
 ## 1. Non-negotiable properties
 
 The future mechanism must satisfy all of these at the same time:
@@ -169,7 +174,7 @@ unexpected runtime value to make it match.
 | Option | Mechanical rule | Crash/restart behavior | Risks | Verdict |
 |---|---|---|---|---|
 | B-A — Separate token marker file | Under an exclusive lock, create/append a consumed digest before the call; existing digest denies | Can be restart-safe if durable and atomic | Introduces a new persistent write target and its own chain/tamper/permission policy; currently unauthorized | Viable only with a new explicit path authorization |
-| B-B — Memory claim plus audit result | Atomically claim token in process memory, then append an audit record | Memory claim disappears on restart; audit append races/crashes can leave ambiguity | Cannot prove replay denial after restart unless audit is authoritative; process-local locks do not cover another process | Insufficient alone |
+| B-B — Memory claim plus audit result | Atomically claim token in process memory, then append an audit record | Memory claim disappears on restart; audit append races/crashes can leave ambiguity | Cannot prove replay denial after restart unless audit is authoritative; process-local locks do not cover another process | **不可單獨採用**; it may only be an in-session defense layered under B-A or B-C |
 | B-C — Hash-chain burn event | Under one gate-level lock, scan/verify the Phase 7 chain, append a redacted burn event, fsync, reverify, and only then allow the call | A committed burn survives restart; crash after burn safely wastes the token | Existing audit schema does not yet define token-digest/binding/burn fields; uniqueness and atomic gate coordination need a separately authorized contract | **Recommended architecture, not yet implementable** |
 
 The recommended B-C order is deliberately fail-safe: `verify chain → validate
@@ -182,13 +187,24 @@ but that does not automatically make it a token ledger. Before implementation,
 the Owner must approve a machine contract able to represent the burn without
 free-text encoding or raw-token leakage.
 
+The validity upper bound is the live, mechanically verified synchronous Owner
+session. `expires_at` may be earlier, but never later; channel loss, session end,
+gate-process replacement, or failure of final presence reconfirmation expires
+the token immediately. A token from one synchronous session is invalid in every
+later process/session even if its wall-clock timestamp has not elapsed.
+
+The gate also counts denied presentations for the same rehearsal. At cumulative
+rejection count `N`, it freezes the rehearsal, closes the channel, and requires
+fresh Owner agreement plus a new ceremony; it cannot reset the counter or ask a
+model to keep trying. `N` is an Owner decision and remains unset below.
+
 ## 6. Token lifecycle and failure semantics
 
 | State | Entry condition | Allowed next state | Runtime allowed? |
 |---|---|---|---|
 | `ABSENT` | default / no fresh Owner token | `ISSUED` only through chosen authorized ceremony | No |
-| `ISSUED` | strong random token exists but Owner has not returned it | `PRESENTED` or `EXPIRED` | No |
-| `PRESENTED` | Owner instruction supplies it with exact frozen identifiers | `BURNED_DENY` or `BURNED_ATTEMPT` | No |
+| `ISSUED` | strong random token exists in the Owner/OOB ceremony but the gate has not accepted both Owner acts | `PRESENTED` or `EXPIRED` | No |
+| `PRESENTED` | exact redacted Owner instruction and matching OOB token/response both validate against the frozen identifiers | `BURNED_DENY` or `BURNED_ATTEMPT` | No |
 | `BURNED_DENY` | any binding/preflight/Owner-presence failure | terminal | No |
 | `BURNED_ATTEMPT` | burn is durably committed immediately before the call | terminal after at most one start | At most one start |
 | `EXPIRED` | expiration reached before verified burn | terminal | No |
@@ -236,9 +252,11 @@ Required channel-specific exclusion/authentication evidence: ________________
 
 Token-production option (`T-A`, `T-B`, or `T-C`): ____________________
 
-Burn/persistence option (`B-A`, `B-B`, or `B-C`): ____________________
+Burn/persistence option (`B-A` or `B-C`; `B-B` cannot stand alone): __________
 
-Maximum validity window: ____________________
+Maximum validity window (must end no later than the synchronous session): ____
+
+Cumulative rejection freeze threshold `N`: ____________________
 
 Owner notes / required changes: ____________________________________________
 

@@ -7,6 +7,11 @@ Decision scope: how a future Phase 9 gate receives a live one-use token while
 preserving the Phase 4 guarantee that an accepted v1 approval packet cannot
 carry execution authority.
 
+Authorization ladder: an Owner schema selection chooses an option only; a later
+exact instruction must separately authorize schema/code implementation; after
+that work passes independent review, another exact Owner-present instruction
+must authorize the one execution. No layer implies the next.
+
 ## 1. Accepted baseline
 
 The current `approval_packet.schema.json` is a Phase 4, data-only contract:

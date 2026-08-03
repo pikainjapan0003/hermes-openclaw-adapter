@@ -7,22 +7,28 @@ Purpose: the exact reading order for the future day on which the Owner may
 authorize one harmless, query-shaped OpenClaw attempt. This is not a runnable
 script and contains no verified CLI command.
 
+Authorization ladder: an Owner design selection chooses options only; a later
+exact instruction must separately authorize implementation; after that work
+passes independent review, another exact Owner-present instruction must
+authorize the one execution. No layer implies the next.
+
 ## 1. Scope in one sentence
 
 Freeze evidence, obtain one exact Owner decision and fresh token, permit one
 foreground query attempt, record it in the Phase 7 audit chain, verify that
 nothing else happened, and rehearse the pre-reviewed no-op rollback conclusion.
 
-“Zero write” means zero intended business/target mutation by the OpenClaw action.
-Control-plane evidence and authorized audit appends are separate, explicit
-records. Any OpenClaw cache/session/state write remains a Phase 9 fact to verify
-and authorize; it is not silently exempt.
+“Zero write” means zero intended business/target mutation and, under the current
+§6.8 premise, no unavoidable OpenClaw operational write. Control-plane evidence
+and separately authorized Phase 9 audit appends are explicit records. If
+OpenClaw necessarily writes cache/session/state, the premise breaks: stop until
+the Owner explicitly revises §6.8 and separately authorizes the exact new scope.
 
 ## 2. Roles
 
 | Role | What this role may do that day | What it may not do |
 |---|---|---|
-| Owner | remain synchronously present; inspect facts/evidence; choose schema/token design beforehand; issue exact action/token instruction; say stop; sign or reject closeout | delegate the live decision to a model; give broad/standing permission |
+| Owner | remain synchronously present; inspect facts/evidence; choose channel/schema/token design beforehand; issue the exact redacted action instruction and separately deliver the token/response OOB; say stop; sign or reject closeout | delegate the live decision to a model; put a raw token in the instruction; give broad/standing permission |
 | Preflight coordinator | display evidence and blockers; run read-only validators; compare frozen hashes; stop on mismatch | mint authority, edit failed evidence in place, invoke OpenClaw |
 | Future authorized one-shot runner | after all gates pass, burn token, start one exact foreground process, close deny-all, capture bounded result | use worker/queue/dispatch, retry, alter argv, run in background |
 | Independent reviewer | observe logs/hashes and verify post-run evidence | become the executor or reinterpret success as a second authorization |
@@ -44,7 +50,7 @@ uses. This document proposes, but does not create, the following session folder:
 | post-run verification | `data/phase9_rehearsal/<rehearsal_id>/05-postcheck.json` | filesystem/effect summaries, not secret values |
 | rollback rehearsal | `data/phase9_rehearsal/<rehearsal_id>/06-rollback-rehearsal.json` | expected `NOT_REQUIRED` for harmless query |
 | human closeout report | `data/phase9_rehearsal/<rehearsal_id>/07-report.md` | no raw token or unredacted secret |
-| pre/post attempt audit events | accepted `data/audit_dev.jsonl` via Phase 7 writer | token digest/reference only |
+| pre/post attempt audit events | proposed `data/audit_dev.jsonl` via Phase 7 writer; **requires new Phase 9 Owner authorization** | token digest/reference only |
 
 The `data/phase9_rehearsal/` path is **not currently authorized**. If the Owner
 does not authorize it, the implementation brief must choose another exact,
@@ -145,8 +151,10 @@ independent reviewer observes counters/state.
 **Actions:**
 
 1. Re-run all preflight and exact-action comparisons at the final boundary.
-2. Under the selected durable mechanism, append and verify the pre-call audit
-   burn event using the Phase 7 writer.
+2. Under the selected durable mechanism and only after a new verbatim Phase 9
+   audit-write authorization, append and verify the pre-call audit burn event
+   using the Phase 7 writer. §6.15 does not authorize this execution-coupled
+   append.
 3. Create one in-memory capability for the exact action hash.
 4. Atomically consume that capability before starting the process.
 5. Start exactly one foreground OpenClaw process using only the Owner-verified
@@ -177,7 +185,8 @@ reviewer recomputes; Owner sees the human summary.
 2. Build a structured post-attempt audit event referencing the burn event.
 3. Record completion class, exit/timeout state, output digests, empty or observed
    side effects, gate-disabled proof, and rollback disposition.
-4. Append once through the Phase 7 writer and fsync.
+4. Append once through the Phase 7 writer and fsync, only within the new exact
+   Phase 9 audit-write authorization.
 5. Re-read and verify the complete hash chain independently.
 
 **Owner sees:** pre/post audit ids and hashes, token digest/reference (not token),
@@ -256,3 +265,6 @@ one attempt was possible, the target effect set is empty, the audit chain
 verifies, replay is denied without a runtime call, rollback is correctly
 `NOT_REQUIRED`, the gate is terminally disabled, and the Owner signs this N=1
 result. Anything else is HOLD/fail, with no retry and no inferred permission.
+
+This document is a checklist, not an execution mechanism. It must never be
+imported, parsed, or treated as dispatch input.

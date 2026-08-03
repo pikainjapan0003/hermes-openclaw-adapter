@@ -6,6 +6,11 @@ Date: 2026-08-03
 Scope: one future Owner-present, harmless, query-shaped call. This document does
 not authorize a command, infer an installed CLI interface, or permit a probe.
 
+Authorization ladder: an Owner design selection chooses facts/architecture only;
+a later exact instruction must separately authorize implementation; after that
+work passes independent review, another exact Owner-present instruction must
+authorize the one execution. No layer implies the next.
+
 ## 1. Method and evidence boundary
 
 This review used only repository text/source and read-only filesystem metadata.
@@ -26,7 +31,7 @@ Read-only environment evidence collected for this design round:
 The directory names show that OpenClaw has local agent, cache, and device state.
 They do **not** prove whether a harmless query writes those locations.
 
-## 2. What is known
+## 2. What is known about the repository's expectations
 
 | Fact | Evidence | Consequence for Phase 9 |
 |---|---|---|
@@ -96,6 +101,14 @@ with “zero write.” The session must stop until the Owner explicitly decides
 whether those exact operational writes are acceptable and adds them to the
 authorized scope. Audit appends through the already accepted Phase 7 writer are
 control-plane evidence, not permission for OpenClaw to write elsewhere.
+The writer's accepted existence likewise does not authorize Phase 9 pre/post
+execution audit appends; those require a new exact Owner authorization.
+
+An unavoidable local-state write also breaks the current `05` §6.8 zero-write
+premise. Continuing would require an explicit Owner-approved revision of that L0
+definition and a new exact authorization for the revised scope. A model,
+reviewer, or implementation package must not silently broaden §6.8 or infer that
+the earlier Phase 7 audit authorization covers OpenClaw state writes.
 
 ## 5. Execution-day evidence record
 
