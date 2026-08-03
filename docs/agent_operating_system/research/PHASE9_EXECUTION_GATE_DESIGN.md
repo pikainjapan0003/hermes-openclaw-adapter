@@ -2,7 +2,7 @@
 
 Status: **PLANNING ONLY. NOT AUTHORIZED FOR IMPLEMENTATION OR EXECUTION.**
 
-Date: 2026-08-03  
+Date: 2026-08-03
 Scope: a future one-shot gate for one Owner-present harmless query. This design
 creates no module, route, token, runtime permission, or OpenClaw call.
 
@@ -177,4 +177,3 @@ authorized:
 
 This document is a design proposal. Reading, approving, or merging it does not
 arm a gate, issue a token, authorize audit appends, or permit an OpenClaw call.
-

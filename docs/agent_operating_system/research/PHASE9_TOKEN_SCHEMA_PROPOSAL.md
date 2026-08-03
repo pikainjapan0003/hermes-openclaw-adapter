@@ -2,7 +2,7 @@
 
 Status: **PLANNING ONLY. NOT AUTHORIZED. NO SCHEMA IS CHANGED BY THIS DOCUMENT.**
 
-Date: 2026-08-03  
+Date: 2026-08-03
 Decision scope: how a future Phase 9 gate receives a live one-use token while
 preserving the Phase 4 guarantee that an accepted v1 approval packet cannot
 carry execution authority.
@@ -206,4 +206,3 @@ Decision date and explicit implementation authorization: ____________________
 
 Until the Owner fills this record and issues a separate implementation brief,
 the accepted schema remains unchanged and the live token remains impossible.
-

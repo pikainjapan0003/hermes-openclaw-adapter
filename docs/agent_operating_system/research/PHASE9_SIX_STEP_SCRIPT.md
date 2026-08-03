@@ -2,7 +2,7 @@
 
 Status: **PLANNING ONLY. NOT AUTHORIZED FOR EXECUTION OR PERSISTENCE.**
 
-Date: 2026-08-03  
+Date: 2026-08-03
 Purpose: the exact reading order for the future day on which the Owner may
 authorize one harmless, query-shaped OpenClaw attempt. This is not a runnable
 script and contains no verified CLI command.
@@ -239,4 +239,3 @@ one attempt was possible, the target effect set is empty, the audit chain
 verifies, replay is denied without a runtime call, rollback is correctly
 `NOT_REQUIRED`, the gate is terminally disabled, and the Owner signs this N=1
 result. Anything else is HOLD/fail, with no retry and no inferred permission.
-

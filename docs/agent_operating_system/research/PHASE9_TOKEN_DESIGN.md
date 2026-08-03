@@ -2,7 +2,7 @@
 
 Status: **PLANNING ONLY. NOT AUTHORIZED FOR IMPLEMENTATION OR EXECUTION.**
 
-Date: 2026-08-03  
+Date: 2026-08-03
 Scope: one Owner-present N=1 harmless-query attempt. A token authorizes neither
 a worker nor a general action class. It is valid only when every independently
 checked gate condition is green.
@@ -148,4 +148,3 @@ Decision date and explicit implementation authorization: ____________________
 Until every applicable field is filled by the Owner and converted into a
 separate implementation brief, the token remains `null`, the gate remains
 absent, and Phase 9 remains blocked.
-

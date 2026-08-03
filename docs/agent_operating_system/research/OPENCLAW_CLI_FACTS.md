@@ -2,7 +2,7 @@
 
 Status: **PLANNING ONLY. Phase 9 execution is not authorized.**
 
-Date: 2026-08-03  
+Date: 2026-08-03
 Scope: one future Owner-present, harmless, query-shaped call. This document does
 not authorize a command, infer an installed CLI interface, or permit a probe.
 
@@ -111,4 +111,3 @@ Before token issuance, the Owner should receive a read-only facts sheet with:
 
 Any unverified item keeps the execution gate disabled. These facts must be
 verified in the Owner-present Phase 9 session; they must not be probed in advance.
-

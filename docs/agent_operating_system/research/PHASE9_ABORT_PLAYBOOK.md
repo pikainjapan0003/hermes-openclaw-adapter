@@ -2,7 +2,7 @@
 
 Status: **PLANNING ONLY. NOT AUTHORIZED FOR EXECUTION OR PERSISTENCE.**
 
-Date: 2026-08-03  
+Date: 2026-08-03
 Scope: future Owner-present handling for one harmless query attempt. This
 playbook is human-readable policy, not machine input.
 
@@ -141,4 +141,3 @@ review only. A future attempt requires a newly frozen bundle, new approval
 packet, new token, renewed Owner presence, and a fully green preflight.
 
 No sentence in this playbook grants that future authorization.
-
