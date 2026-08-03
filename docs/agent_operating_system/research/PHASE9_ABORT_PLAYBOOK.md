@@ -67,6 +67,7 @@ future contract requirement, not permission to encode them in free text.
 | 12 | Post-call audit append or chain verification fails | post event cannot validate/fsync or complete chain is invalid | keep execution frozen; show Owner in-memory incident; do not use alternate persistence | burn attempt remains permanent | if audit unavailable, no false success claim; record later only under a new explicit recovery instruction | gate was closed before post-audit; replay denies |
 | 13 | Runner crash/cancellation after durable burn but before observed process start | burn exists but start record is absent/ambiguous after restart | classify as spent/ambiguous; do not “complete” the call | burned permanently | burn event plus restart incident, observed start unknown | durable burn denies recreation; new token required |
 | 14 | Second start request, follow-up, or automatic retry path appears | start counter >1 request, reused capability, scheduler/worker activity, or follow-up flag | reject request and freeze the session; treat any actual second start as a safety incident | original token already burned; no new authority exists | replay/second-start attempt, source, executor count | atomic one-use bit and durable burn deny; all schedulers off |
+| 15 | Raw token appears in any persistent or model-visible output | redaction scan finds token bytes in Owner instruction, report, commit/closeout text, audit, file, argv/environment evidence, exception, or fixture | stop before any call; restrict further display; do not copy the exposed value into an incident report | revoke the exposed token immediately; require a fresh OOB ceremony | record only leak surface/class, packet/action digests, and a new non-secret incident id | no capability is created or retained; new token and full ceremony required |
 
 ## 4. Scenario-specific notes
 
@@ -113,6 +114,15 @@ operational effects match the reviewed empty set. If OpenClaw updates an
 unapproved cache/session/state file, that is an incident/HOLD. The system cannot
 delete, revert, or edit it unless that exact rollback was already reviewed and
 separately authorized.
+
+### 4.7 Raw-token exposure invalidates the ceremony
+
+The Phase 9 Owner instruction must be authored with
+`token=<REDACTED:sha256[0:8]>`; it must never contain a raw token that is later
+masked for reporting. If any retainable or model-visible surface receives the
+raw value, that token is compromised and revoked. Do not quote it while
+reporting the leak. Close the gate and begin only with a new token, new OOB
+ceremony, and renewed preflight under separate authorization.
 
 ## 5. Mechanical all-disabled checklist
 

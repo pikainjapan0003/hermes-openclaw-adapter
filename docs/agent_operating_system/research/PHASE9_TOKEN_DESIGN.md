@@ -99,6 +99,34 @@ authority. Therefore only the Owner provides the token, while the raw value
 never becomes model-readable. The Owner must approve this interpretation and
 the selected channel before implementation; until then Phase 9 remains HOLD.
 
+### 2.3 Phase 9 authorization-citation masking
+
+The Owner's original instruction must be written without the raw token. Its
+token reference uses exactly this human-visible form:
+
+`token=<REDACTED:sha256[0:8]>`
+
+Here `sha256[0:8]` is replaced by the first eight hexadecimal characters of the
+raw token's SHA-256 digest. The same instruction must name the full packet digest
+and action digest. The eight-character display is only a human correlation tag;
+the gate compares the complete binding digest/HMAC supplied through the OOB
+ceremony and never treats the short tag as authentication.
+
+This satisfies `20_JUDGMENT_RUBRICS.md` R-06 without copying a secret because
+the **verbatim instruction as originally authored** already contains the
+redacted tag, packet digest, and action digest. Reports, authorization citations,
+commit messages, and closeout text quote that original safe sentence exactly;
+they do not take a raw-token sentence and redact it afterward. The packet/action
+digests identify the exact authorized object, the full non-secret token digest
+in the binding record proves which OOB token matched, and the instruction digest
+ties the citation to the Owner's text.
+
+This Phase 9 format still requires an Owner decision before implementation. It
+does not modify `01_SAFETY_BOUNDARIES.md` or `20_JUDGMENT_RUBRICS.md`. If the
+Owner's original instruction contains a raw token instead of the prescribed
+tag, the ceremony is invalid: do not quote or persist it, revoke the exposed
+token, and start a new ceremony with a new token.
+
 ## 3. Who produces the token — three options
 
 | Option | Owner experience | Strengths | Weak-model / security risks | Verdict |

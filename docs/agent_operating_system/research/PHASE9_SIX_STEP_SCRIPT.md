@@ -196,6 +196,10 @@ decides whether facts are acceptable.
 5. Present a replay negative check using the fake executor/gate path only; the
    same token must deny without any OpenClaw call.
 6. Verify gate terminal state and audit chain again.
+7. Scan every persistent and displayed surface, including the verbatim Owner
+   instruction citation, report, commit/closeout text, audit bytes, errors,
+   argv/environment evidence, and fixtures. The citation must contain only
+   `token=<REDACTED:sha256[0:8]>`, packet/action digests, and no raw token.
 
 **Owner sees:** one-page delta: expected vs actual action/output/effects, file
 changes, audit state, replay denial, and remaining unknowns.
@@ -203,7 +207,8 @@ changes, audit state, replay denial, and remaining unknowns.
 **Stop immediately if:** any mismatch, unreviewed filesystem write, missing
 evidence, ambiguous runtime state, replay acceptance, or gate reopening occurs.
 
-**Artifact:** proposed `05-postcheck.json`, referenced by the closeout report.
+**Artifact:** proposed `05-postcheck.json`, referenced by the closeout report;
+its no-secret proof explicitly covers the Owner-instruction citation.
 
 ## 10. Step 6 — rehearse rollback and close out
 
