@@ -134,6 +134,22 @@ the non-adversarial threat model.
 Ingress isolation does not protect a token that the generator displays to the
 model. The Owner must select and authorize one exact egress with the ingress:
 
+`05_VERIFIED_LONG_TERM_PLAN.md` §6.17, Owner ruling option「丙」(commit
+`e2ff062`), establishes the following hard accounting rule verbatim:
+
+> ingress 與 egress 為同一端點時：
+> OOB 回送 = presence／liveness 證明，僅此而已；
+> 不得計入判準 4（owner_response_authenticated）；
+> 真正的第二因子 = §2.6 由 Owner 自行產生、非系統顯示的逐字授權動作；
+> 文件不得宣稱此組合構成雙因子認證。
+
+Therefore a return through the same endpoint may set only
+`owner_presence_demonstrated`. It does not authenticate the Owner, regardless
+of token entropy, terminal ownership, or successful echo of the displayed
+value. The §2.5 criterion-4 accounting and §2.6 verbatim authorization rule
+below are mandatory; an implementation may not combine the display and echo
+into a claimed authentication factor.
+
 | Egress candidate | Who starts/generates | Display destination | Best-effort evidence against accidental model exposure |
 |---|---|---|---|
 | E-A — distinct-principal isolated tty | an already authorized gate/generator running as the distinct gate principal | exact gate-owned tty/console viewed directly by Owner | **acceptable for a non-adversarial model** when §2.2 tty/process probes pass; tty is not the model terminal; no ordinary tee, shared scrollback, capture, inherited fd, or model-readable log |
@@ -159,9 +175,18 @@ boolean. It is true only when all of the following frozen predicates are true:
 3. `fresh_challenge_bound`: the gate generated a cryptographically unpredictable,
    single-session challenge bound to the rehearsal id, packet digest, action
    digest, and a short deadline.
-4. `owner_response_authenticated`: before that deadline, the chosen OOB channel
-   delivered the correct response using an Owner-held authenticator or secret;
-   the gate retains only response/challenge digests.
+4. `owner_authorization_evidence_green`: exactly one applicable evidence path
+   must be green:
+   - `owner_response_authenticated` requires an Owner-held authenticator or
+     secret that was not generated and displayed by the same endpoint; before
+     the deadline, the approved channel delivers its correct bound response,
+     and the gate retains only response/challenge digests.
+   - When ingress and egress are the same endpoint, their return sets only
+     `owner_presence_demonstrated` and **cannot** set
+     `owner_response_authenticated`. Criterion 4 is then satisfied only by
+     `owner_verbatim_authorization_verified` under §2.6: the gate verifies the
+     Owner-authored, non-system-displayed exact-action authorization and its
+     frozen packet/action bindings.
 5. `final_presence_reconfirmed`: immediately before token burn, a second fresh
    bound challenge succeeds through the same approved channel.
 6. `channel_continuity_green`: ingress and egress identities, ACLs, endpoints,
@@ -198,6 +223,14 @@ and possession of the secret without the exact Owner instruction creates no
 authority. Therefore only the Owner provides the token, while the raw value
 never becomes model-readable. The Owner must approve this interpretation and
 the selected channel before implementation; until then Phase 9 remains HOLD.
+
+For a same-endpoint ingress/egress ceremony, item 2 above demonstrates only
+`owner_presence_demonstrated`; it is not authentication and does not satisfy
+criterion 4. In that case item 1 must be independently Owner-authored, must not
+be copied from a system-displayed sentence, and must pass the exact digest and
+action comparison as `owner_verbatim_authorization_verified`. Only that §2.6
+act satisfies criterion 4. The design does not describe this combination as
+two-factor authentication.
 
 ### 2.7 Trusted packet/action digest presentation
 
@@ -252,7 +285,7 @@ token, and start a new ceremony with a new token.
 | Option | Owner experience | Strengths | Weak-model / security risks | Verdict |
 |---|---|---|---|---|
 | T-A — Owner invents and supplies it | Owner creates a fresh secret and sends it only through the selected OOB channel | Authority visibly originates with Owner; no generator trust | Human entropy and reuse are likely; unsafe if copied through chat or model-visible terminal | Not recommended; prohibited unless the §2 channel checks pass |
-| T-B — System generates once, Owner returns it OOB | After evidence is frozen, a separately authorized generator delivers one random token only to the Owner; the Owner returns it through the selected OOB channel | Strong entropy plus explicit Owner act; easy binding to displayed packet digest | Generator/display and return channel both require best-effort isolation; clipboard/chat exposure invalidates the token | Acceptable for a non-adversarial model when §2 checks pass; not unconditionally recommended |
+| T-B — System generates once, Owner returns it OOB | After evidence is frozen, a separately authorized generator delivers one random token only to the Owner; the Owner returns it through the selected OOB channel | High entropy prevents accidental reuse of a low-entropy value and supports binding to the displayed packet digest | Generator/display and return channel both require best-effort isolation; clipboard/chat exposure invalidates the token; a same-endpoint return demonstrates presence only and is not authentication | Acceptable for a non-adversarial model when §2 checks and the separate §2.6 Owner instruction pass; not unconditionally recommended |
 | T-C — System challenge, Owner confirms with an authenticator | Gate creates a bound challenge; an approved Owner-held authenticator returns the response through the selected OOB channel | Raw bearer token need not be typed; strongest binding to live Owner confirmation | Highest complexity; authenticator, key custody, and recovery become new systems | Acceptable for a non-adversarial model when §2 checks pass |
 
 For T-B, “system generates” is not self-authorization. Generation may occur only
