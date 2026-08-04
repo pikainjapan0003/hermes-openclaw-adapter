@@ -14,6 +14,10 @@ authorize the one execution. No layer implies the next.
 ## Threat model
 
 Source: `05_VERIFIED_LONG_TERM_PLAN.md` §6.16, commit `e34ca1c`.
+Same-endpoint accounting source: `05_VERIFIED_LONG_TERM_PLAN.md` §6.17,
+commit `e2ff062`. A return through the display endpoint proves only
+presence/liveness; it is not an authenticated Owner response and must not be
+counted as one.
 
 > 在範圍內（設計必須擋住）：模型過度熱心、誤解授權、自作主張、把顯示當授權、意外重放、崩潰後誤續跑。
 >
@@ -89,7 +93,7 @@ Before token issuance, the coordinator freezes and hashes this set:
 | CLI facts sheet | executable/interface/output/timeout/state-write facts verified with no unknowns |
 | Owner authorization channel | exact Owner-selected ingress **and egress** contracts; gate/endpoints run as a different OS principal from the model or entirely off-host; all identity/ACL/ptrace/`/proc`/fd/tty best-effort isolation probes pass; no raw token in model-visible instruction/output |
 | Owner digest view | complete packet/action digests independently displayed through the selected non-model egress, or read by Owner from frozen bytes through an independently trusted reader; model-only display is invalid |
-| Owner session | computed `owner_synchronously_present`; exact-action instruction; fresh bound challenge and authenticated response; immediate pre-burn reconfirmation |
+| Owner session | computed `owner_synchronously_present`; exact-action instruction; fresh bound challenge plus applicable `owner_authorization_evidence_green` path; immediate pre-burn reconfirmation. A same-endpoint return records only `owner_presence_demonstrated`; criterion 4 then requires `owner_verbatim_authorization_verified` from `PHASE9_TOKEN_DESIGN.md` §2.6 |
 | Capability posture | worker, queue, connector, follow-up, write tools, background mode, and second-call paths disabled |
 
 Every field that can change argv or behavior belongs in the canonical action
@@ -100,10 +104,15 @@ substitute a mismatching value.
 `owner_synchronously_present` is not an input flag. The gate computes it as the
 logical AND of the six predicates defined in `PHASE9_TOKEN_DESIGN.md` §2.5:
 approved channel contract, best-effort isolation attestation, fresh bound challenge,
-authenticated Owner response, immediate pre-burn reconfirmation, and unchanged
-channel continuity. The frozen evidence contains each predicate result and its
-non-secret digest/reference. Missing, stale, caller-asserted, or unverifiable
-evidence makes the result false.
+`owner_authorization_evidence_green`, immediate pre-burn reconfirmation, and
+unchanged channel continuity. For different-endpoint or Owner-held-authenticator
+ceremonies, criterion 4 may use `owner_response_authenticated`. When ingress and
+egress are the same endpoint, it may use only
+`owner_verbatim_authorization_verified` from `PHASE9_TOKEN_DESIGN.md` §2.6; the
+return sets `owner_presence_demonstrated` only and must not set
+`owner_response_authenticated`. The frozen evidence contains each predicate
+result and its non-secret digest/reference. Missing, stale, caller-asserted, or
+unverifiable evidence makes the result false.
 
 The current measured `uid=1000(lnovo)` model session must not share its uid or
 terminal with a local gate or secret-bearing endpoint, because ordinary
@@ -150,7 +159,11 @@ The future implementation must preserve this order:
    after the response.
 9. Recompute all six `owner_synchronously_present` predicates as one AND from
    evidence produced after step 8. Any drift or stale evidence closes deny;
-   the gate must not enter `BURNING` until this recomputation is true.
+   the gate must not enter `BURNING` until this recomputation is true. Criterion
+   4 follows the two-path split: an applicable independent authenticator/secret
+   may set `owner_response_authenticated`; a same-endpoint ceremony cannot and
+   must instead have `owner_verbatim_authorization_verified` from §2.6, while
+   its returned challenge records only `owner_presence_demonstrated`.
 10. Acquire the gate/token-audit coordination lock, recheck the chain and absence
    of the token digest, append the pre-call burn/attempt event, fsync, and verify.
 11. Create one process-local capability containing only the action hash and a
@@ -180,6 +193,9 @@ successfully appended and chain-verified before runtime start. It should contain
 - action hash, exact target classification, timeout, and attempt number `1`;
 - a non-reversible token digest/reference, never the raw token;
 - Owner-session confirmation reference without chat content or identity secret;
+- `owner_presence_demonstrated` and its non-secret challenge/session reference;
+- `owner_verbatim_authorization_verified` and its non-secret instruction digest
+  and verification-method reference, never the instruction text;
 - all preflight condition ids and their frozen green result digest;
 - transition `CHECKING → BURNING → ONE_SHOT_READY`;
 - zero intended business side effects and the reviewed abort rule.
