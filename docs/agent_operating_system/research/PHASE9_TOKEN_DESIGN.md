@@ -406,31 +406,48 @@ executor invocation, and zero real runtime calls.**
 ## 8. Owner decision record
 
 Owner-controlled OOB ingress (`OOB-A`, `OOB-B`, `OOB-C`, or separately reviewed
-alternative): ____________________
+alternative): **`OOB-C`**
 
 Owner-controlled OOB egress (`E-A`, `E-B`, `E-C`, or separately reviewed
-alternative): ____________________
+alternative): **`E-A`**
 
-Gate/generator OS principal or off-host location: ___________________________
+Gate/generator OS principal or off-host location: **本機另一個 OS 使用者（非模型
+所在身分）；依 §6.16，此為對非對抗性模型的盡力隔離，不聲稱能抵抗刻意取得 root
+的模型。**
 
 Independent packet/action digest presentation method and reader/egress
-evidence: _________________________________________________________________
+evidence: **由同一專用終端獨立顯示完整 packet/action 摘要碼；因 ingress 與
+egress 同端點，該顯示與回送僅提供 `owner_presence_demonstrated`，不得計入
+`owner_response_authenticated`（§6.17）。**
 
-Required channel-specific isolation/authentication evidence: ________________
+Required channel-specific isolation/authentication evidence: **每場新 HMAC 遮罩
+標記（禁用 `sha256(token)[0:8]`）；端點 ownership／ACL／ptrace／`/proc`／fd／tty
+盡力隔離探測；探測結果依 §6.16 標示為 best-effort，不作為對抗性隔離證明。**
 
-Token-production option (`T-A`, `T-B`, or `T-C`): ____________________
+Token-production option (`T-A`, `T-B`, or `T-C`): **`T-B`**
 
-Burn/persistence option (`B-A` or `B-C`; `B-B` cannot stand alone): __________
+Burn/persistence option (`B-A` or `B-C`; `B-B` cannot stand alone): **`B-C`
+（另須取得 Phase 9 audit 寫入授權；不得沿用 §6.15 的 Phase 7 授權）**
 
-Maximum validity window (must end no later than the synchronous session): ____
+Maximum validity window (must end no later than the synchronous session): **10
+分鐘，且 Owner 在場時段結束時立即提前失效（以先到者為準）**
 
-Cumulative rejection freeze threshold (`rejection_freeze_threshold`): _______
+Cumulative rejection freeze threshold (`rejection_freeze_threshold`): **1**
 
-Owner notes / required changes: ____________________________________________
+Owner notes / required changes: **無修改要求；Owner 於 2026-08-04 接受整體設計。**
 
-Verbatim authorization sentence creation and checking method: ______________
+Verbatim authorization sentence creation and checking method: **Owner 2026-08-04
+逐字裁決：「授權句由我當天臨場自己想，不事先寫下、不讓任何 AI 代擬；句子裡要講出
+當天的動作和目標，系統只檢查有沒有講到，以及不能跟畫面上任何一句一模一樣。」
+實作約束：(1) 系統不得事先儲存、產生、建議或以任何形式提示該句；(2) gate 僅檢查
+該句是否指名當日 action 與 target，以及是否與本場任何系統顯示字串完全相符（相符
+即 fail-closed）；(3) 依 §6.17 與 GATE step 5，此判準為 procedural-only，不得
+宣稱可機械證明作者身分。**
 
-Decision date and explicit implementation authorization: ____________________
+Decision date and explicit implementation authorization: **設計選案日期
+2026-08-04（Owner 本人）。實作授權＝**尚未給予**。本紀錄僅代表設計定案；
+撰寫 gate、產生真 token、修改 schema、新增 Phase 9 audit 寫入、呼叫 OpenClaw
+一律仍須另一張精確授權。選案 ≠ 實作授權 ≠ 執行授權。**
 
 Until every applicable field is filled by the Owner and converted into a
 separate implementation brief, the token remains `null`, the gate remains

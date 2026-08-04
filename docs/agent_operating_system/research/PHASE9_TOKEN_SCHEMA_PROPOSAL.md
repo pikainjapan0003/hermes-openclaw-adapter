@@ -219,15 +219,20 @@ Before any real token is accepted, an independently reviewed package must prove:
 
 ## 8. Owner decision record
 
-Schema option (`S-A`, `S-B`, or `S-C`): ____________________
+Schema option (`S-A`, `S-B`, or `S-C`): **`S-A`**
 
-If S-B, exact v2 discriminator: ____________________
+If S-B, exact v2 discriminator: **不適用（未選 S-B）**
 
-Transient token retention/display limit: ____________________
+Transient token retention/display limit: **僅存在於 Owner 在場時段內，上限 10
+分鐘；raw token 不得進入聊天、檔案、argv、環境變數、log 或錯誤訊息；引用一律使用
+每場新 HMAC 遮罩標記。**
 
-Owner notes / required changes: ____________________________________________
+Owner notes / required changes: **無修改要求；Owner 於 2026-08-04 接受整體設計。
+v1 審批包的 `single_use_execution_token` 維持 `const: null` 不變。**
 
-Decision date and explicit implementation authorization: ____________________
+Decision date and explicit implementation authorization: **設計選案日期
+2026-08-04（Owner 本人）。實作授權＝**尚未給予**。schema 檔案在取得另一張精確
+授權前不得修改。選案 ≠ 實作授權 ≠ 執行授權。**
 
 Until the Owner fills this record and issues a separate implementation brief,
 the accepted schema remains unchanged and the live token remains impossible.

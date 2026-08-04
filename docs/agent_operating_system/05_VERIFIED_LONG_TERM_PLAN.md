@@ -29,7 +29,7 @@
 
 順序原則：0–1 隨時做；2 是 3–7 的前提；3→4→5 有依賴鏈；6 可與 4、5 並行；**7 依賴 Phase 5 的 evidence bundle，必須在 5 之後**；8 規劃可提早；9 必須在 3+4+5+7 全部完成後；10 在 9 之後（先證明執行紀律，再開外部讀取）；11 貫穿全程。
 
-**二次補強（2026-07-08）**：Owner 盤問 20 題的裁決與各 Phase 修訂記錄於**第 6 節**；第 3 節內容與第 6 節衝突時以第 6 節為準。要點：Phase 9 併入 v1.0（6.3）、Phase 8 升為 v1.0 後第一優先、Phase 10 無限期停留規劃。
+**二次補強（2026-07-08）**：Owner 盤問 20 題的裁決與各 Phase 修訂記錄於**第 6 節**；第 3 節內容與第 6 節衝突時以第 6 節為準。要點：Phase 9 併入 v1.0（6.3）、Phase 8 升為 v1.0 後第一優先、Phase 10 無限期停留規劃。**L0 裁決速查**：6.12 Phase 3 施工期｜6.13 夜跑批次治理（含 2b 免逐次蓋章）｜6.14 mock_e2e 凍結｜6.15 Phase 7 寫入授權（限 `data/audit_dev.jsonl` append-only）｜6.16 Phase 9 威脅模型（防不小心、不防故意）｜6.17 同端點回送＝presence-only｜6.18 Phase 9 設計選案（**選案 ≠ 實作授權 ≠ 執行授權**）。
 
 ---
 
@@ -452,37 +452,43 @@ Owner 於 2026-08-03 對話中逐字輸入以下授權句：
 
 ### 6.16 Phase 9 威脅模型裁決（2026-08-03 Owner 拍板，L0）
 
-**背景（Fable 5 與 Opus 雙模型實測）**：本機模型 session 可經 `wsl.exe -d Ubuntu -u root` **免密碼取得 uid=0**；預設身分 `uid=1000(lnovo)` 另含 `27(sudo)`；repo、`app/`、`.venv`、`~/.openclaw/` 皆為 lnovo 可寫。**結論：任何裝在本機（含 WSL）的閘門，都無法在機械上排除一個刻意繞過的模型。**
-
-**Owner 裁決**：Phase 9 的威脅模型為——
+**背景（Fable 5＋Opus 雙模型實測）**：模型 session 可經 `wsl.exe -d Ubuntu -u root` **免密碼取得 uid=0**；預設 `uid=1000(lnovo)` 另含 `27(sudo)`；repo／`app/`／`.venv`／`~/.openclaw/` 皆 lnovo 可寫。**結論：任何本機（含 WSL）閘門都無法機械排除刻意繞過的模型。**
 
 ```text
-在範圍內（設計必須擋住）：模型過度熱心、誤解授權、自作主張、
-                        把顯示當成授權、意外重放、崩潰後誤續跑。
+Owner 裁決——Phase 9 威脅模型：
+在範圍內（必須擋住）：模型過度熱心、誤解授權、自作主張、把顯示當成授權、
+                    意外重放、崩潰後誤續跑。
 明確不在範圍內：一個刻意規避的對抗性模型。
 ```
 
-**因此**：Phase 9 的安全論述**不得**使用「mechanically proven model exclusion」這類絕對語；應改為「程序約束＋盡力技術隔離，對非對抗性模型有效」。以下為**已知並接受的殘餘風險**，不得再被當成待修缺陷：模型可經 `wsl.exe -u root` 取得 root；gate 程式碼與 `.venv` 對模型可寫；burn ledger 與 frozen artifact 可被有意刪改；`~/.openclaw/` config 可被有意竄改。
-
-**若日後 Owner 改為需要防對抗性模型**：唯一路徑是把 token 通道與 gate 移到**這台 Windows 完全無法觸及**的裝置；屆時本節須由 Owner 明示翻案。
+**因此**：安全論述**不得**用「mechanically proven model exclusion」等絕對語，應為「程序約束＋盡力技術隔離，對非對抗性模型有效」。**已接受殘餘風險**（不得再列為待修缺陷，亦不得寫成已解決）：`wsl.exe -u root` 可得 root；gate 與 `.venv` 對模型可寫；burn ledger 與 frozen artifact 可被有意刪改；`~/.openclaw/` 可被竄改。**若日後改為需防對抗性模型**：唯一路徑是把 token 通道與 gate 移到本機完全無法觸及的裝置，且須 Owner 明示翻案。
 
 ### 6.17 同端點回送的語意裁決（2026-08-04 Owner 拍板，L0）
 
-**問題**：NB-24-FIX3 批審發現，若 token 由 gate 產生、經 egress 顯示、再由 Owner 從**同一端點**輸入回 gate，該回送在資訊上是 gate 自身輸出的回音。它只證明「有人讀得到該端點」（presence／liveness），**不構成**對 Owner 身分的認證。原文件卻以判準 4「Owner-held authenticator or secret」計之，屬記帳錯誤；且一次意外洩漏（截圖、log、繼承 fd、共用畫面——皆屬 §6.16 **範圍內**的「不小心」）會同時擊穿顯示端與回送端，零縱深。
-
-**Owner 裁決（選案「丙」）**：不新增裝置、不新增子系統，**改為據實記帳**——
+**問題（NB-24-FIX3 批審）**：token 由 gate 產生、經 egress 顯示、再由 Owner 從**同一端點**輸回，該回送是 gate 自身輸出的回音，只證明「有人讀得到該端點」，**不構成** Owner 身分認證；原以判準 4「Owner-held authenticator or secret」計之屬記帳錯誤。且一次意外洩漏（截圖、log、繼承 fd、共用畫面——皆屬 §6.16 範圍內的「不小心」）會同時擊穿顯示端與回送端，零縱深。
 
 ```text
-ingress 與 egress 為同一端點時：
+Owner 裁決（選案「丙」，不加裝置、據實記帳）——ingress 與 egress 同端點時：
   OOB 回送 = presence／liveness 證明，僅此而已；
   不得計入判準 4（owner_response_authenticated）；
   真正的第二因子 = §2.6 由 Owner 自行產生、非系統顯示的逐字授權動作；
   文件不得宣稱此組合構成雙因子認證。
 ```
 
-**理由**：Owner 逐字授權句源自 Owner 本人而非系統輸出，模型即使讀盡該端點畫面也無法產生；把安全論述記在它身上才是事實。此裁決**不降低**實際保護力，而是消除「後續設計在回音上疊加更多信任」的風險。
+**理由**：逐字授權句源自 Owner 本人而非系統輸出，模型讀盡畫面也無法產生；記在它身上才是事實。此裁決不降低實際保護力，而是消除「後續設計在回音上疊加信任」的風險。**本節僅規範語意，不等於選定任何 §8 選項**（選案見 §6.18）；日後改採甲（顯示端與回送端相異）或乙（Owner 持有驗證器）不需翻案本節，僅需在 §8 另行選定。
 
-**未選定事項**：本裁決僅規範同端點回送的語意，**不等於**選定 `OOB-C`／`E-A`／`T-B` 或任何 §8 選項；`PHASE9_TOKEN_DESIGN.md §8` 與 `PHASE9_TOKEN_SCHEMA_PROPOSAL.md §8` 仍須由 Owner 親自填寫。選案 ≠ 實作授權 ≠ 執行授權。日後若 Owner 改採「顯示端與回送端相異」（甲）或「Owner 持有驗證器」（乙），本節不需翻案，僅需在 §8 另行選定。
+### 6.18 Phase 9 設計選案（2026-08-04 Owner 拍板，L0）
+
+Owner 回覆「**接受**」，並就建議表未列的一欄逐字裁決：
+
+```text
+授權句由我當天臨場自己想，不事先寫下、不讓任何 AI 代擬；句子裡要講出當天的
+動作和目標，系統只檢查有沒有講到，以及不能跟畫面上任何一句一模一樣。
+```
+
+已填入 `PHASE9_TOKEN_DESIGN.md §8` 與 `PHASE9_TOKEN_SCHEMA_PROPOSAL.md §8`：ingress `OOB-C`／egress `E-A`／token `T-B`／schema `S-A`／burn `B-C`／有效期 10 分鐘且隨在場時段結束提前失效／`rejection_freeze_threshold = 1`／遮罩用每場新 HMAC（禁 `sha256(token)[0:8]`）／逐字授權句方法如上。
+
+**僅為設計選案，實作授權尚未給予**：撰寫 gate、產生真 token、改 `docs/schemas/*.json`、新增 Phase 9 audit 寫入、呼叫 OpenClaw，一律仍須另一張精確授權；執行當天另須 Owner 在場並給只限該一發的執行指令。**選案 ≠ 實作授權 ≠ 執行授權**，三層互不包含。`B-C` 另受拘束：Phase 9 audit 寫入授權未取得，不得沿用 §6.15 的 Phase 7 授權（嚴格限於 `data/audit_dev.jsonl` append-only local dev）。
 
 ### 6.14 `mock_e2e_v0_7` 保留並凍結（2026-07-20 Fable 5 裁決，Owner 可翻案）
 
