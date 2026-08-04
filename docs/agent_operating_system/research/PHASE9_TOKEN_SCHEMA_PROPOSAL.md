@@ -68,7 +68,7 @@ of those files in this docs-only batch.
    the approved non-model egress or trusted frozen-artifact reader before the
    transient presentation can validate at the gate boundary.
 
-## 3. Option A — dedicated Phase 9 authorization contract
+## 3. S-A — dedicated Phase 9 authorization contract
 
 Keep `approval_packet.schema.json` unchanged. Add a separate, future Phase 9
 contract for a **transient execution-authorization presentation**. It references
@@ -116,7 +116,7 @@ transient presentation and redacted audit record are required.
 **Assessment: recommended.** It preserves the strongest structural Phase 4
 guarantee and makes Phase 9 authority visibly separate.
 
-## 4. Option B — versioned approval-packet branches
+## 4. S-B — versioned approval-packet branches
 
 Change the approval-packet schema into explicit version branches:
 
@@ -155,12 +155,12 @@ existing packet cannot be mutated in place.
 Execution-adjacent data enters the same message type used for offline approval.
 A weak model can mistake “v2 approval packet” for executable permission, and
 schema composition mistakes can accidentally allow both/no branches. The test
-and review surface is substantially larger than Option A.
+and review surface is substantially larger than S-A.
 
 **Assessment: viable but not preferred.** Choose only if one message type is an
 important Owner requirement.
 
-## 5. Option C — directly relax the current field
+## 5. S-C — directly relax the current field
 
 Change the existing token property from null-only to null-or-string while
 leaving the current loose `schema_version` and message type in place.
@@ -171,7 +171,7 @@ This option destroys the structural guarantee: a historical v1-shaped packet
 could validate with a token. An application gate might later reject it, but the
 weak-model safety property “format alone rejects a live token” would be gone.
 There is no schema-level method under this option to prove that old v1 packets
-can never carry tokens; adding such a discriminator converts it into Option B.
+can never carry tokens; adding such a discriminator converts it into S-B.
 
 ### Test impact
 
@@ -194,7 +194,7 @@ more authoritative while providing no execution-gate safety by itself.
 
 ## 6. Comparison
 
-| Criterion | A: dedicated contract | B: version branches | C: direct relax |
+| Criterion | S-A: dedicated contract | S-B: version branches | S-C: direct relax |
 |---|---|---|---|
 | v1 packet structurally token-free | Strongest; unchanged schema | Strong if branch is exact and closed | **No** |
 | Phase 4 reverse guarantee | Unchanged | Preserved with substantial new tests | Weakened/broken |
@@ -219,9 +219,9 @@ Before any real token is accepted, an independently reviewed package must prove:
 
 ## 8. Owner decision record
 
-Schema option (`A`, `B`, or `C`): ____________________
+Schema option (`S-A`, `S-B`, or `S-C`): ____________________
 
-If B, exact v2 discriminator: ____________________
+If S-B, exact v2 discriminator: ____________________
 
 Transient token retention/display limit: ____________________
 

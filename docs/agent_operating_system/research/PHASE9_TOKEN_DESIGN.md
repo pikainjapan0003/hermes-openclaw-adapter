@@ -341,10 +341,11 @@ gate-process replacement, or failure of final presence reconfirmation expires
 the token immediately. A token from one synchronous session is invalid in every
 later process/session even if its wall-clock timestamp has not elapsed.
 
-The gate also counts denied presentations for the same rehearsal. At cumulative
-rejection count `N`, it freezes the rehearsal, closes the channel, and requires
-fresh Owner agreement plus a new ceremony; it cannot reset the counter or ask a
-model to keep trying. `N` is an Owner decision and remains unset below.
+The gate also counts denied presentations for the same rehearsal. At the
+cumulative `rejection_freeze_threshold`, it freezes the rehearsal, closes the
+channel, and requires fresh Owner agreement plus a new ceremony; it cannot
+reset the counter or ask a model to keep trying. The threshold is an Owner
+decision and remains unset below.
 
 ## 6. Token lifecycle and failure semantics
 
@@ -413,7 +414,7 @@ Burn/persistence option (`B-A` or `B-C`; `B-B` cannot stand alone): __________
 
 Maximum validity window (must end no later than the synchronous session): ____
 
-Cumulative rejection freeze threshold `N`: ____________________
+Cumulative rejection freeze threshold (`rejection_freeze_threshold`): _______
 
 Owner notes / required changes: ____________________________________________
 

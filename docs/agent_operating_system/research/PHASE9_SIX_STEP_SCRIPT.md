@@ -58,7 +58,7 @@ uses. This document proposes, but does not create, the following session folder:
 |---|---|---|
 | frozen CLI facts/preflight report | `data/phase9_rehearsal/<rehearsal_id>/00-preflight.json` | no credentials or raw token |
 | evidence bundle | `data/phase9_rehearsal/<rehearsal_id>/01-evidence-bundle.json` | existing evidence allowlist only |
-| inert v1 approval packet | `data/phase9_rehearsal/<rehearsal_id>/02-approval-packet.json` | token remains null under proposed schema Option A |
+| inert v1 approval packet | `data/phase9_rehearsal/<rehearsal_id>/02-approval-packet.json` | token remains null under proposed schema S-A |
 | redacted token authorization receipt | `data/phase9_rehearsal/<rehearsal_id>/03-token-receipt.json` | digest/binding only; raw token never written |
 | captured execution result | `data/phase9_rehearsal/<rehearsal_id>/04-execution-result.json` | bounded/redacted output plus digest |
 | post-run verification | `data/phase9_rehearsal/<rehearsal_id>/05-postcheck.json` | filesystem/effect summaries, not secret values |

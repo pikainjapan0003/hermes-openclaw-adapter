@@ -10,13 +10,15 @@ Fable 5 + Opus review. **Accepted does not mean solved, mitigated away, or
 mechanically prevented.** The current design defends accidental overreach by a
 non-adversarial model. A deliberately evasive model is outside scope.
 
-The commands and results below are copied from the review evidence recorded in
-§6.16. This docs-only batch did not rerun them and did not write any audit,
-artifact, configuration, or runtime file.
+The accepted conclusions below are cited from
+`05_VERIFIED_LONG_TERM_PLAN.md` §6.16 (line 455 at commit `e34ca1c`). The shell
+commands and displayed result lines below are **reconstructed evidence forms,
+not a verbatim transcript**; they were not rerun in this docs-only batch. This
+batch did not write any audit, artifact, configuration, or runtime file.
 
 ## 1. Review finding P0-1 — local root is obtainable
 
-**Measured fact**
+**Recorded measured conclusion from §6.16 (not remeasured in this batch)**
 
 **PLANNING ONLY, NOT AUTHORIZED**
 
@@ -42,7 +44,7 @@ not sufficient for an adversarial threat model.
 
 ## 2. Review finding P0-2 — local gate code and environment are writable
 
-**Measured fact**
+**Recorded measured conclusion from §6.16 (not remeasured in this batch)**
 
 **PLANNING ONLY, NOT AUTHORIZED**
 
@@ -55,9 +57,13 @@ $ test -w /mnt/c/Users/Lnovo/Desktop/hermes-adapter-work/.venv; echo $?
 0
 ```
 
-The recorded result is that the repo, `app/`, and `.venv` are writable by
-`lnovo`. A deliberately evasive model could change future gate code or its
-dependencies before launch.
+`/mnt/c` is exposed through DrvFs, whose Unix-looking mode/ownership metadata is
+synthesized and may not represent the effective Windows ACL. Therefore
+`test -w` alone is **not** a reliable Windows-ACL measurement. The accepted
+conclusion that the repo, `app/`, and `.venv` are writable by `lnovo` is also
+supported directly by the Owner ruling in §6.16; the reconstructed command form
+above is supporting context, not sole proof. A deliberately evasive model could
+change future gate code or its dependencies before launch.
 
 **Why accepted under §6.16:** ordinary accidental overreach is constrained by
 reviewed code, frozen digests, fail-closed checks, and an Owner-present script.
@@ -71,7 +77,7 @@ result.
 
 ## 3. Review finding P1-1 — local burn and frozen evidence are deliberately mutable
 
-**Measured fact**
+**Derived risk from the recorded writable-parent conclusion**
 
 **PLANNING ONLY, NOT AUTHORIZED**
 
@@ -81,10 +87,10 @@ $ test -w /mnt/c/Users/Lnovo/Desktop/hermes-adapter-work; echo $?
 ```
 
 The burn ledger and frozen Phase 9 artifacts are proposed local descendants of
-this writable repo/data authority. The measured writable parent means a model
-acting deliberately could delete, replace, or roll back those future files.
-This is a consequence of the measured parent authority, not a claim that a
-Phase 9 ledger already exists.
+this writable repo/data authority. Their future mutability is **derived** from
+the recorded writable-parent conclusion; it was not separately measured and no
+Phase 9 ledger exists. A model acting deliberately could therefore delete,
+replace, or roll back those future files.
 
 **Why accepted under §6.16:** append-before-call, hash checks, the second fresh
 challenge, and fail-closed restart behavior protect accidental replay and
@@ -98,7 +104,7 @@ reset or rewrite.
 
 ## 4. Review finding P1-2 — local OpenClaw configuration is writable
 
-**Measured fact**
+**Recorded measured conclusion from §6.16 (not remeasured in this batch)**
 
 **PLANNING ONLY, NOT AUTHORIZED**
 
