@@ -466,6 +466,24 @@ Owner 於 2026-08-03 對話中逐字輸入以下授權句：
 
 **若日後 Owner 改為需要防對抗性模型**：唯一路徑是把 token 通道與 gate 移到**這台 Windows 完全無法觸及**的裝置；屆時本節須由 Owner 明示翻案。
 
+### 6.17 同端點回送的語意裁決（2026-08-04 Owner 拍板，L0）
+
+**問題**：NB-24-FIX3 批審發現，若 token 由 gate 產生、經 egress 顯示、再由 Owner 從**同一端點**輸入回 gate，該回送在資訊上是 gate 自身輸出的回音。它只證明「有人讀得到該端點」（presence／liveness），**不構成**對 Owner 身分的認證。原文件卻以判準 4「Owner-held authenticator or secret」計之，屬記帳錯誤；且一次意外洩漏（截圖、log、繼承 fd、共用畫面——皆屬 §6.16 **範圍內**的「不小心」）會同時擊穿顯示端與回送端，零縱深。
+
+**Owner 裁決（選案「丙」）**：不新增裝置、不新增子系統，**改為據實記帳**——
+
+```text
+ingress 與 egress 為同一端點時：
+  OOB 回送 = presence／liveness 證明，僅此而已；
+  不得計入判準 4（owner_response_authenticated）；
+  真正的第二因子 = §2.6 由 Owner 自行產生、非系統顯示的逐字授權動作；
+  文件不得宣稱此組合構成雙因子認證。
+```
+
+**理由**：Owner 逐字授權句源自 Owner 本人而非系統輸出，模型即使讀盡該端點畫面也無法產生；把安全論述記在它身上才是事實。此裁決**不降低**實際保護力，而是消除「後續設計在回音上疊加更多信任」的風險。
+
+**未選定事項**：本裁決僅規範同端點回送的語意，**不等於**選定 `OOB-C`／`E-A`／`T-B` 或任何 §8 選項；`PHASE9_TOKEN_DESIGN.md §8` 與 `PHASE9_TOKEN_SCHEMA_PROPOSAL.md §8` 仍須由 Owner 親自填寫。選案 ≠ 實作授權 ≠ 執行授權。日後若 Owner 改採「顯示端與回送端相異」（甲）或「Owner 持有驗證器」（乙），本節不需翻案，僅需在 §8 另行選定。
+
 ### 6.14 `mock_e2e_v0_7` 保留並凍結（2026-07-20 Fable 5 裁決，Owner 可翻案）
 
 `app/mock_e2e_v0_7.py` 保留為凍結的 v0.7 legacy rehearsal；其輸出不是 Blackboard contract artifact，不得被解讀為 queue／approval／execution authority，也不得在原檔內改造成新 contract。後續只可用測試鎖住既有行為；若要建立單向 migration adapter 或退役舊件，須另案取得明確欄位政策與 Owner 裁決。本決策可由 Owner 明示翻案。
