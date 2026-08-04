@@ -60,6 +60,50 @@ They do **not** prove whether a harmless query writes those locations.
 | Legacy execution treats missing binary, timeout, and nonzero exit as errors and captures stdout/stderr separately. | `app/main.py:564-600` | These are desired adapter behaviors, not verified CLI guarantees. |
 | Local OpenClaw state directories exist. | read-only WSL directory-presence evidence above | A before/after filesystem check is mandatory on execution day. |
 
+## 2b. Measured CLI introspection (Owner-authorized 2026-08-04)
+
+**授權範圍（Owner 於 2026-08-04 對話中選定「乙」，嚴格解釋）**：僅 `--version`
+與 `--help` 系列的自我描述指令；**不得**下任何任務、不得帶任何提示詞、不得
+`--deliver`、不得建立 session。以下為實跑結果，非推論。
+
+| 指令 | 結果 | exit |
+|---|---|---|
+| `openclaw --version` | `OpenClaw 2026.6.1 (2e08f0f)` | 0 |
+| `readlink -f /usr/bin/openclaw` | `/usr/lib/node_modules/openclaw/openclaw.mjs` | — |
+| `openclaw --help` | 全域選項與 30+ 子命令清單 | 0 |
+| `openclaw agent --help` | `agent` 子命令完整選項表 | 0 |
+
+由此**解除**的假設（原 §3 第 1、7、9 項）：
+
+- **子命令與參數（原 §3-1）**：`openclaw agent` 存在，實際選項包含
+  `-m/--message <text>`、`--json`、`--local`、`--agent <id>`、
+  `--timeout <seconds>`、`--model <id>`、`--session-id`、`--session-key`、
+  `--channel`、`--deliver`、`--thinking`。與 `app/main.py:277-285` 的既有預期
+  **相符**。
+- **逾時行為（原 §3-7）**：CLI **自帶**逾時，`--timeout <seconds>`，說明文字為
+  `default 600 or config value`。故 gate 不可假設「逾時只由呼叫端控制」，
+  必須顯式指定並與 gate 自身的逾時取較嚴者。
+- **版本身分（原 §3-9）**：可執行目標與版本已確定（見上表）；執行日仍須
+  重新比對，版本變動即視為 drift。
+
+由此**新增**的設計約束（探測前未知，屬新事實）：
+
+1. **`--deliver` 預設為 false**，不加該旗標時回覆不會送到任何通道。Phase 9
+   **必須**依賴此預設並顯式禁止該旗標——它是最直接的 egress 風險。
+2. **不加 `--local` 時，`agent` 是「via the Gateway」執行**，亦即牽涉一個常駐
+   Gateway 服務，而非自足的單一行程。這推翻了「一次呼叫＝一個可完全觀察的
+   子行程」的隱含假設；gate 必須明示採 `--local` 或採 Gateway，並各自說明
+   證據可觀察性。**此項須在實作規格中裁決。**
+3. **`--channel` 支援 20+ 對外通道**（telegram/whatsapp/discord/slack/signal…）。
+   Phase 9 必須把通道參數釘死或完全不傳，並在 argv 契約中列為禁止欄位。
+4. **session 是可定址且會持續的**（`--session-id`／`--session-key`），佐證
+   §3-3「local state writes」為真實風險而非臆測——執行日的前後檔案系統比對
+   為**必要**而非建議。
+
+**仍未解除**：原 §3 第 2、3、4、5、6、8、10 項（唯讀語意、local state 實際
+寫入、工具/網路行為、任務 exit code 意義、輸出 JSON 實際形狀、session 副作用、
+prompt 侷限性）。`--help` 的描述**不是**行為保證。
+
 ## 3. What remains an assumption — 待驗證
 
 Every item in this section is **待驗證** and must remain absent from an
