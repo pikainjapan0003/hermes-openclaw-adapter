@@ -5,10 +5,13 @@ from __future__ import annotations
 import ast
 import hashlib
 import json
+import threading
+import time
+from contextlib import contextmanager
 from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
 import pytest
 
@@ -44,10 +47,12 @@ EVIDENCE_HASH = "b" * 64
 class Clock:
     def __init__(self) -> None:
         self.current = NOW
+        self._lock = threading.Lock()
 
     def __call__(self) -> datetime:
-        self.current += timedelta(seconds=1)
-        return self.current
+        with self._lock:
+            self.current += timedelta(seconds=1)
+            return self.current
 
 
 class StaticVerifier:
@@ -142,11 +147,60 @@ class SameEndpointPresence:
         )
 
 
+class BarrierPresence(SameEndpointPresence):
+    def __init__(self, barrier: threading.Barrier) -> None:
+        super().__init__()
+        self._barrier = barrier
+
+    def collect_after_second_challenge(
+        self,
+        challenge: FreshChallenge,
+    ) -> PresenceInputs:
+        inputs = super().collect_after_second_challenge(challenge)
+        self._barrier.wait(timeout=5)
+        return inputs
+
+
+class UnavailableCoordinationLock:
+    def __init__(self) -> None:
+        self.acquire_calls = 0
+        self.release_calls = 0
+
+    def acquire(self, blocking: bool = True, timeout: float = -1) -> bool:
+        del blocking, timeout
+        self.acquire_calls += 1
+        return False
+
+    def release(self) -> None:
+        self.release_calls += 1
+        raise AssertionError("an unacquired lock must not be released")
+
+
+class ReleaseFailingCoordinationLock:
+    def acquire(self, blocking: bool = True, timeout: float = -1) -> bool:
+        del blocking, timeout
+        return True
+
+    def release(self) -> None:
+        raise RuntimeError("synthetic coordination release failure")
+
+
 class TmpBurnLedger:
-    def __init__(self, target: Path, *, fail: bool = False) -> None:
+    def __init__(
+        self,
+        target: Path,
+        *,
+        fail: bool = False,
+        lock_fail: bool = False,
+        commit_delay_seconds: float = 0.0,
+    ) -> None:
         self._target = target
         self.fail = fail
+        self.lock_fail = lock_fail
+        self.commit_delay_seconds = commit_delay_seconds
         self.commits = 0
+        self.lock_entries = 0
+        self._ledger_lock = threading.Lock()
 
     @property
     def target(self) -> Path:
@@ -157,12 +211,27 @@ class TmpBurnLedger:
             return []
         return [json.loads(line) for line in self._target.read_text().splitlines()]
 
+    @contextmanager
+    def exclusive_lock(self, *, timeout_seconds: float) -> Iterator[None]:
+        if self.lock_fail:
+            raise TimeoutError("synthetic ledger lock failure")
+        acquired = self._ledger_lock.acquire(timeout=timeout_seconds)
+        if not acquired:
+            raise TimeoutError("synthetic ledger lock timeout")
+        try:
+            self.lock_entries += 1
+            yield
+        finally:
+            self._ledger_lock.release()
+
     def contains(self, token_digest: str) -> bool:
         return any(item["token_digest"] == token_digest for item in self._records())
 
     def commit(self, record) -> BurnReceipt:
         if self.fail:
             raise OSError("synthetic burn failure")
+        if self.commit_delay_seconds:
+            time.sleep(self.commit_delay_seconds)
         self.commits += 1
         payload = record.safe_record()
         encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"))
@@ -181,6 +250,7 @@ class CountingExecutor:
         self.argv: tuple[str, ...] | None = None
         self.timeout: int | None = None
         self.mutate = mutate
+        self._lock = threading.Lock()
 
     def execute(
         self,
@@ -188,9 +258,10 @@ class CountingExecutor:
         *,
         timeout_seconds: int,
     ) -> ExecutionResult:
-        self.calls += 1
-        self.argv = argv
-        self.timeout = timeout_seconds
+        with self._lock:
+            self.calls += 1
+            self.argv = argv
+            self.timeout = timeout_seconds
         if self.mutate is not None:
             self.mutate.write_text("changed", encoding="utf-8")
         return ExecutionResult(0, False, "1" * 64, "2" * 64)
@@ -205,6 +276,8 @@ def _fixture(
     version: str = EXPECTED_OPENCLAW_VERSION,
     verbatim: bool = True,
     executor: CountingExecutor | None = None,
+    ledger: TmpBurnLedger | None = None,
+    gate_token_audit_coordination_lock: Any | None = None,
 ):
     state_root = tmp_path / "openclaw-state"
     state_root.mkdir()
@@ -254,7 +327,14 @@ def _fixture(
             else None
         ),
     )
-    ledger = TmpBurnLedger(tmp_path / "burn.jsonl", fail=burn_fail)
+    selected_ledger = (
+        ledger
+        if ledger is not None
+        else TmpBurnLedger(
+            tmp_path / "burn.jsonl",
+            fail=burn_fail,
+        )
+    )
     selected_executor = executor or CountingExecutor()
     presence = SameEndpointPresence(verbatim=verbatim)
     gate = Phase9Gate(
@@ -262,15 +342,25 @@ def _fixture(
         contract_verifier=StaticVerifier(),
         preflight_verifier=StaticVerifier(),
         audit_authorization_verifier=StaticAuditVerifier(),
-        burn_ledger=ledger,
+        burn_ledger=selected_ledger,
         version_probe=StaticVersionProbe(version),
         snapshotter=DirectorySnapshotter(state_root),
         presence_channel=presence,
         executor=selected_executor,
         clock=Clock(),
         challenge_bytes=lambda size: b"c" * size,
+        gate_token_audit_coordination_lock=gate_token_audit_coordination_lock,
     )
-    return gate, request, raw, owner_text, ledger, selected_executor, presence, state_root
+    return (
+        gate,
+        request,
+        raw,
+        owner_text,
+        selected_ledger,
+        selected_executor,
+        presence,
+        state_root,
+    )
 
 
 def test_exact_fake_flow_burns_before_one_call_and_closes(tmp_path: Path) -> None:
@@ -305,6 +395,23 @@ def test_exact_fake_flow_burns_before_one_call_and_closes(tmp_path: Path) -> Non
     assert result.presence.owner_presence_demonstrated is True
     assert result.presence.owner_response_authenticated is False
     assert result.presence.owner_verbatim_authorization_verified is True
+    assert result.trace == (
+        "1:DENY_ALL_TO_CHECKING",
+        "2:CONTRACTS_VERIFIED",
+        "3:HASHES_RECOMPUTED",
+        "4:PHASE9_CONTRACT_ACCEPTED",
+        "5:OWNER_PROCEDURE_CHECKED",
+        "6:TOKEN_VERIFIED",
+        "7:PREFLIGHT_REVALIDATED",
+        "8:SECOND_CHALLENGE_COMPLETED",
+        "9:SIX_PREDICATES_RECOMPUTED",
+        "10:BURN_DURABLE_AND_VERIFIED",
+        "11:ONE_SHOT_CAPABILITY_CREATED",
+        "12:ARGV_REVALIDATED",
+        "13:ONE_SHOT_CONSUMED",
+        "14:CLOSED_DENY",
+        "15:POST_ATTEMPT_EVIDENCE_COMPUTED",
+    )
     burn_text = ledger.target.read_text(encoding="utf-8")
     assert owner_text not in burn_text
     assert "owner_instruction_digest" in burn_text
@@ -322,6 +429,139 @@ def test_burn_failure_never_calls_executor(tmp_path: Path) -> None:
             owner_authorization_text=owner_text,
         )
 
+    assert executor.calls == 0
+    assert gate.state is GateState.CLOSED_DENY
+    assert gate.freeze.frozen is True
+
+
+def test_concurrent_same_token_is_burned_once_and_executes_once(
+    tmp_path: Path,
+) -> None:
+    process_lock = threading.Lock()
+    ledger = TmpBurnLedger(
+        tmp_path / "burn.jsonl",
+        commit_delay_seconds=0.05,
+    )
+    executor = CountingExecutor()
+    barrier = threading.Barrier(2)
+    gate_one, request, raw, owner_text, _ledger, _executor, _presence, root = _fixture(
+        tmp_path,
+        ledger=ledger,
+        executor=executor,
+        gate_token_audit_coordination_lock=process_lock,
+    )
+    gate_one.presence_channel = BarrierPresence(barrier)
+    gate_two = Phase9Gate(
+        rehearsal_id="rehearsal-001",
+        contract_verifier=StaticVerifier(),
+        preflight_verifier=StaticVerifier(),
+        audit_authorization_verifier=StaticAuditVerifier(),
+        burn_ledger=ledger,
+        version_probe=StaticVersionProbe(),
+        snapshotter=DirectorySnapshotter(root),
+        presence_channel=BarrierPresence(barrier),
+        executor=executor,
+        clock=Clock(),
+        challenge_bytes=lambda size: b"q" * size,
+        gate_token_audit_coordination_lock=process_lock,
+    )
+    outcomes: list[str] = []
+    outcome_lock = threading.Lock()
+
+    def invoke(gate: Phase9Gate) -> None:
+        try:
+            gate.run(
+                request,
+                presented_raw_token=raw,
+                owner_authorization_text=owner_text,
+            )
+        except GateDenied as exc:
+            outcome = exc.code
+        else:
+            outcome = "EXECUTED"
+        with outcome_lock:
+            outcomes.append(outcome)
+
+    threads = (
+        threading.Thread(target=invoke, args=(gate_one,)),
+        threading.Thread(target=invoke, args=(gate_two,)),
+    )
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=10)
+
+    assert all(not thread.is_alive() for thread in threads)
+    assert sorted(outcomes) == ["EXECUTED", "TOKEN_ALREADY_BURNED"]
+    assert executor.calls == 1
+    assert ledger.commits == 1
+    assert ledger.lock_entries == 2
+    assert gate_one.state is GateState.CLOSED_DENY
+    assert gate_two.state is GateState.CLOSED_DENY
+
+
+def test_process_coordination_lock_unavailable_fails_closed(
+    tmp_path: Path,
+) -> None:
+    coordination_lock = UnavailableCoordinationLock()
+    gate, request, raw, owner_text, ledger, executor, _presence, _root = _fixture(
+        tmp_path,
+        gate_token_audit_coordination_lock=coordination_lock,
+    )
+
+    with pytest.raises(GateDenied, match="COORDINATION_LOCK_UNAVAILABLE"):
+        gate.run(
+            request,
+            presented_raw_token=raw,
+            owner_authorization_text=owner_text,
+        )
+
+    assert coordination_lock.acquire_calls == 1
+    assert coordination_lock.release_calls == 0
+    assert ledger.lock_entries == 0
+    assert ledger.commits == 0
+    assert executor.calls == 0
+    assert gate.state is GateState.CLOSED_DENY
+    assert gate.freeze.rejection_count == 1
+
+
+def test_ledger_exclusive_lock_unavailable_fails_closed(tmp_path: Path) -> None:
+    ledger = TmpBurnLedger(tmp_path / "burn.jsonl", lock_fail=True)
+    gate, request, raw, owner_text, _ledger, executor, _presence, _root = _fixture(
+        tmp_path,
+        ledger=ledger,
+    )
+
+    with pytest.raises(GateDenied, match="BURN_WRITE_FAILED"):
+        gate.run(
+            request,
+            presented_raw_token=raw,
+            owner_authorization_text=owner_text,
+        )
+
+    assert ledger.lock_entries == 0
+    assert ledger.commits == 0
+    assert executor.calls == 0
+    assert gate.state is GateState.CLOSED_DENY
+    assert gate.freeze.rejection_count == 1
+
+
+def test_process_coordination_lock_release_failure_fails_closed(
+    tmp_path: Path,
+) -> None:
+    gate, request, raw, owner_text, ledger, executor, _presence, _root = _fixture(
+        tmp_path,
+        gate_token_audit_coordination_lock=ReleaseFailingCoordinationLock(),
+    )
+
+    with pytest.raises(GateDenied, match="COORDINATION_LOCK_RELEASE_FAILED"):
+        gate.run(
+            request,
+            presented_raw_token=raw,
+            owner_authorization_text=owner_text,
+        )
+
+    assert ledger.commits == 1
     assert executor.calls == 0
     assert gate.state is GateState.CLOSED_DENY
     assert gate.freeze.frozen is True
