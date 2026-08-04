@@ -43,20 +43,21 @@
 - **格式規則（schema）**：機器用來拒絕欄位錯誤的規則，本身不是執行許可。
 - **復原（rollback）**：出事時怎麼回復；本次查詢不寫業務資料，正常結果為不需復原。
 
-## 本設計直接定案的最小架構
+## 本設計的建議架構（尚未經 Owner 選定）
 
-以下是設計結論，不再把每個技術細節都丟給 Owner 選：
+以下是設計建議，目的是讓 Owner 不必從零整理技術細節；表內任何值目前都
+不是 Owner 選案，也不會自動寫入正式決策欄。
 
-| 項目 | 設計定案 | 理由 |
-|---|---|---|
-| 密碼輸入 | `OOB-C`：Owner 在不同本機使用者擁有的專用終端輸入；不得使用模型所在的同一工作階段或終端 | 新威脅模型接受本機不同身分的盡力隔離；同終端仍可能讓非惡意模型不小心讀到 |
-| 安全顯示與摘要核對 | `E-A`：同一專用終端只向 Owner 顯示；完整 packet/action 摘要碼也由該終端獨立顯示 | N=1 最少新設備，同時避開模型聊天室與模型終端 |
-| 密碼來源 | `T-B`：另外授權的產生器隨機產生一次，Owner 看見後親自經 `OOB-C` 回送 | 比人腦想密碼更難猜，又比新增專用驗證器簡單 |
-| 格式 | `S-A`：新增 Phase 9 專用授權格式，舊 v1 審批包繼續只能是 `null` | 不削弱 Phase 4「舊審批包走不到執行」的保證 |
-| 作廢證明 | `B-C`：作廢事件進稽核鏈，且必須先寫成功再呼叫 | 重開程序後仍能拒絕重放；但須另取得 Phase 9 audit 寫入授權 |
-| 有效時間 | 產生後最多 10 分鐘，且 Owner 在場時段一結束就提早失效 | 縮短誤用窗口，不讓密碼帶到下一次工作階段 |
-| 拒絕上限 | `N=1`：第一次無效、錯誤或不一致就凍結整場 | N=1 演練沒有「多試幾次」的必要，最符合 fail-closed |
-| 摘要遮罩 | 每次工作階段的新 HMAC 遮罩標記，不使用公開 token 雜湊 | 避免短密碼被離線猜測；短標記只供人類對照，不當驗證本體 |
+| 項目 | 設計建議 | 理由 | 對應決策欄 |
+|---|---|---|---|
+| 密碼輸入 | `OOB-C`：Owner 在不同本機使用者擁有的專用終端輸入；不得使用模型所在的同一工作階段或終端 | 新威脅模型接受本機不同身分的盡力隔離；同終端仍可能讓非惡意模型不小心讀到 | `PHASE9_TOKEN_DESIGN.md` §8 `Owner-controlled OOB ingress`（第 364–365 行）及 `Gate/generator OS principal or off-host location`（第 370 行） |
+| 安全顯示與摘要核對 | `E-A`：同一專用終端只向 Owner 顯示；完整 packet/action 摘要碼也由該終端獨立顯示 | N=1 最少新設備，同時避開模型聊天室與模型終端 | `PHASE9_TOKEN_DESIGN.md` §8 `Owner-controlled OOB egress`（第 367–368 行）及 `Independent packet/action digest presentation method and reader/egress evidence`（第 372–373 行） |
+| 密碼來源 | `T-B`：另外授權的產生器隨機產生一次，Owner 看見後親自經 `OOB-C` 回送 | 比人腦想密碼更難猜，又比新增專用驗證器簡單 | `PHASE9_TOKEN_DESIGN.md` §8 `Token-production option`（第 377 行） |
+| 格式 | `S-A`：新增 Phase 9 專用授權格式，舊 v1 審批包繼續只能是 `null` | 不削弱 Phase 4「舊審批包走不到執行」的保證 | `PHASE9_TOKEN_SCHEMA_PROPOSAL.md` §8 `Schema option`（第 222 行） |
+| 作廢證明 | `B-C`：作廢事件進稽核鏈，且必須先寫成功再呼叫 | 重開程序後仍能拒絕重放；但須另取得 Phase 9 audit 寫入授權 | `PHASE9_TOKEN_DESIGN.md` §8 `Burn/persistence option`（第 379 行） |
+| 有效時間 | 產生後最多 10 分鐘，且 Owner 在場時段一結束就提早失效 | 縮短誤用窗口，不讓密碼帶到下一次工作階段 | `PHASE9_TOKEN_DESIGN.md` §8 `Maximum validity window`（第 381 行） |
+| 拒絕上限 | `N=1`：第一次無效、錯誤或不一致就凍結整場 | N=1 演練沒有「多試幾次」的必要，最符合 fail-closed | `PHASE9_TOKEN_DESIGN.md` §8 `Cumulative rejection freeze threshold N`（第 383 行） |
+| 摘要遮罩 | 每次工作階段的新 HMAC 遮罩標記，不使用公開 token 雜湊 | 避免短密碼被離線猜測；短標記只供人類對照，不當驗證本體 | `PHASE9_TOKEN_DESIGN.md` §8 `Required channel-specific isolation/authentication evidence`（第 375 行）及 `Owner notes / required changes`（第 385 行） |
 
 若專用不同身分終端無法準備，這份設計不會偷偷改用聊天室或模型終端；應停止
 並另提離機裝置方案。不同本機身分只防不小心，不防故意取得 root 或改程式。
@@ -93,6 +94,9 @@ Owner 對上述整體設計（接受／要求修改）：____________________
 若要求修改，請用白話寫要改哪一項：__________________________
 
 決策日期：____________________
+
+接受此建議＝授權將這些值**填入**上述兩份文件的 §8；在 Owner 親自填寫
+並簽署日期前，任何選項皆未選定。
 
 ## 這個選案不代表什麼
 

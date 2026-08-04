@@ -130,7 +130,7 @@ do not treat this host's `~/.openclaw/` as authoritative.
 | `PHASE9_TOKEN_SCHEMA_PROPOSAL.md` | quotes §6.16 | schema validity is not adversarial isolation | schema choice does not choose an OOB path | schema cannot resolve these four risks |
 | `PHASE9_SIX_STEP_SCRIPT.md` | quotes §6.16 | Owner-present checks target accidental overreach | selected ingress/egress must avoid the model session/terminal | deliberate-bypass signs invoke abort, not a success claim |
 | `PHASE9_ABORT_PLAYBOOK.md` | quotes §6.16 | fail-closed without claiming adversarial containment | drift or suspected bypass closes the ceremony | scenario 17 preserves the “accepted, not solved” classification |
-| `PHASE9_OWNER_BRIEF.md` | quotes §6.16 in plain language | says what is and is not defended | asks only for decisions still requiring Owner judgment | names all four accepted risks without calling them fixed |
+| `PHASE9_OWNER_BRIEF.md` | quotes §6.16 in plain language | says what is and is not defended | presents recommendations mapped to still-blank §8 decision fields; it records no selection | names all four accepted risks without calling them fixed |
 
 ## 6. Boundary if deliberate bypass is suspected
 
