@@ -126,17 +126,18 @@ intentional configuration tampering by the same host owner.
 device as the gate, with an Owner-controlled immutable configuration snapshot;
 do not treat this host's `~/.openclaw/` as authoritative.
 
-## 5. Seven-document consistency matrix
+## 5. Eight-document consistency matrix
 
-| Document | Threat model | Safety wording | OOB decision | Accepted-risk handling |
-|---|---|---|---|---|
-| `OPENCLAW_CLI_FACTS.md` | quotes §6.16 | best-effort, non-adversarial | no CLI/OOB assumption promoted to fact | accepted risks are not CLI facts to “fix” |
-| `PHASE9_TOKEN_DESIGN.md` | quotes §6.16 | no absolute model-exclusion claim | local different uid/SID may be accepted; same model session/terminal remains prohibited | P0-1/P0-2/P1-1/P1-2 remain explicit |
-| `PHASE9_EXECUTION_GATE_DESIGN.md` | quotes §6.16 | procedural constraint plus best-effort isolation | six-predicate presence uses best-effort isolation evidence | deliberate local bypass is outside gate claim |
-| `PHASE9_TOKEN_SCHEMA_PROPOSAL.md` | quotes §6.16 | schema validity is not adversarial isolation | schema choice does not choose an OOB path | schema cannot resolve these four risks |
-| `PHASE9_SIX_STEP_SCRIPT.md` | quotes §6.16 | Owner-present checks target accidental overreach | selected ingress/egress must avoid the model session/terminal | deliberate-bypass signs invoke abort, not a success claim |
-| `PHASE9_ABORT_PLAYBOOK.md` | quotes §6.16 | fail-closed without claiming adversarial containment | drift or suspected bypass closes the ceremony | scenario 17 preserves the “accepted, not solved” classification |
-| `PHASE9_OWNER_BRIEF.md` | quotes §6.16 in plain language | says what is and is not defended | presents recommendations mapped to still-blank §8 decision fields; it records no selection | names all four accepted risks without calling them fixed |
+| Document | Threat model | Safety wording | OOB decision | §6.17 same-endpoint accounting | Accepted-risk handling |
+|---|---|---|---|---|---|
+| `OPENCLAW_CLI_FACTS.md` | quotes §6.16 | best-effort, non-adversarial | no CLI/OOB assumption promoted to fact | **Not addressed:** this is a CLI-facts document and makes no response-authentication claim | accepted risks are not CLI facts to “fix” |
+| `PHASE9_TOKEN_DESIGN.md` | quotes §6.16 | no absolute model-exclusion claim | local different uid/SID may be accepted; same model session/terminal remains prohibited | **Explicit:** same-endpoint return sets presence only; procedural Owner wording supplies criterion 4 | P0-1/P0-2/P1-1/P1-2 remain explicit |
+| `PHASE9_EXECUTION_GATE_DESIGN.md` | quotes §6.16 and cites §6.17 | procedural constraint plus best-effort isolation | six-predicate presence uses best-effort isolation evidence | **Explicit:** two criterion-4 paths, same-endpoint restriction, and both accounting fields in the proposed pre-call record | deliberate local bypass is outside gate claim |
+| `PHASE9_TOKEN_SCHEMA_PROPOSAL.md` | quotes §6.16 | schema validity is not adversarial isolation | schema choice does not choose an OOB path | **Not addressed:** this format proposal defines no endpoint or Owner-authentication semantics | schema cannot resolve these four risks |
+| `PHASE9_SIX_STEP_SCRIPT.md` | quotes §6.16 | Owner-present checks target accidental overreach | selected ingress/egress must avoid the model session/terminal | **Explicit:** same-endpoint response records presence only; independently worded Owner sentence is the sole criterion-4 source | deliberate-bypass signs invoke abort, not a success claim |
+| `PHASE9_ABORT_PLAYBOOK.md` | quotes §6.16 | fail-closed without claiming adversarial containment | drift or suspected bypass closes the ceremony | **Not addressed directly:** it delegates predicate meaning to token/gate designs and makes no contrary authentication claim | scenario 17 preserves the “accepted, not solved” classification |
+| `PHASE9_OWNER_BRIEF.md` | quotes §6.16 in plain language | says what is and is not defended | presents recommendations mapped to still-blank §8 decision fields; it records no selection | **Explicit:** same-endpoint return proves presence, not Owner authentication; §2.6 wording is separate | names all four accepted risks without calling them fixed |
+| `PHASE9_ACCEPTED_RESIDUAL_RISKS.md` | records §6.16 boundary and accepted risks | separates recorded conclusions from derived risk | audits the other seven documents without selecting an option | **This matrix:** records explicit coverage and honestly marks documents where §6.17 is not directly addressed | accepted still does not mean solved |
 
 ## 6. Boundary if deliberate bypass is suspected
 

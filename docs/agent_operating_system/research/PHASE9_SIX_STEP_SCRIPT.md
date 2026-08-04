@@ -144,7 +144,22 @@ selected ceremony; coordinator only displays and validates bindings.
    probes; freeze their attestation digest and stop on any drift.
 6. Bind token to rehearsal, packet id/hash, bundle hash, action hash, target,
    expiration, and attempt number `1`.
-7. Display the no-retry rule and wait for the Owner's exact go/no-go statement.
+7. Display the no-retry rule, then close or clear the system-generated wording
+   surface before asking for authorization. The coordinator must not display a
+   draft, template, completion, or suggested authorization sentence for the
+   Owner to copy.
+8. After the Owner has independently reviewed the frozen digests, wait for the
+   Owner to write the verbatim authorization sentence **in the Owner's own
+   wording**. That Owner-written sentence is the only source for
+   `owner_verbatim_authorization_verified`. The predicate remains procedural:
+   the minimum exact-copy check can reject a sentence identical to any string
+   displayed by the system in this ceremony, but cannot mechanically prove
+   authorship and does not defend against a deliberately evasive model.
+
+When ingress and egress are the same endpoint, returning the displayed token or
+challenge records only `owner_presence_demonstrated`; it does not authenticate
+the Owner. In that case only the independently worded sentence in action 8 may
+supply criterion 4 through `owner_verbatim_authorization_verified`.
 
 The Owner must **not** click `/dashboard/tasks/{id}/approve`, and the coordinator
 must not call that route or any queue-writing route. The existing dashboard

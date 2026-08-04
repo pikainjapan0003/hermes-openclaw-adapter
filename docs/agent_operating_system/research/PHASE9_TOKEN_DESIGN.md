@@ -175,8 +175,9 @@ boolean. It is true only when all of the following frozen predicates are true:
 3. `fresh_challenge_bound`: the gate generated a cryptographically unpredictable,
    single-session challenge bound to the rehearsal id, packet digest, action
    digest, and a short deadline.
-4. `owner_authorization_evidence_green`: exactly one applicable evidence path
-   must be green:
+4. `owner_authorization_evidence_green`: at least one applicable evidence path
+   must be green. When ingress and egress are the same endpoint, only the
+   verbatim-authorization path is applicable:
    - `owner_response_authenticated` requires an Owner-held authenticator or
      secret that was not generated and displayed by the same endpoint; before
      the deadline, the approved channel delivers its correct bound response,
@@ -231,6 +232,15 @@ be copied from a system-displayed sentence, and must pass the exact digest and
 action comparison as `owner_verbatim_authorization_verified`. Only that §2.6
 act satisfies criterion 4. The design does not describe this combination as
 two-factor authentication.
+
+`owner_verbatim_authorization_verified` is a **procedural-only predicate**. A
+local program cannot mechanically prove that the Owner personally composed the
+words rather than a model or another process. The future gate may verify the
+sentence's required bindings and may reject an exact copy of any string that the
+system displayed during the ceremony, but those checks prove format and detect
+literal copying only; they do not prove human authorship. This predicate is
+effective only under the §6.16 non-adversarial-model threat boundary. Its name
+must never be reported as cryptographic identity authentication.
 
 ### 2.7 Trusted packet/action digest presentation
 
@@ -417,6 +427,8 @@ Maximum validity window (must end no later than the synchronous session): ____
 Cumulative rejection freeze threshold (`rejection_freeze_threshold`): _______
 
 Owner notes / required changes: ____________________________________________
+
+Verbatim authorization sentence creation and checking method: ______________
 
 Decision date and explicit implementation authorization: ____________________
 

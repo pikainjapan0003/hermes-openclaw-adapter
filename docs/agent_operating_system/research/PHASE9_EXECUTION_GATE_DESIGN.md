@@ -57,7 +57,7 @@ tool name, agent name, or prior successful rehearsal is not an allowlist.
 - No HTTP route is required for N=1. The future authorized runner is a local,
   foreground, single-shot session controlled by the Owner.
 
-### 2.1 Decision: procedural queue isolation for this N=1 rehearsal
+### 2.1 Proposal: procedural queue isolation for this N=1 rehearsal
 
 For the N=1 rehearsal, responsibility belongs to the Phase 9 coordinator and
 gate preflight. The Owner decision creates only an inert approval packet. The
@@ -74,7 +74,7 @@ depth, the same queued-record identity set, zero claims attributable to the
 rehearsal, and no new queued record. Any drift is HOLD and no process starts (or,
 if already started, is a safety incident with no retry).
 
-This is the selected containment for the single Owner-present rehearsal, not a
+This is the proposed containment for the single Owner-present rehearsal, not a
 claim that the existing approve route is safe. Any later Phase 9 integration
 with dashboard/queue workflows requires a separately designed, authorized, and
 tested product fix. This docs-only package does not make that change.
@@ -146,7 +146,15 @@ The future implementation must preserve this order:
    cannot carry a token.
 5. Prove the Owner independently observed the exact packet/action digests through
    the approved non-model egress or trusted frozen-artifact reader; then prove
-   the exact redacted Owner instruction names those values.
+   the exact redacted Owner instruction names those values. This establishes
+   `owner_verbatim_authorization_verified`, a **procedural-only predicate**: the
+   gate cannot mechanically prove that the Owner personally wrote the sentence.
+   As a minimum mechanical check, canonicalize the candidate sentence and
+   compare it with every string displayed by the system during this ceremony;
+   an exact match fails closed. This check catches literal copying only. It does
+   not prove authorship, identity, independent thought, or resistance to a
+   deliberately evasive model, and is useful only within the §6.16
+   non-adversarial threat model.
 6. Verify token freshness, expiry, session, packet, action, target, and attempt
    bindings without logging the raw token; immediately after this first Owner
    response, rerun the applicable isolation probes and freeze their attestation
@@ -154,9 +162,11 @@ The future implementation must preserve this order:
 7. Recheck all preflight conditions and the CLI facts sheet at the last possible
    point before burn.
 8. Issue the **second fresh bound challenge** through the approved egress and
-   accept its authenticated response only through the approved ingress. Rerun
-   every applicable identity/ACL/ptrace/`/proc`/fd/tty/endpoint isolation probe
-   after the response.
+   receive the response only through the approved ingress. An independent
+   Owner-held authenticator/secret may set `owner_response_authenticated`; a
+   same-endpoint return sets only `owner_presence_demonstrated`. Rerun every
+   applicable identity/ACL/ptrace/`/proc`/fd/tty/endpoint isolation probe after
+   the response.
 9. Recompute all six `owner_synchronously_present` predicates as one AND from
    evidence produced after step 8. Any drift or stale evidence closes deny;
    the gate must not enter `BURNING` until this recomputation is true. Criterion
