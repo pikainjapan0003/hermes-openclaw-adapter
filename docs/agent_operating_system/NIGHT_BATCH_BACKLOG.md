@@ -356,6 +356,11 @@ Packages 1–22 are consumed; the result/commit index is preserved in `research/
 
 AUD (v1.1 audit record), RB (rollback-to-Git binding), PB (produced_by policy), and ROOT projection decisions remain blank pending Owner choice. Phase 7 still requires the exact Owner instruction `允許寫入 data/audit_dev.jsonl（local dev append-only）`; Phase 9 still requires Owner presence. This section does not grant either gate.
 
+> **Later-status metadata (2026-08-03; historical text above unchanged):**
+> Owner subsequently gave that exact Phase 7 instruction and signed off Phase
+> 7 (05 §5/§6.15). This later fact grants neither Phase 9 audit writing nor
+> Phase 9 execution; those remain separately gated.
+
 ## NIGHT-BATCH-19 backlog refill — 2026-08-02 (Round 9)
 
 This section supersedes only the current-status interpretation of older
@@ -400,6 +405,11 @@ Older NIGHT-BATCH-17 stock for hardlinks, active-checkout portability,
 coverage-floor layering, test-layer markers, and fixture hash portability is
 consumed by NIGHT-BATCH-18/19 and must not be reopened under the old wording.
 The Owner choices above intentionally remain blank.
+
+> **Later-status metadata (2026-08-03; historical rows above unchanged):**
+> Owner subsequently gave `允許寫入 data/audit_dev.jsonl（local dev
+> append-only）` and signed off Phase 7 (05 §5/§6.15). This update does not
+> authorize a Phase 9 audit ledger or any execution.
 
 ## NIGHT-BATCH-21 backlog refill — 2026-08-04 (Round 11)
 
@@ -448,6 +458,11 @@ inventing persistence or execution work.
 | Research-directory governance | **Blank; no archive/move/delete authority** |
 | Phase 7 audit writer | Exact active Owner instruction still absent |
 | Phase 9 N=1 | Owner presence and Phase 7 closeout still absent |
+
+> **Later-status metadata (2026-08-03; historical rows above unchanged):**
+> The exact Phase 7 instruction was subsequently given and Phase 7 was signed
+> off (05 §5/§6.15). Phase 9 audit writing and execution still require their
+> own authorization and are not unlocked by this note.
 
 ## NIGHT-BATCH-22 backlog refill - 2026-08-05 (Round 12)
 
@@ -505,6 +520,11 @@ Owner-gate authority.
 | Research-directory governance | **Blank** | No archive, move, rename, compression, or deletion |
 | Phase 7 audit writer | Exact active Owner instruction still absent | No writer, formal `data/`, or persistent append |
 | Phase 9 N=1 | Owner presence and Phase 7 closeout still absent | Token remains null; preflight stays blocked |
+
+> **Later-status metadata (2026-08-03; historical rows above unchanged):**
+> Owner subsequently supplied the exact Phase 7 instruction and signed off
+> Phase 7 (05 §5/§6.15). Phase 9 audit writing and execution remain separate
+> Owner gates; this metadata is not authorization.
 
 ## NIGHT-BATCH-26 補貨 — 2026-08-05（雙審 findings 登記）
 
