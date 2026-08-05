@@ -8,19 +8,43 @@ lock is the cross-process half of the two-layer coordination contract.
 from __future__ import annotations
 
 import hashlib
+import importlib
 import json
 import os
 import threading
 import time
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, BinaryIO, Callable, Iterator
+from typing import Any, BinaryIO, Callable, Iterator, Protocol, cast
 
 from app.hash_chain import HashChainError, canonical_json
 from app.phase9_gate import BurnReceipt, BurnRecord
 
 
 _LOCK_POLL_SECONDS = 0.01
+
+
+class _WindowsFileLockApi(Protocol):
+    LK_NBLCK: int
+    LK_UNLCK: int
+
+    def locking(self, descriptor: int, mode: int, byte_count: int) -> None: ...
+
+
+class _PosixFileLockApi(Protocol):
+    LOCK_EX: int
+    LOCK_NB: int
+    LOCK_UN: int
+
+    def flock(self, descriptor: int, operation: int) -> None: ...
+
+
+def _windows_file_lock_api() -> _WindowsFileLockApi:
+    return cast(_WindowsFileLockApi, importlib.import_module("msvcrt"))
+
+
+def _posix_file_lock_api() -> _PosixFileLockApi:
+    return cast(_PosixFileLockApi, importlib.import_module("fcntl"))
 
 
 class BurnLedgerError(RuntimeError):
@@ -60,14 +84,12 @@ class FileBurnLedger:
         """Use the bounded, non-blocking form of the audit-writer OS lock."""
 
         if os.name == "nt":
-            import msvcrt
+            msvcrt = _windows_file_lock_api()
 
             handle.seek(0)
-            msvcrt.locking(  # type: ignore[attr-defined]
-                handle.fileno(), msvcrt.LK_NBLCK, 1  # type: ignore[attr-defined]
-            )
+            msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
         else:
-            import fcntl
+            fcntl = _posix_file_lock_api()
 
             fcntl.flock(
                 handle.fileno(),
@@ -93,14 +115,12 @@ class FileBurnLedger:
     def _release_os_lock(handle: BinaryIO) -> None:
         try:
             if os.name == "nt":
-                import msvcrt
+                msvcrt = _windows_file_lock_api()
 
                 handle.seek(0)
-                msvcrt.locking(  # type: ignore[attr-defined]
-                    handle.fileno(), msvcrt.LK_UNLCK, 1  # type: ignore[attr-defined]
-                )
+                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
             else:
-                import fcntl
+                fcntl = _posix_file_lock_api()
 
                 fcntl.flock(
                     handle.fileno(),

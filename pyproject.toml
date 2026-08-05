@@ -35,4 +35,9 @@ files = [
   "app/remote_readonly_projection.py",
   "app/hash_chain.py",
   "app/rollback_preview_builder.py",
+  "app/phase9_token.py",
+  "app/phase9_presence.py",
+  "app/phase9_abort.py",
+  "app/phase9_gate.py",
+  "app/phase9_burn_ledger.py",
 ]
