@@ -266,6 +266,20 @@ class ExitFailingLedger(TmpBurnLedger):
         raise OSError("synthetic ledger exit failure after commit")
 
 
+class MaskedInternalDenialLedger(TmpBurnLedger):
+    @contextmanager
+    def exclusive_lock(self, *, timeout_seconds: float) -> Iterator[None]:
+        with super().exclusive_lock(timeout_seconds=timeout_seconds):
+            yield
+        try:
+            raise GateDenied(
+                "SYNTHETIC_MASKED_DENIAL",
+                AbortScenario.PRECALL_AUDIT_FAILURE,
+            )
+        except GateDenied as denial:
+            raise OSError("SENSITIVE-LEDGER-WRAPPER") from denial
+
+
 class CountingExecutor:
     test_double = True
 
@@ -666,6 +680,31 @@ def test_ledger_exit_failure_after_commit_is_burn_verify_failure(
     assert ledger.commits == 1
     assert executor.calls == 0
     assert gate.freeze.rejection_count == 1
+
+
+def test_masked_internal_denial_converges_to_closed_deny_once(
+    tmp_path: Path,
+) -> None:
+    ledger = MaskedInternalDenialLedger(tmp_path / "burn.jsonl")
+    gate, request, raw, owner_text, _ledger, executor, _presence, _root = _fixture(
+        tmp_path,
+        ledger=ledger,
+    )
+
+    with pytest.raises(GateDenied) as caught:
+        gate.run(
+            request,
+            presented_raw_token=raw,
+            owner_authorization_text=owner_text,
+        )
+
+    assert caught.value.code == "SYNTHETIC_MASKED_DENIAL"
+    assert caught.value.scenario is AbortScenario.PRECALL_AUDIT_FAILURE
+    assert caught.value.context == ("LEDGER_LOCK_EXIT_FAILED",)
+    assert gate.state is GateState.CLOSED_DENY
+    assert gate.freeze.frozen is True
+    assert gate.freeze.rejection_count == 1
+    assert executor.calls == 0
 
 
 def test_acquire_that_raises_after_locking_is_released_and_denied(

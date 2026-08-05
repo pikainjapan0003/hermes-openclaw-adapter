@@ -566,6 +566,16 @@ class Phase9Gate:
         self.trace.append("CLOSED_DENY")
         return GateDenied(code, scenario)
 
+    def _converge_existing_denial(self, denial: GateDenied) -> GateDenied:
+        """Close around an already-created denial without counting it twice."""
+
+        if self.freeze.rejection_count == 0:
+            self.freeze.reject()
+        self.state = GateState.CLOSED_DENY
+        if not self.trace or self.trace[-1] != "CLOSED_DENY":
+            self.trace.append("CLOSED_DENY")
+        return denial
+
     def _deny(self, code: str, scenario: AbortScenario) -> NoReturn:
         raise self._closed_denial(code, scenario)
 
@@ -788,7 +798,12 @@ class Phase9Gate:
                     masked_denial = _find_in_flight_denial(exc)
                     if masked_denial is not None:
                         masked_denial.add_context("LEDGER_LOCK_EXIT_FAILED")
-                        pending_denial = masked_denial
+                        # Option (i): even a denial created inside a failing
+                        # ledger context must converge to the gate's terminal
+                        # fail-closed state.  Do not count a denial twice.
+                        pending_denial = self._converge_existing_denial(
+                            masked_denial
+                        )
                     else:
                         code = (
                             "BURN_VERIFY_FAILED"
