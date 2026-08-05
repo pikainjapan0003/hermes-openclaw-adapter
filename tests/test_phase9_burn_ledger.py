@@ -8,6 +8,7 @@ reports must not describe that branch as CI-covered.
 from __future__ import annotations
 
 import ast
+import inspect
 import multiprocessing
 import threading
 from contextlib import contextmanager
@@ -335,6 +336,7 @@ def _process_worker(
         challenge_bytes=lambda size: b"c" * size,
         gate_token_audit_coordination_lock=threading.Lock(),
     )
+    start_barrier.wait(timeout=10)
     try:
         gate.run(
             request,
@@ -682,19 +684,48 @@ def test_cross_process_lock_allows_exactly_one_execution_for_twenty_rounds(
 
 
 def test_noop_lock_control_demonstrates_double_execution(tmp_path: Path) -> None:
-    outcomes, calls, line_count = _run_process_round(
-        tmp_path,
-        100,
-        no_op_lock=True,
-    )
+    round_results: list[tuple[list[str], int, int]] = []
+    for round_number in range(100, 105):
+        outcomes, calls, line_count = _run_process_round(
+            tmp_path,
+            round_number,
+            no_op_lock=True,
+        )
+        assert outcomes in (
+            ["EXECUTED", "EXECUTED"],
+            ["EXECUTED", "TOKEN_ALREADY_BURNED"],
+        )
+        assert len(calls) == outcomes.count("EXECUTED")
+        # On NTFS, unlocked concurrent append can silently lose one record.
+        # That is a worse no-lock failure mode, not a reason to weaken
+        # protected tests.
+        assert line_count in {1, 2}
+        round_results.append((outcomes, len(calls), line_count))
 
-    assert outcomes == ["EXECUTED", "EXECUTED"]
-    assert len(calls) == 2
-    # On NTFS, unlocked concurrent append can silently lose one record.  That
-    # is a worse no-lock failure mode, not a reason to weaken protected tests.
-    assert line_count in {1, 2}
+    double_execution_rounds = sum(
+        outcomes == ["EXECUTED", "EXECUTED"]
+        for outcomes, _, _ in round_results
+    )
+    assert double_execution_rounds >= 1
     assert NoOpLockLedger.__bases__ == (FileBurnLedger,)
-    print(f"noop_executor_calls={len(calls)} noop_burn_records={line_count}")
+    assert {
+        name
+        for name, value in NoOpLockLedger.__dict__.items()
+        if callable(value)
+    } == {"exclusive_lock"}
+    no_op_lock_source = inspect.getsource(NoOpLockLedger.exclusive_lock)
+    assert not any(
+        forbidden in no_op_lock_source
+        for forbidden in ("Barrier", "barrier", "sleep", "Event", "wait(")
+    )
+    assert NoOpLockLedger.contains is FileBurnLedger.contains
+    assert NoOpLockLedger.commit is FileBurnLedger.commit
+    print(
+        "noop_rounds=5 "
+        f"double_execution_rounds={double_execution_rounds} "
+        f"executor_calls={[calls for _, calls, _ in round_results]} "
+        f"burn_records={[records for _, _, records in round_results]}"
+    )
 
 
 def test_burn_ledger_source_is_append_only_and_has_no_runtime_wiring() -> None:
