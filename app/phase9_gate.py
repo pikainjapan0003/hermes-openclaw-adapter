@@ -391,7 +391,7 @@ class BurnLedger(Protocol):
         *,
         timeout_seconds: float,
     ) -> ContextManager[None]:
-        """Hold the ledger persistence layer's exclusive coordination lock."""
+        """Provide cross-process exclusion; a process-local lock is insufficient."""
 
     def contains(self, token_digest: str) -> bool:
         """Return whether the durable replay barrier already contains a digest."""
