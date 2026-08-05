@@ -526,7 +526,7 @@ finding**。兩人獨立裁定 `LOCK_EX|LOCK_NB` / `LK_NBLCK` ＋輪詢為**接�
 | `pyproject.toml [tool.mypy].files` 併入 `app/phase9_*.py` | 兩審皆提（Fable 5 B 節／Opus 5 P3-2） | 現行 `python -m mypy` 的「6 files 全綠」不涵蓋 Phase 9，易被誤讀為已驗證 |
 | `_read_physical_records` 持鎖分支的 `OSError` 未轉 `BurnLedgerError` | Opus 5 P3-4 | 仍 fail-closed，僅型別不一致 |
 | 讀取失敗（既有 ledger 損毀）被回報成 `BURN_WRITE_FAILED` | Opus 5 P3-3 | 語意誤導；實際是重放屏障損毀。仍 fail-closed、executor＝0 |
-| `phase9_burn_ledger.py:50-51` docstring 措辭：宣稱與 `audit_writer_local.py` 同鎖策略，實際後者為阻塞型 | Fable 5 F-5 | 註解修正；不影響安全 |
+| `phase9_burn_ledger.py:50-51` docstring 措辭：宣稱與 `audit_writer_local.py` 同鎖策略，實際後者為阻塞型 | Fable 5 finding 5 | 註解修正；不影響安全 |
 | Windows `msvcrt` 分支無 CI 覆蓋 | Opus 5 P3-5 | 兩審的 Windows 證據皆為手動、不具持續性 |
 | 本檔 NB-18/19/21/22 節仍載「Phase 7 exact Owner instruction still absent」，與 2026-08-03 Owner 已給授權句的事實不符 | 本次登記時發現 | docs only；只加 later-status metadata，**不得**改寫歷史章節原文 |
 
