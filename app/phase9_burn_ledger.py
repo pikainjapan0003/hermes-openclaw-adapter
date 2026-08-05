@@ -190,9 +190,14 @@ class FileBurnLedger:
     def _read_physical_records(self) -> list[dict[str, Any]]:
         handle = self._active_handle_for_caller()
         if handle is not None:
-            handle.flush()
-            handle.seek(0)
-            return self._decode_records(handle.read())
+            try:
+                handle.flush()
+                handle.seek(0)
+                return self._decode_records(handle.read())
+            except BurnLedgerError:
+                raise
+            except (OSError, ValueError) as exc:
+                raise BurnLedgerError("burn ledger could not be read") from exc
         try:
             with self._target.open("rb") as reader:
                 return self._decode_records(reader.read())

@@ -727,6 +727,7 @@ class Phase9Gate:
         coordination_lock_release_required = False
         receipt: BurnReceipt | None = None
         pending_denial: GateDenied | None = None
+        burn_boundary_stage = "ledger_lock"
         # Both lock layers protect the pre-call audit burn boundary.  Any
         # acquisition, ledger-context, or release failure therefore maps to
         # PRECALL_AUDIT_FAILURE and closes the rehearsal before execution.
@@ -758,6 +759,7 @@ class Phase9Gate:
                     with self.burn_ledger.exclusive_lock(
                         timeout_seconds=COORDINATION_LOCK_TIMEOUT_SECONDS
                     ):
+                        burn_boundary_stage = "replay_check"
                         if self.burn_ledger.contains(binding.nonce_digest):
                             self._deny(
                                 "TOKEN_ALREADY_BURNED",
@@ -781,7 +783,9 @@ class Phase9Gate:
                             authorization_record_id=authorization_record.record_id,
                         )
                         self.state = GateState.BURNING
+                        burn_boundary_stage = "commit"
                         receipt = self.burn_ledger.commit(burn)
+                        burn_boundary_stage = "burn_verification"
                         if (
                             receipt.token_digest != binding.nonce_digest
                             or not receipt.durable
@@ -805,9 +809,13 @@ class Phase9Gate:
                             masked_denial
                         )
                     else:
+                        # An unreadable replay barrier is a verification
+                        # failure, never evidence that the token is fresh.
                         code = (
                             "BURN_VERIFY_FAILED"
                             if receipt is not None
+                            or burn_boundary_stage
+                            in {"replay_check", "burn_verification"}
                             else "BURN_WRITE_FAILED"
                         )
                         pending_denial = self._closed_denial(

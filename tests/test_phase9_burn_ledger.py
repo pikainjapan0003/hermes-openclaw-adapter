@@ -481,6 +481,60 @@ def test_fsync_failure_denies_gate_before_executor(tmp_path: Path) -> None:
     assert executor.calls == 0
 
 
+@pytest.mark.parametrize("failed_operation", ["flush", "seek", "read"])
+def test_active_handle_read_oserror_is_payload_free_burn_ledger_error(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    failed_operation: str,
+) -> None:
+    class FailingReadHandle:
+        def flush(self) -> None:
+            if failed_operation == "flush":
+                raise OSError("SENSITIVE-FLUSH-PAYLOAD")
+
+        def seek(self, _offset: int) -> None:
+            if failed_operation == "seek":
+                raise OSError("SENSITIVE-SEEK-PAYLOAD")
+
+        def read(self) -> bytes:
+            if failed_operation == "read":
+                raise OSError("SENSITIVE-READ-PAYLOAD")
+            return b""
+
+    ledger = FileBurnLedger(tmp_path / "burn.jsonl")
+    monkeypatch.setattr(
+        ledger,
+        "_active_handle_for_caller",
+        lambda: FailingReadHandle(),
+    )
+
+    with pytest.raises(BurnLedgerError) as caught:
+        ledger.contains("c" * 64)
+
+    assert str(caught.value) == "burn ledger could not be read"
+    assert "SENSITIVE" not in str(caught.value)
+
+
+def test_corrupt_replay_barrier_is_verify_failure_and_never_executes(
+    tmp_path: Path,
+) -> None:
+    ledger = FileBurnLedger(tmp_path / "corrupt-burn.jsonl")
+    ledger.target.write_bytes(b"not-json\n")
+    gate, request, raw, owner_text, executor = _local_gate_fixture(tmp_path, ledger)
+
+    with pytest.raises(GateDenied) as caught:
+        gate.run(
+            request,
+            presented_raw_token=raw,
+            owner_authorization_text=owner_text,
+        )
+
+    assert caught.value.code == "BURN_VERIFY_FAILED"
+    assert executor.calls == 0
+    assert gate.state.value == "CLOSED_DENY"
+    assert gate.freeze.frozen is True
+
+
 def test_commit_requires_exclusive_lock(tmp_path: Path) -> None:
     ledger = FileBurnLedger(tmp_path / "burn.jsonl")
     with pytest.raises(BurnLedgerError, match="requires the exclusive ledger lock"):
