@@ -81,7 +81,12 @@ class FileBurnLedger:
         return self._target
 
     def _try_lock_once(self, handle: BinaryIO) -> None:
-        """Use the bounded, non-blocking form of the audit-writer OS lock."""
+        """Try the host OS lock once without blocking.
+
+        Unlike ``audit_writer_local`` (which uses blocking ``LOCK_EX`` /
+        ``LK_LOCK``), this ledger deliberately polls the non-blocking forms so
+        it can honor the bounded ``timeout_seconds`` contract.
+        """
 
         if os.name == "nt":
             msvcrt = _windows_file_lock_api()

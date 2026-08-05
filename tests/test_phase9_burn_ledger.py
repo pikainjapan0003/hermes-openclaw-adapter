@@ -1,4 +1,9 @@
-"""Cross-process and append-only evidence for the Phase 9 burn ledger."""
+"""Cross-process and append-only evidence for the Phase 9 burn ledger.
+
+Linux CI exercises only the POSIX ``fcntl`` branch.  The Windows ``msvcrt``
+branch has native-host manual evidence but no continuing Linux-CI coverage;
+reports must not describe that branch as CI-covered.
+"""
 
 from __future__ import annotations
 
