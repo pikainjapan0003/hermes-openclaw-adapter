@@ -78,6 +78,25 @@ class GateDenied(RuntimeError):
         super().__init__(code)
         self.code = code
         self.scenario = scenario
+        self.context: tuple[str, ...] = ()
+
+    def add_context(self, detail: str) -> None:
+        """Attach payload-free abort context without changing the denial."""
+
+        self.context = (*self.context, detail)
+
+
+def _find_in_flight_denial(error: BaseException) -> GateDenied | None:
+    """Recover a denial masked by a failing context-manager exit."""
+
+    current: BaseException | None = error
+    seen: set[int] = set()
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        if isinstance(current, GateDenied):
+            return current
+        current = current.__context__ or current.__cause__
+    return None
 
 
 @dataclass(frozen=True)
@@ -539,12 +558,16 @@ class Phase9Gate:
         self.freeze = RehearsalFreeze(rehearsal_id)
         self.state = GateState.DENY_ALL
         self.trace: list[str] = []
+        self.coordination_lock_poisoned = False
 
-    def _deny(self, code: str, scenario: AbortScenario) -> NoReturn:
+    def _closed_denial(self, code: str, scenario: AbortScenario) -> GateDenied:
         self.freeze.reject()
         self.state = GateState.CLOSED_DENY
         self.trace.append("CLOSED_DENY")
-        raise GateDenied(code, scenario)
+        return GateDenied(code, scenario)
+
+    def _deny(self, code: str, scenario: AbortScenario) -> NoReturn:
+        raise self._closed_denial(code, scenario)
 
     def _utc_now(self) -> datetime:
         value = self.clock()
@@ -691,80 +714,108 @@ class Phase9Gate:
         if len(instruction_digest) != 64:
             self._deny("OWNER_AUTHORIZATION_DENIED", AbortScenario.FROZEN_INPUT_MISMATCH)
 
-        coordination_lock_acquired = False
+        coordination_lock_release_required = False
         receipt: BurnReceipt | None = None
+        pending_denial: GateDenied | None = None
         # Both lock layers protect the pre-call audit burn boundary.  Any
         # acquisition, ledger-context, or release failure therefore maps to
         # PRECALL_AUDIT_FAILURE and closes the rehearsal before execution.
         try:
             try:
+                # Set before acquire so a non-conforming lock that acquires and
+                # then raises still receives a best-effort release in finally.
+                coordination_lock_release_required = True
                 coordination_lock_acquired = (
                     self.gate_token_audit_coordination_lock.acquire(
                         timeout=COORDINATION_LOCK_TIMEOUT_SECONDS
                     )
                 )
             except Exception:
-                self._deny(
+                pending_denial = self._closed_denial(
                     "COORDINATION_LOCK_FAILED",
                     AbortScenario.PRECALL_AUDIT_FAILURE,
                 )
-            if not coordination_lock_acquired:
-                self._deny(
-                    "COORDINATION_LOCK_UNAVAILABLE",
-                    AbortScenario.PRECALL_AUDIT_FAILURE,
-                )
-
-            try:
-                with self.burn_ledger.exclusive_lock(
-                    timeout_seconds=COORDINATION_LOCK_TIMEOUT_SECONDS
-                ):
-                    if self.burn_ledger.contains(binding.nonce_digest):
-                        self._deny(
-                            "TOKEN_ALREADY_BURNED",
-                            AbortScenario.TOKEN_INVALID_OR_REPLAYED,
-                        )
-                    burn = BurnRecord(
-                        rehearsal_id=self.rehearsal_id,
-                        approval_packet_hash=binding.approval_packet_hash,
-                        action_hash=action_hash,
-                        token_digest=binding.nonce_digest,
-                        binding_hash=binding.digest(),
-                        burned_at=self._utc_now(),
-                        attempt_number=ATTEMPT_NUMBER,
-                        owner_presence_demonstrated=(
-                            presence.owner_presence_demonstrated
-                        ),
-                        owner_verbatim_authorization_verified=(
-                            presence.owner_verbatim_authorization_verified
-                        ),
-                        owner_instruction_digest=instruction_digest,
-                        authorization_record_id=authorization_record.record_id,
+            else:
+                if not coordination_lock_acquired:
+                    coordination_lock_release_required = False
+                    pending_denial = self._closed_denial(
+                        "COORDINATION_LOCK_UNAVAILABLE",
+                        AbortScenario.PRECALL_AUDIT_FAILURE,
                     )
-                    self.state = GateState.BURNING
-                    receipt = self.burn_ledger.commit(burn)
-                    if (
-                        receipt.token_digest != binding.nonce_digest
-                        or not receipt.durable
-                        or not receipt.verified
-                        or not self.burn_ledger.contains(binding.nonce_digest)
+
+            if pending_denial is None:
+                try:
+                    with self.burn_ledger.exclusive_lock(
+                        timeout_seconds=COORDINATION_LOCK_TIMEOUT_SECONDS
                     ):
-                        self._deny(
-                            "BURN_VERIFY_FAILED",
+                        if self.burn_ledger.contains(binding.nonce_digest):
+                            self._deny(
+                                "TOKEN_ALREADY_BURNED",
+                                AbortScenario.TOKEN_INVALID_OR_REPLAYED,
+                            )
+                        burn = BurnRecord(
+                            rehearsal_id=self.rehearsal_id,
+                            approval_packet_hash=binding.approval_packet_hash,
+                            action_hash=action_hash,
+                            token_digest=binding.nonce_digest,
+                            binding_hash=binding.digest(),
+                            burned_at=self._utc_now(),
+                            attempt_number=ATTEMPT_NUMBER,
+                            owner_presence_demonstrated=(
+                                presence.owner_presence_demonstrated
+                            ),
+                            owner_verbatim_authorization_verified=(
+                                presence.owner_verbatim_authorization_verified
+                            ),
+                            owner_instruction_digest=instruction_digest,
+                            authorization_record_id=authorization_record.record_id,
+                        )
+                        self.state = GateState.BURNING
+                        receipt = self.burn_ledger.commit(burn)
+                        if (
+                            receipt.token_digest != binding.nonce_digest
+                            or not receipt.durable
+                            or not receipt.verified
+                            or not self.burn_ledger.contains(binding.nonce_digest)
+                        ):
+                            self._deny(
+                                "BURN_VERIFY_FAILED",
+                                AbortScenario.PRECALL_AUDIT_FAILURE,
+                            )
+                except GateDenied as exc:
+                    pending_denial = exc
+                except Exception as exc:
+                    masked_denial = _find_in_flight_denial(exc)
+                    if masked_denial is not None:
+                        masked_denial.add_context("LEDGER_LOCK_EXIT_FAILED")
+                        pending_denial = masked_denial
+                    else:
+                        code = (
+                            "BURN_VERIFY_FAILED"
+                            if receipt is not None
+                            else "BURN_WRITE_FAILED"
+                        )
+                        pending_denial = self._closed_denial(
+                            code,
                             AbortScenario.PRECALL_AUDIT_FAILURE,
                         )
-            except GateDenied:
-                raise
-            except Exception:
-                self._deny("BURN_WRITE_FAILED", AbortScenario.PRECALL_AUDIT_FAILURE)
         finally:
-            if coordination_lock_acquired:
+            if coordination_lock_release_required:
                 try:
                     self.gate_token_audit_coordination_lock.release()
                 except Exception:
-                    self._deny(
-                        "COORDINATION_LOCK_RELEASE_FAILED",
-                        AbortScenario.PRECALL_AUDIT_FAILURE,
-                    )
+                    self.coordination_lock_poisoned = True
+                    self.trace.append("COORDINATION_LOCK_POISONED")
+                    if pending_denial is not None:
+                        pending_denial.add_context("COORDINATION_LOCK_RELEASE_FAILED")
+                    else:
+                        pending_denial = self._closed_denial(
+                            "COORDINATION_LOCK_RELEASE_FAILED",
+                            AbortScenario.PRECALL_AUDIT_FAILURE,
+                        )
+                        pending_denial.add_context("COORDINATION_LOCK_POISONED")
+        if pending_denial is not None:
+            raise pending_denial
         if receipt is None:
             self._deny("BURN_VERIFY_FAILED", AbortScenario.PRECALL_AUDIT_FAILURE)
         self.trace.append("10:BURN_DURABLE_AND_VERIFIED")

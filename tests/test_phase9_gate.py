@@ -15,6 +15,7 @@ from typing import Any, Iterator
 
 import pytest
 
+from app.phase9_abort import AbortScenario
 from app.phase9_gate import (
     EXPECTED_OPENCLAW_VERSION,
     PHASE9_AUDIT_SCOPE,
@@ -185,6 +186,21 @@ class ReleaseFailingCoordinationLock:
         raise RuntimeError("synthetic coordination release failure")
 
 
+class AcquiredThenRaisingCoordinationLock:
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self.release_calls = 0
+
+    def acquire(self, blocking: bool = True, timeout: float = -1) -> bool:
+        acquired = self._lock.acquire(blocking, timeout)
+        assert acquired is True
+        raise RuntimeError("synthetic failure after acquisition")
+
+    def release(self) -> None:
+        self.release_calls += 1
+        self._lock.release()
+
+
 class TmpBurnLedger:
     def __init__(
         self,
@@ -240,6 +256,14 @@ class TmpBurnLedger:
             handle.flush()
         digest = hashlib.sha256(encoded.encode("utf-8")).hexdigest()
         return BurnReceipt(record.token_digest, digest, durable=True, verified=True)
+
+
+class ExitFailingLedger(TmpBurnLedger):
+    @contextmanager
+    def exclusive_lock(self, *, timeout_seconds: float) -> Iterator[None]:
+        with super().exclusive_lock(timeout_seconds=timeout_seconds):
+            yield
+        raise OSError("synthetic ledger exit failure after commit")
 
 
 class CountingExecutor:
@@ -579,7 +603,7 @@ def test_process_coordination_lock_release_failure_fails_closed(
         gate_token_audit_coordination_lock=ReleaseFailingCoordinationLock(),
     )
 
-    with pytest.raises(GateDenied, match="COORDINATION_LOCK_RELEASE_FAILED"):
+    with pytest.raises(GateDenied, match="COORDINATION_LOCK_RELEASE_FAILED") as caught:
         gate.run(
             request,
             presented_raw_token=raw,
@@ -590,6 +614,81 @@ def test_process_coordination_lock_release_failure_fails_closed(
     assert executor.calls == 0
     assert gate.state is GateState.CLOSED_DENY
     assert gate.freeze.frozen is True
+    assert gate.freeze.rejection_count == 1
+    assert gate.coordination_lock_poisoned is True
+    assert caught.value.context == ("COORDINATION_LOCK_POISONED",)
+    assert "COORDINATION_LOCK_POISONED" in gate.trace
+
+
+def test_replay_denial_survives_simultaneous_release_failure(tmp_path: Path) -> None:
+    gate, request, raw, owner_text, ledger, executor, _presence, _root = _fixture(
+        tmp_path,
+        gate_token_audit_coordination_lock=ReleaseFailingCoordinationLock(),
+    )
+    ledger.target.write_text(
+        json.dumps({"token_digest": request.issued_token.binding.nonce_digest}) + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(GateDenied) as caught:
+        gate.run(
+            request,
+            presented_raw_token=raw,
+            owner_authorization_text=owner_text,
+        )
+
+    assert caught.value.code == "TOKEN_ALREADY_BURNED"
+    assert caught.value.scenario is AbortScenario.TOKEN_INVALID_OR_REPLAYED
+    assert caught.value.context == ("COORDINATION_LOCK_RELEASE_FAILED",)
+    assert gate.freeze.rejection_count == 1
+    assert gate.coordination_lock_poisoned is True
+    assert executor.calls == 0
+
+
+def test_ledger_exit_failure_after_commit_is_burn_verify_failure(
+    tmp_path: Path,
+) -> None:
+    ledger = ExitFailingLedger(tmp_path / "burn.jsonl")
+    gate, request, raw, owner_text, _ledger, executor, _presence, _root = _fixture(
+        tmp_path,
+        ledger=ledger,
+    )
+
+    with pytest.raises(GateDenied) as caught:
+        gate.run(
+            request,
+            presented_raw_token=raw,
+            owner_authorization_text=owner_text,
+        )
+
+    assert caught.value.code == "BURN_VERIFY_FAILED"
+    assert caught.value.scenario is AbortScenario.PRECALL_AUDIT_FAILURE
+    assert ledger.commits == 1
+    assert executor.calls == 0
+    assert gate.freeze.rejection_count == 1
+
+
+def test_acquire_that_raises_after_locking_is_released_and_denied(
+    tmp_path: Path,
+) -> None:
+    coordination_lock = AcquiredThenRaisingCoordinationLock()
+    gate, request, raw, owner_text, ledger, executor, _presence, _root = _fixture(
+        tmp_path,
+        gate_token_audit_coordination_lock=coordination_lock,
+    )
+
+    with pytest.raises(GateDenied, match="COORDINATION_LOCK_FAILED"):
+        gate.run(
+            request,
+            presented_raw_token=raw,
+            owner_authorization_text=owner_text,
+        )
+
+    assert coordination_lock.release_calls == 1
+    assert gate.coordination_lock_poisoned is False
+    assert gate.freeze.rejection_count == 1
+    assert ledger.commits == 0
+    assert executor.calls == 0
 
 
 def test_system_display_copy_is_rejected_before_burn(tmp_path: Path) -> None:

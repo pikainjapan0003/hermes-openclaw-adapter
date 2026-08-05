@@ -140,6 +140,23 @@ class ProcessExecutor:
         return ExecutionResult(0, False, "1" * 64, "2" * 64)
 
 
+class LocalCountingExecutor:
+    test_double = True
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def execute(
+        self,
+        _argv: tuple[str, ...],
+        *,
+        timeout_seconds: int,
+    ) -> ExecutionResult:
+        del timeout_seconds
+        self.calls += 1
+        return ExecutionResult(0, False, "1" * 64, "2" * 64)
+
+
 class UnsafeNoOpLedger:
     """Deliberately broken contrast double; never production code."""
 
@@ -202,6 +219,77 @@ def _burn_record(token_digest: str = "c" * 64) -> BurnRecord:
         owner_instruction_digest="1" * 64,
         authorization_record_id="owner-audit-auth-001",
     )
+
+
+def _local_gate_fixture(
+    tmp_path: Path,
+    ledger: FileBurnLedger,
+) -> tuple[Phase9Gate, GateRequest, str, str, LocalCountingExecutor]:
+    state_root = tmp_path / "local-state"
+    state_root.mkdir()
+    (state_root / "config.json").write_text("{}", encoding="utf-8")
+    action = ActionRequest(
+        action_name="n1_harmless_query",
+        target="target-local-demo",
+        message="Return one harmless local status summary.",
+        requested_cli_timeout_seconds=30,
+        gate_timeout_seconds=12,
+        agent_id="main",
+        model_id="safe-model",
+    )
+    issued = issue_token(
+        approval_packet_id="packet-001",
+        approval_packet_hash=PACKET_HASH,
+        evidence_bundle_hash=EVIDENCE_HASH,
+        action_hash=action.digest(),
+        rehearsal_id="rehearsal-001",
+        session_ends_at=NOW + timedelta(minutes=5),
+        session_hmac_key=b"h" * 32,
+        key_id="session-001",
+        now=NOW,
+        random_bytes=lambda size: b"t" * size,
+    )
+    raw = issued.reveal_for_oob_once()
+    owner_text = (
+        "I authorize n1_harmless_query for target-local-demo in this rehearsal."
+    )
+    request = GateRequest(
+        issued_token=issued,
+        token_presentation=TokenPresentation.from_binding(issued.binding),
+        action=action,
+        system_display_strings=("safe digest view",),
+        initial_challenge_id="initial-challenge",
+        session_active=True,
+        phase9_audit_authorization=Phase9AuditAuthorizationRecord(
+            record_id="owner-audit-auth-001",
+            rehearsal_id="rehearsal-001",
+            scope=PHASE9_AUDIT_SCOPE,
+            owner_instruction_digest="f" * 64,
+            authorized_at=NOW - timedelta(seconds=1),
+            valid_until=NOW + timedelta(minutes=3),
+        ),
+    )
+    executor = LocalCountingExecutor()
+    gate = Phase9Gate(
+        rehearsal_id="rehearsal-001",
+        contract_verifier=TrueVerifier(),
+        preflight_verifier=TrueVerifier(),
+        audit_authorization_verifier=TrueAuditVerifier(),
+        burn_ledger=ledger,
+        version_probe=StaticVersionProbe(),
+        snapshotter=DirectorySnapshotter(state_root),
+        presence_channel=ProcessBarrierPresence(_ImmediateBarrier()),
+        executor=executor,
+        clock=ProcessClock(),
+        gate_token_audit_coordination_lock=threading.Lock(),
+        challenge_bytes=lambda size: b"c" * size,
+    )
+    return gate, request, raw, owner_text, executor
+
+
+class _ImmediateBarrier:
+    def wait(self, timeout: float) -> None:
+        del timeout
 
 
 def _process_worker(
@@ -371,6 +459,24 @@ def test_fsync_failure_returns_non_durable_receipt(tmp_path: Path) -> None:
 
     assert receipt.durable is False
     assert receipt.verified is False
+
+
+def test_fsync_failure_denies_gate_before_executor(tmp_path: Path) -> None:
+    def fail_fsync(_descriptor: int) -> None:
+        raise OSError("synthetic fsync failure")
+
+    ledger = FileBurnLedger(tmp_path / "gate-burn.jsonl", fsync_fn=fail_fsync)
+    gate, request, raw, owner_text, executor = _local_gate_fixture(tmp_path, ledger)
+
+    with pytest.raises(GateDenied) as caught:
+        gate.run(
+            request,
+            presented_raw_token=raw,
+            owner_authorization_text=owner_text,
+        )
+
+    assert caught.value.code == "BURN_VERIFY_FAILED"
+    assert executor.calls == 0
 
 
 def test_commit_requires_exclusive_lock(tmp_path: Path) -> None:
