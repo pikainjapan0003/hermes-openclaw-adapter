@@ -145,6 +145,7 @@ class LocalCountingExecutor:
 
     def __init__(self) -> None:
         self.calls = 0
+        self._lock = threading.Lock()
 
     def execute(
         self,
@@ -153,7 +154,8 @@ class LocalCountingExecutor:
         timeout_seconds: int,
     ) -> ExecutionResult:
         del timeout_seconds
-        self.calls += 1
+        with self._lock:
+            self.calls += 1
         return ExecutionResult(0, False, "1" * 64, "2" * 64)
 
 
@@ -483,6 +485,80 @@ def test_commit_requires_exclusive_lock(tmp_path: Path) -> None:
     ledger = FileBurnLedger(tmp_path / "burn.jsonl")
     with pytest.raises(BurnLedgerError, match="requires the exclusive ledger lock"):
         ledger.commit(_burn_record())
+
+
+@pytest.mark.slow
+def test_shared_file_ledger_instance_waits_and_reports_replay_for_150_rounds(
+    tmp_path: Path,
+) -> None:
+    """The object lock is bounded process-local state protection, not OS locking."""
+
+    executor_counts: list[int] = []
+    burn_counts: list[int] = []
+    for round_number in range(150):
+        round_root = tmp_path / f"shared-instance-{round_number}"
+        round_root.mkdir()
+        ledger = FileBurnLedger(round_root / "burn.jsonl")
+        gate_one, request, raw, owner_text, executor = _local_gate_fixture(
+            round_root,
+            ledger,
+        )
+        barrier = threading.Barrier(2)
+        gate_one.presence_channel = ProcessBarrierPresence(barrier)
+        gate_two = Phase9Gate(
+            rehearsal_id="rehearsal-001",
+            contract_verifier=TrueVerifier(),
+            preflight_verifier=TrueVerifier(),
+            audit_authorization_verifier=TrueAuditVerifier(),
+            burn_ledger=ledger,
+            version_probe=StaticVersionProbe(),
+            snapshotter=gate_one.snapshotter,
+            presence_channel=ProcessBarrierPresence(barrier),
+            executor=executor,
+            clock=ProcessClock(),
+            gate_token_audit_coordination_lock=threading.Lock(),
+            challenge_bytes=lambda size: b"c" * size,
+        )
+        outcomes: list[str] = []
+        outcome_lock = threading.Lock()
+
+        def invoke(gate: Phase9Gate) -> None:
+            try:
+                gate.run(
+                    request,
+                    presented_raw_token=raw,
+                    owner_authorization_text=owner_text,
+                )
+            except GateDenied as exc:
+                outcome = exc.code
+            else:
+                outcome = "EXECUTED"
+            with outcome_lock:
+                outcomes.append(outcome)
+
+        threads = (
+            threading.Thread(target=invoke, args=(gate_one,)),
+            threading.Thread(target=invoke, args=(gate_two,)),
+        )
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join(timeout=10)
+
+        assert all(not thread.is_alive() for thread in threads)
+        assert sorted(outcomes) == ["EXECUTED", "TOKEN_ALREADY_BURNED"]
+        executor_counts.append(executor.calls)
+        burn_count = len(ledger.target.read_text(encoding="utf-8").splitlines())
+        burn_counts.append(burn_count)
+        assert executor.calls == 1
+        assert burn_count == 1
+
+    print(
+        "shared_instance_rounds=150 "
+        f"max_executor_calls={max(executor_counts)} "
+        f"max_burn_records={max(burn_counts)} "
+        "replay_code=TOKEN_ALREADY_BURNED"
+    )
 
 
 @pytest.mark.slow

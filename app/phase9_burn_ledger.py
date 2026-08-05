@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import threading
 import time
 from contextlib import contextmanager
 from pathlib import Path
@@ -27,7 +28,12 @@ class BurnLedgerError(RuntimeError):
 
 
 class FileBurnLedger:
-    """JSONL burn ledger with an OS-level, cross-process exclusive lock."""
+    """JSONL burn ledger with an OS-level, cross-process exclusive lock.
+
+    The two ``threading.Lock`` instances below only serialize callers and
+    protect handle state inside this Python object.  They do not provide
+    cross-process exclusion; that guarantee comes only from the OS file lock.
+    """
 
     def __init__(
         self,
@@ -41,7 +47,10 @@ class FileBurnLedger:
         self._fsync = fsync_fn
         self._monotonic = monotonic_fn
         self._sleep = sleep_fn
+        self._instance_call_lock = threading.Lock()
+        self._active_handle_lock = threading.Lock()
         self._active_handle: BinaryIO | None = None
+        self._active_owner_thread_id: int | None = None
 
     @property
     def target(self) -> Path:
@@ -102,27 +111,58 @@ class FileBurnLedger:
 
     @contextmanager
     def exclusive_lock(self, *, timeout_seconds: float) -> Iterator[None]:
-        """Hold an OS-level exclusive lock for one replay-check/burn cycle."""
+        """Hold both lock layers for one bounded replay-check/burn cycle.
 
-        if self._active_handle is not None:
-            raise BurnLedgerError("burn ledger lock is not reentrant")
-        try:
-            handle = self._target.open("a+b")
-        except (OSError, ValueError) as exc:
-            raise BurnLedgerError("burn ledger could not be opened") from exc
+        The instance lock is process-local object-state protection only.  It
+        deliberately shares one timeout budget with the OS-level file lock;
+        it is not a substitute for cross-process exclusion.
+        """
+
+        if not isinstance(timeout_seconds, (int, float)) or timeout_seconds <= 0:
+            raise BurnLedgerError("burn ledger lock timeout is invalid")
+        deadline = self._monotonic() + float(timeout_seconds)
+        remaining = max(0.0, deadline - self._monotonic())
+        if not self._instance_call_lock.acquire(timeout=remaining):
+            raise BurnLedgerError("burn ledger lock unavailable")
+        instance_acquired = True
+        handle: BinaryIO | None = None
         acquired = False
         try:
-            self._acquire_os_lock(handle, timeout_seconds)
+            try:
+                handle = self._target.open("a+b")
+            except (OSError, ValueError) as exc:
+                raise BurnLedgerError("burn ledger could not be opened") from exc
+            remaining = deadline - self._monotonic()
+            if remaining <= 0:
+                raise BurnLedgerError("burn ledger lock unavailable")
+            self._acquire_os_lock(handle, remaining)
             acquired = True
-            self._active_handle = handle
+            with self._active_handle_lock:
+                self._active_handle = handle
+                self._active_owner_thread_id = threading.get_ident()
             yield
         finally:
-            self._active_handle = None
             try:
-                if acquired:
-                    self._release_os_lock(handle)
+                with self._active_handle_lock:
+                    self._active_handle = None
+                    self._active_owner_thread_id = None
+                try:
+                    if acquired and handle is not None:
+                        self._release_os_lock(handle)
+                finally:
+                    if handle is not None:
+                        handle.close()
             finally:
-                handle.close()
+                if instance_acquired:
+                    self._instance_call_lock.release()
+
+    def _active_handle_for_caller(self) -> BinaryIO | None:
+        """Return the active handle only to its owning thread."""
+
+        with self._active_handle_lock:
+            if self._active_owner_thread_id != threading.get_ident():
+                return None
+            return self._active_handle
 
     @staticmethod
     def _decode_records(raw: bytes) -> list[dict[str, Any]]:
@@ -148,7 +188,7 @@ class FileBurnLedger:
         return records
 
     def _read_physical_records(self) -> list[dict[str, Any]]:
-        handle = self._active_handle
+        handle = self._active_handle_for_caller()
         if handle is not None:
             handle.flush()
             handle.seek(0)
@@ -176,7 +216,7 @@ class FileBurnLedger:
     def commit(self, record: BurnRecord) -> BurnReceipt:
         """Append, fsync, and read back one redacted burn record."""
 
-        handle = self._active_handle
+        handle = self._active_handle_for_caller()
         if handle is None:
             raise BurnLedgerError("burn commit requires the exclusive ledger lock")
         payload = record.safe_record()
