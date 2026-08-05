@@ -505,3 +505,35 @@ Owner-gate authority.
 | Research-directory governance | **Blank** | No archive, move, rename, compression, or deletion |
 | Phase 7 audit writer | Exact active Owner instruction still absent | No writer, formal `data/`, or persistent append |
 | Phase 9 N=1 | Owner presence and Phase 7 closeout still absent | Token remains null; preflight stays blocked |
+
+## NIGHT-BATCH-26 補貨 — 2026-08-05（雙審 findings 登記）
+
+NB-26（真實 `FileBurnLedger` ＋協調鎖必填＋鎖失敗證據收尾）已於 `d1732c0`
+合併並 push。雙審結論：Fable 5 = conditional pass、Opus 5 = PASS，**零阻擋
+finding**。兩人獨立裁定 `LOCK_EX|LOCK_NB` / `LK_NBLCK` ＋輪詢為**接受**
+（同一 OS 互斥語意，且比無界阻塞更 fail-closed）。以下為兩份審查提出、
+**本批不修**的存貨；登記於此不構成任何實作、寫入或執行授權。
+
+### 【夜跑可做】
+
+| 條目 | 來源 | 邊界 |
+|---|---|---|
+| `FileBurnLedger` 共用實例的 check-then-act：`_active_handle` 防重入檢查未受同步保護，同行程第二呼叫者會提前拋 `BurnLedgerError` 而跳過 timeout 輪詢，導致回報 `BURN_WRITE_FAILED` 而非 `TOKEN_ALREADY_BURNED` | Fable 5 Finding 1（150 輪實測：executor 恆為 1、ledger 恆 1 筆，**安全不變式未破**，5/150 輪錯誤碼誤導） | 二擇一並附測試：為該屬性加 `threading.Lock`，或在 docstring/型別層明文禁止跨呼叫者共用實例。**不得**放寬任何 fail-closed 條件 |
+| `_find_in_flight_denial` 缺相關性檢查：會冒領例外鏈上任何 `GateDenied`；該分支未呼叫 `_closed_denial()`，gate 可能停在 `BURNING`、`freeze.frozen=False` | Opus 5 P2-1（出貨的 `FileBurnLedger` 未 import `GateDenied`，實務上不可觸發；即便觸發，第二次 `run()` 仍得 `REHEARSAL_FROZEN`、executor 恆 0） | masked 分支補一次 `_closed_denial()`，或限定只認本次 `run()` 產生的 denial；附回歸測試 |
+| `test_noop_lock_control_demonstrates_double_execution` 在原生 Windows/NTFS flaky | Fable 5 Finding 2（連跑 4 次 = PASS/FAIL/FAIL/PASS；`line_count==2` 斷言不可移植——無鎖並發 append 在 NTFS 上會**靜默吃掉**一次寫入而非乾淨產生兩筆） | 評估平台特定斷言或重試；**不得**因此弱化保護版測試。此現象反而強化真鎖的必要性，須在測試註解中記明 |
+| 對照組改為只覆寫 `exclusive_lock` 的 `FileBurnLedger` 子類 | Opus 5 P3-1（現行 `UnsafeNoOpLedger` 是另寫類別＋額外 barrier，證明「無鎖會雙跑」但未直接證明「正牌那把鎖就是擋住的」；複審自建真對照 10/10 重現，結論成立） | tests only；保留原測試或取代皆可，須維持證明力 |
+| 補永久回歸測試：同行程雙 gate 共用 ledger、雙獨立 ledger 實例指同一檔、`_find_in_flight_denial` 邊界（環路／長鏈／payload 不外洩） | Fable 5 J-3 ／ Opus 5 第三節 7–8 | 兩份審查的臨時 probe 均未提交，這些安全性質目前**無任何永久測試**守護 |
+| `pyproject.toml [tool.mypy].files` 併入 `app/phase9_*.py` | 兩審皆提（Fable 5 B 節／Opus 5 P3-2） | 現行 `python -m mypy` 的「6 files 全綠」不涵蓋 Phase 9，易被誤讀為已驗證 |
+| `_read_physical_records` 持鎖分支的 `OSError` 未轉 `BurnLedgerError` | Opus 5 P3-4 | 仍 fail-closed，僅型別不一致 |
+| 讀取失敗（既有 ledger 損毀）被回報成 `BURN_WRITE_FAILED` | Opus 5 P3-3 | 語意誤導；實際是重放屏障損毀。仍 fail-closed、executor＝0 |
+| `phase9_burn_ledger.py:50-51` docstring 措辭：宣稱與 `audit_writer_local.py` 同鎖策略，實際後者為阻塞型 | Fable 5 F-5 | 註解修正；不影響安全 |
+| Windows `msvcrt` 分支無 CI 覆蓋 | Opus 5 P3-5 | 兩審的 Windows 證據皆為手動、不具持續性 |
+| 本檔 NB-18/19/21/22 節仍載「Phase 7 exact Owner instruction still absent」，與 2026-08-03 Owner 已給授權句的事實不符 | 本次登記時發現 | docs only；只加 later-status metadata，**不得**改寫歷史章節原文 |
+
+### 【Owner 閘】（維持未裁決）
+
+| 閘 | 狀態 |
+|---|---|
+| **Phase 9 稽核寫入授權**（B-C：作廢紀錄寫入稽核鏈） | **未請求、未取得**。與 2026-08-03 的 Phase 7 授權句是兩回事，**不得沿用**。缺此紀錄時 gate 維持 fail-closed |
+| Phase 9 執行授權（N=1 真實調用） | 未取得。需 Owner 在場＋當日臨場逐字授權句（05 §6.18） |
+| ledger 檔案**意外刪除**＝讀成「未燒過」，可再燒一次 | 兩審獨立指出（`_read_physical_records` 對 `FileNotFoundError` 回 `[]`）。§6.16 已接受「有意刪改」為殘餘風險，但「意外重放」在防護範圍內，本項落在兩者交界。兩審均建議登記凍結、非本批引入。是否加獨立錨點（inode／建立時間／第二處 digest）**待 Owner 裁決** |
