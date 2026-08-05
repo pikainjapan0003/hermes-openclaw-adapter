@@ -336,6 +336,11 @@ def _fixture(
         )
     )
     selected_executor = executor or CountingExecutor()
+    selected_coordination_lock = (
+        gate_token_audit_coordination_lock
+        if gate_token_audit_coordination_lock is not None
+        else threading.Lock()
+    )
     presence = SameEndpointPresence(verbatim=verbatim)
     gate = Phase9Gate(
         rehearsal_id="rehearsal-001",
@@ -349,7 +354,7 @@ def _fixture(
         executor=selected_executor,
         clock=Clock(),
         challenge_bytes=lambda size: b"c" * size,
-        gate_token_audit_coordination_lock=gate_token_audit_coordination_lock,
+        gate_token_audit_coordination_lock=selected_coordination_lock,
     )
     return (
         gate,
@@ -415,6 +420,26 @@ def test_exact_fake_flow_burns_before_one_call_and_closes(tmp_path: Path) -> Non
     burn_text = ledger.target.read_text(encoding="utf-8")
     assert owner_text not in burn_text
     assert "owner_instruction_digest" in burn_text
+
+
+def test_coordination_lock_is_a_required_constructor_argument(tmp_path: Path) -> None:
+    state_root = tmp_path / "required-lock-state"
+    state_root.mkdir()
+    ledger = TmpBurnLedger(tmp_path / "required-lock-burn.jsonl")
+
+    with pytest.raises(TypeError, match="gate_token_audit_coordination_lock"):
+        Phase9Gate(  # type: ignore[call-arg]
+            rehearsal_id="rehearsal-001",
+            contract_verifier=StaticVerifier(),
+            preflight_verifier=StaticVerifier(),
+            audit_authorization_verifier=StaticAuditVerifier(),
+            burn_ledger=ledger,
+            version_probe=StaticVersionProbe(),
+            snapshotter=DirectorySnapshotter(state_root),
+            presence_channel=SameEndpointPresence(),
+            executor=CountingExecutor(),
+            clock=Clock(),
+        )
 
 
 def test_burn_failure_never_calls_executor(tmp_path: Path) -> None:

@@ -4,6 +4,10 @@ This first implementation package contains the braking system only.  The real
 OpenClaw executor and version probe are intentionally unavailable and raise
 ``NotImplementedError``.  Tests may inject counters, a tmp-path burn ledger,
 and synthetic snapshots; no route or runtime imports this module.
+
+The mandatory gate/token-audit lock protects callers inside one process.  The
+ledger's mandatory ``exclusive_lock`` supplies cross-process exclusion.  Both
+layers are required; neither is a substitute for the other.
 """
 
 from __future__ import annotations
@@ -11,7 +15,6 @@ from __future__ import annotations
 import hashlib
 import json
 import secrets
-import threading
 import unicodedata
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -518,10 +521,8 @@ class Phase9Gate:
         presence_channel: PresenceChannel,
         executor: Executor,
         clock: Callable[[], datetime],
+        gate_token_audit_coordination_lock: GateTokenAuditCoordinationLock,
         challenge_bytes: Callable[[int], bytes] = secrets.token_bytes,
-        gate_token_audit_coordination_lock: (
-            GateTokenAuditCoordinationLock | None
-        ) = None,
     ) -> None:
         self.rehearsal_id = rehearsal_id
         self.contract_verifier = contract_verifier
@@ -534,11 +535,7 @@ class Phase9Gate:
         self.executor = executor
         self.clock = clock
         self.challenge_bytes = challenge_bytes
-        self.gate_token_audit_coordination_lock = (
-            gate_token_audit_coordination_lock
-            if gate_token_audit_coordination_lock is not None
-            else threading.Lock()
-        )
+        self.gate_token_audit_coordination_lock = gate_token_audit_coordination_lock
         self.freeze = RehearsalFreeze(rehearsal_id)
         self.state = GateState.DENY_ALL
         self.trace: list[str] = []
