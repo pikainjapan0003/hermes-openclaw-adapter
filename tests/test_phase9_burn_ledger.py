@@ -3,10 +3,7 @@
 from __future__ import annotations
 
 import ast
-import hashlib
-import json
 import multiprocessing
-import os
 import threading
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
@@ -16,7 +13,6 @@ from typing import Any, Iterator
 
 import pytest
 
-from app.hash_chain import canonical_json
 from app.phase9_burn_ledger import BurnLedgerError, FileBurnLedger
 from app.phase9_gate import (
     EXPECTED_OPENCLAW_VERSION,
@@ -159,52 +155,23 @@ class LocalCountingExecutor:
         return ExecutionResult(0, False, "1" * 64, "2" * 64)
 
 
-class UnsafeNoOpLedger:
-    """Deliberately broken contrast double; never production code."""
-
-    def __init__(self, target: Path, first_contains_barrier: Any) -> None:
-        self._target = target
-        self._first_contains_barrier = first_contains_barrier
-        self._first_contains = True
-
-    @property
-    def target(self) -> Path:
-        return self._target
+class NoOpLockLedger(FileBurnLedger):
+    """Production ledger with only its OS lock deliberately removed."""
 
     @contextmanager
     def exclusive_lock(self, *, timeout_seconds: float) -> Iterator[None]:
         del timeout_seconds
-        yield
-
-    def _records(self) -> list[dict[str, Any]]:
-        if not self._target.exists():
-            return []
-        return [
-            json.loads(line)
-            for line in self._target.read_text(encoding="utf-8").splitlines()
-        ]
-
-    def contains(self, token_digest: str) -> bool:
-        result = any(
-            record.get("token_digest") == token_digest for record in self._records()
-        )
-        if self._first_contains:
-            self._first_contains = False
-            self._first_contains_barrier.wait(timeout=10)
-        return result
-
-    def commit(self, record: BurnRecord) -> BurnReceipt:
-        encoded = canonical_json(record.safe_record())
-        with self._target.open("a+b") as handle:
-            handle.write(encoded + b"\n")
-            handle.flush()
-            os.fsync(handle.fileno())
-        return BurnReceipt(
-            record.token_digest,
-            hashlib.sha256(encoded).hexdigest(),
-            durable=True,
-            verified=True,
-        )
+        handle = self.target.open("a+b")
+        with self._active_handle_lock:
+            self._active_handle = handle
+            self._active_owner_thread_id = threading.get_ident()
+        try:
+            yield
+        finally:
+            with self._active_handle_lock:
+                self._active_handle = None
+                self._active_owner_thread_id = None
+            handle.close()
 
 
 def _burn_record(token_digest: str = "c" * 64) -> BurnRecord:
@@ -298,10 +265,9 @@ def _process_worker(
     ledger_path: str,
     state_root: str,
     start_barrier: Any,
-    first_contains_barrier: Any,
     outcomes: Any,
     executor_calls: Any,
-    unsafe_noop_lock: bool,
+    no_op_lock: bool,
 ) -> None:
     action = ActionRequest(
         action_name="n1_harmless_query",
@@ -346,8 +312,8 @@ def _process_worker(
     )
     target = Path(ledger_path)
     ledger = (
-        UnsafeNoOpLedger(target, first_contains_barrier)
-        if unsafe_noop_lock
+        NoOpLockLedger(target)
+        if no_op_lock
         else FileBurnLedger(target)
     )
     gate = Phase9Gate(
@@ -392,11 +358,10 @@ def _run_process_round(
     tmp_path: Path,
     round_number: int,
     *,
-    unsafe_noop_lock: bool,
+    no_op_lock: bool,
 ) -> tuple[list[str], list[tuple[str, int]], int]:
     context = multiprocessing.get_context("spawn")
     start_barrier = context.Barrier(2)
-    first_contains_barrier = context.Barrier(2) if unsafe_noop_lock else None
     outcomes = context.Queue()
     executor_calls = context.Queue()
     state_root = tmp_path / f"state-{round_number}"
@@ -410,10 +375,9 @@ def _run_process_round(
                 str(ledger_path),
                 str(state_root),
                 start_barrier,
-                first_contains_barrier,
                 outcomes,
                 executor_calls,
-                unsafe_noop_lock,
+                no_op_lock,
             ),
         )
         for _ in range(2)
@@ -699,7 +663,7 @@ def test_cross_process_lock_allows_exactly_one_execution_for_twenty_rounds(
         outcomes, calls, line_count = _run_process_round(
             tmp_path,
             round_number,
-            unsafe_noop_lock=False,
+            no_op_lock=False,
         )
         executor_counts.append(len(calls))
         assert outcomes == ["EXECUTED", "TOKEN_ALREADY_BURNED"]
@@ -716,12 +680,16 @@ def test_noop_lock_control_demonstrates_double_execution(tmp_path: Path) -> None
     outcomes, calls, line_count = _run_process_round(
         tmp_path,
         100,
-        unsafe_noop_lock=True,
+        no_op_lock=True,
     )
 
     assert outcomes == ["EXECUTED", "EXECUTED"]
     assert len(calls) == 2
-    assert line_count == 2
+    # On NTFS, unlocked concurrent append can silently lose one record.  That
+    # is a worse no-lock failure mode, not a reason to weaken protected tests.
+    assert line_count in {1, 2}
+    assert NoOpLockLedger.__bases__ == (FileBurnLedger,)
+    print(f"noop_executor_calls={len(calls)} noop_burn_records={line_count}")
 
 
 def test_burn_ledger_source_is_append_only_and_has_no_runtime_wiring() -> None:
