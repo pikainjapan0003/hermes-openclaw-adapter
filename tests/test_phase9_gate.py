@@ -31,6 +31,7 @@ from app.phase9_gate import (
     OwnerAuthorizedOpenClawVersionProbe,
     Phase9AuditAuthorizationRecord,
     Phase9Gate,
+    _find_in_flight_denial,
     build_openclaw_argv,
     validate_openclaw_argv,
 )
@@ -705,6 +706,47 @@ def test_masked_internal_denial_converges_to_closed_deny_once(
     assert gate.freeze.frozen is True
     assert gate.freeze.rejection_count == 1
     assert executor.calls == 0
+
+
+def test_find_in_flight_denial_stops_on_self_referential_context() -> None:
+    wrapper = RuntimeError("SENSITIVE-SELF-LOOP")
+    wrapper.__context__ = wrapper
+
+    assert _find_in_flight_denial(wrapper) is None
+
+
+def test_find_in_flight_denial_traverses_one_thousand_layers() -> None:
+    denial = GateDenied(
+        "ORIGINAL_DENIAL",
+        AbortScenario.TOKEN_INVALID_OR_REPLAYED,
+    )
+    wrapper = RuntimeError("outer")
+    current: BaseException = wrapper
+    for layer in range(1000):
+        next_error = RuntimeError(f"layer-{layer}")
+        current.__context__ = next_error
+        current = next_error
+    current.__context__ = denial
+
+    assert _find_in_flight_denial(wrapper) is denial
+
+
+def test_masking_wrapper_payload_never_enters_recovered_denial() -> None:
+    secret = "FAKE-SECRET-WRAPPER-PAYLOAD"
+    denial = GateDenied(
+        "ORIGINAL_DENIAL",
+        AbortScenario.PRECALL_AUDIT_FAILURE,
+    )
+    wrapper = RuntimeError(secret)
+    wrapper.__cause__ = denial
+
+    recovered = _find_in_flight_denial(wrapper)
+
+    assert recovered is denial
+    assert secret not in str(recovered)
+    assert secret not in repr(recovered)
+    assert all(secret not in str(value) for value in recovered.args)
+    assert all(secret not in value for value in recovered.context)
 
 
 def test_acquire_that_raises_after_locking_is_released_and_denied(
