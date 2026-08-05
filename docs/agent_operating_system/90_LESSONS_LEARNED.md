@@ -124,3 +124,29 @@
 - 缺的規則：派工前的事實查證不能只掃欄位名稱；schema 組合語義與行為前置同樣必須有實際 file:line 證據。
 - 新增規則：40 F8 擴為三類——欄位存在性、schema keyword 存在／缺席、行為前置主張；任一類缺證據即不得派出。
 - 驗收：本批 package 0 型自檢覆蓋三類；下一批不得再出現同型 HOLD。
+
+## L-014 派工方 commit 純文件後未重跑套件，把紅的 master 推上遠端
+
+- 日期：2026-08-05
+- 範圍：`3addbe6`（NIGHT-BATCH-26 findings 登記）到 `6ee2f57`（修復）
+- 症狀：登記 backlog 時，把「Fable 5 的第 5 號 finding」寫成了 F 家族規則同形狀的
+  識別碼（大寫 F、連字號、數字 5）。`tests/test_cross_reference_integrity.py` 的
+  `TOKEN_RE` 會把 `docs/agent_operating_system/` 內所有該形狀的字串當成指向
+  `40_MAINTENANCE_PROTOCOL.md` 的 F 家族制度規則參照；該檔並未定義該編號，
+  判為懸空引用，`test_every_governance_reference_has_an_authority_definition` 變紅。
+  commit 後未重跑套件即 push，紅的 master 在遠端擺了約一天，
+  由下一批的執行者在派工單外自行發現並修補，反而製造包界線爭議。
+- 根因：把「重跑完整套件」的觸發條件內化成「有改程式才要跑」。但本 repo 的
+  治理測試會讀 `docs/` 內容，**文件本身就是被測對象**；純文件 commit 一樣會使套件變紅。
+- 缺的規則：F5 修改流程未明寫「純文件變更也必須在 commit 前跑完整套件」，
+  也未提醒制度檔內不得出現與規則代號同形狀的自由文字。
+- 新增規則：
+  1. **任何 commit 前都必須跑完整套件，不分程式或文件**；push 前必須綠。
+  2. `docs/agent_operating_system/` 內的自由文字**不得使用與制度規則同形狀的識別碼**
+     （`F-?\d+`、`R-?\d+`、`L-?\d+` 等）。指稱審查 finding 一律寫
+     `finding N`，不得寫 `F-N` 或 `FN`。
+  3. 若必須在批次內修補基線自身的缺陷，該修補應獨立成一個標明「基線缺陷修補」
+     的 commit，不得默默併入其他包，以免包界線審查產生歧義。
+- 驗收：`6ee2f57` 修復後 `test_cross_reference_integrity.py` 3 passed、完整套件
+  `2452 passed`；NIGHT-BATCH-27 登記時六處 finding 標籤全數改用 `finding N` 措辭，
+  `grep -nE 'F[0-9]|F-[0-9]' ` 對新增段落零命中。

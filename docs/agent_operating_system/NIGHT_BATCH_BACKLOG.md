@@ -557,3 +557,37 @@ finding**。兩人獨立裁定 `LOCK_EX|LOCK_NB` / `LK_NBLCK` ＋輪詢為**接�
 | **Phase 9 稽核寫入授權**（B-C：作廢紀錄寫入稽核鏈） | **未請求、未取得**。與 2026-08-03 的 Phase 7 授權句是兩回事，**不得沿用**。缺此紀錄時 gate 維持 fail-closed |
 | Phase 9 執行授權（N=1 真實調用） | 未取得。需 Owner 在場＋當日臨場逐字授權句（05 §6.18） |
 | ledger 檔案**意外刪除**＝讀成「未燒過」，可再燒一次 | 兩審獨立指出（`_read_physical_records` 對 `FileNotFoundError` 回 `[]`）。§6.16 已接受「有意刪改」為殘餘風險，但「意外重放」在防護範圍內，本項落在兩者交界。兩審均建議登記凍結、非本批引入。是否加獨立錨點（inode／建立時間／第二處 digest）**待 Owner 裁決** |
+
+## NIGHT-BATCH-27 補貨 — 2026-08-06（雙審 findings 登記，排 NB-28）
+
+NB-27（八包＋FIX09）已於 `31fbdcc` 合併並 push。兩輪雙審結論：
+八包 = Fable 5 pass／Opus 5 conditional pass（一項阻擋：對照組 flaky，已由 FIX09 修復）；
+FIX09 = Fable 5 pass／Opus 5 conditional pass，**零阻擋**。
+實跑：`2462 passed, 1 skipped, 14 xfailed`；mypy 11 檔＋5 檔全綠；
+定向重複跑合計 WSL 100 次＋Windows 80 次，零失敗。
+以下為登記存貨，**不構成任何實作、寫入或執行授權**。
+
+### 【夜跑可做】
+
+| 條目 | 來源 | 邊界 |
+|---|---|---|
+| **對照組的 rendezvous 實測無效，措辭必須更正**：`tests/test_phase9_burn_ledger.py:339` 新加的 `start_barrier.wait()` 對穩定性無貢獻——`ProcessBarrierPresence` 已在 `app/phase9_gate.py:705` 對**同一個 barrier** 會合且離臨界區更近，完全支配該行。實測 fix vs nofix 失手率相同（閒置 1/120 vs 1/120；滿載 37/60 vs 31/60，z≈1.1 不顯著）。**穩定性 100% 來自 k=5 聚合** | Opus 5 FIX09 finding 1（P2） | docs/測試註解 only；該行留著無害，但任何報告或 commit 訊息**不得**把確定性歸因於 rendezvous |
+| **k=5 的邊際不足**：CPU 滿載時單輪失手率 0.617，k=5 殘餘偽紅率約 **8.9%/invocation**（閒置與四核負載下分別為 4.0e-11、1.3e-4）。建議改 `k_max≈20 ＋ 撞到雙執行即 break`：閒置下更快（約 1 輪），滿載下降至 6e-5 | Opus 5 FIX09 finding 2（P2） | tests only；不得改為放寬結果集合或標 slow／xfail／flaky |
+| 每輪 `assert line_count in {1,2}` 應改條件式：對 `["EXECUTED","TOKEN_ALREADY_BURNED"]` 的輪次唯一正確值是 1，允許 2 會掩蓋「被拒行程卻寫了紀錄」的缺陷 | Opus 5 FIX09 finding 4（P3） | tests only |
+| `_process_worker` 的 `start_barrier.wait()` 位於 `try:` 之外，barrier 破損時子行程裸退出、不投遞 queue 訊息，父層只看到 `exitcode!=0`，診斷不如 `UNEXPECTED:BrokenBarrierError` | Opus 5 FIX09 finding 3（P3） | tests only；實測無 hang（11.8s 有界） |
+| 對照組使該測試由 ~1.3s 升至 ~4.5–6.5s（5 倍）；early-break 可一併解決 | Opus 5 FIX09 finding 5（P3） | tests only |
+| `inspect.getsource` 禁字掃描只掃單一方法，barrier 若藏在類主體屬性或 lambda 預設值可規避（實務上被 `__dict__` callable 斷言擋住） | Opus 5 FIX09 finding 6（P3） | tests only；資訊性 |
+| 保護版 20 輪測試共用 `_process_worker`，FIX09 也改變了它的時序；已證明仍能拒絕無鎖 ledger，但**本身未做 ≥50 次重複跑**（有 `@pytest.mark.slow`） | Opus 5 FIX09 未解問題 3 | tests only；補重複跑證據 |
+| Windows 原生樣本量僅 10 次 invocation／50 round，足以坐實 NTFS 靜默丟寫註解，**不足以估計 Windows 滿載偽紅率** | Opus 5 FIX09 未解問題 2 | measurement only |
+
+### 【NB-27 八包遺留、本批未修的 P3】（來源：Opus 5 八包審查）
+
+| 條目 | 邊界 |
+|---|---|
+| 乾淨退出路徑的 denial 未收斂（`app/phase9_gate.py:800`，`except GateDenied` 分支）：`__exit__` 乾淨時停在 `CHECKING`／`frozen=False`／`rejection_count=0`。僅 BurnLedger 實作自拋裸 `GateDenied` 才觸發，executor 恆 0 | 修法為導向 `_converge_existing_denial`（冪等）；不得順手擴大 |
+| NaN timeout 無界忙轉（`phase9_burn_ledger.py:104-106,146-147`）：`nan <= 0` 為 False 通過驗證，`monotonic() >= nan` 恆 False，sleep 被夾成 0.0。基線既有、非回歸；gate 只傳常數 5.0，實務不可達 | 加 `math.isfinite` 檢查 |
+| 開檔／取鎖失敗與 **commit 內部 readback 失敗**仍報 `BURN_WRITE_FAILED`：後者紀錄其實已 fsync 落盤（實測 `physical_records=1`），維運會誤以為沒燒而重試 | 錯誤碼細分；仍須 fail-closed |
+| `contains()` 不檢查持鎖，與 `commit()` 不對稱：公開 API 允許無鎖 check-then-act，只靠慣例保護。基線相同 | 對稱化或文件化 |
+| `_find_in_flight_denial` 的 `__cause__` 盲點（`app/phase9_gate.py:98`）：`current.__context__ or current.__cause__`，若 `__context__` 是非 denial 的鏈而 denial 只掛 `__cause__` 就會漏找。基線零 diff | 兩條鏈都要走 |
+| 同執行緒重入診斷品質下降：改用不可重入 `threading.Lock` 後，重入會耗掉整個 timeout（gate 常數 5.0s）才回報通用的 `lock unavailable`，無法區分「重入」與「競爭」 | 恢復專屬訊息或快速路徑；不得放寬有界失敗 |
+| Windows `msvcrt` 分支無持續 CI 覆蓋：兩輪四份審查的 Windows 證據皆為手動、不具持續性 | 提案 only；不得偽稱 CI-covered |
