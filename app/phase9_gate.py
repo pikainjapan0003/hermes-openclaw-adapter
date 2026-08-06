@@ -566,6 +566,43 @@ class Phase9Gate:
         self.trace.append("CLOSED_DENY")
         return GateDenied(code, scenario)
 
+    def _commit_failure_disposition(
+        self, token_digest: str
+    ) -> tuple[str, AbortScenario]:
+        """Classify a commit failure while the exclusive lock is still held.
+
+        Durability is decided by re-reading the physical ledger, never by
+        assuming the write did not land.  If that read itself fails the record
+        cannot be ruled out, so the conservative disposition applies: a burn
+        that may be durable must never be reported with a code that reads as
+        "safe to retry".
+        """
+
+        try:
+            landed = self.burn_ledger.contains(token_digest)
+        except Exception:
+            return ("BURN_DURABLE_UNVERIFIED", AbortScenario.CRASH_AFTER_BURN)
+        if landed:
+            return ("BURN_DURABLE_UNVERIFIED", AbortScenario.CRASH_AFTER_BURN)
+        return ("BURN_WRITE_FAILED", AbortScenario.PRECALL_AUDIT_FAILURE)
+
+    @staticmethod
+    def _burn_boundary_disposition(
+        stage: str, receipt: BurnReceipt | None
+    ) -> tuple[str, AbortScenario]:
+        """Map a burn-boundary failure to a code that states what is known."""
+
+        if receipt is not None or stage in {"replay_check", "burn_verification"}:
+            # An unreadable replay barrier is a verification failure, never
+            # evidence that the token is fresh.
+            return ("BURN_VERIFY_FAILED", AbortScenario.PRECALL_AUDIT_FAILURE)
+        if stage == "ledger_lock":
+            # The exclusive lock was never entered; no byte was written.
+            return ("BURN_NOT_ATTEMPTED", AbortScenario.PRECALL_AUDIT_FAILURE)
+        # A commit-stage failure that escaped in-lock classification leaves
+        # durability unknown; stay on the conservative side.
+        return ("BURN_DURABLE_UNVERIFIED", AbortScenario.CRASH_AFTER_BURN)
+
     def _converge_existing_denial(self, denial: GateDenied) -> GateDenied:
         """Close around an already-created denial without counting it twice."""
 
@@ -784,7 +821,18 @@ class Phase9Gate:
                         )
                         self.state = GateState.BURNING
                         burn_boundary_stage = "commit"
-                        receipt = self.burn_ledger.commit(burn)
+                        try:
+                            receipt = self.burn_ledger.commit(burn)
+                        except GateDenied:
+                            raise
+                        except Exception:
+                            # Still holding the exclusive lock, so the ledger
+                            # can be asked what actually happened instead of
+                            # being guessed at.
+                            code, scenario = self._commit_failure_disposition(
+                                binding.nonce_digest
+                            )
+                            self._deny(code, scenario)
                         burn_boundary_stage = "burn_verification"
                         if (
                             receipt.token_digest != binding.nonce_digest
@@ -809,19 +857,10 @@ class Phase9Gate:
                             masked_denial
                         )
                     else:
-                        # An unreadable replay barrier is a verification
-                        # failure, never evidence that the token is fresh.
-                        code = (
-                            "BURN_VERIFY_FAILED"
-                            if receipt is not None
-                            or burn_boundary_stage
-                            in {"replay_check", "burn_verification"}
-                            else "BURN_WRITE_FAILED"
+                        code, scenario = self._burn_boundary_disposition(
+                            burn_boundary_stage, receipt
                         )
-                        pending_denial = self._closed_denial(
-                            code,
-                            AbortScenario.PRECALL_AUDIT_FAILURE,
-                        )
+                        pending_denial = self._closed_denial(code, scenario)
         finally:
             if coordination_lock_release_required:
                 try:

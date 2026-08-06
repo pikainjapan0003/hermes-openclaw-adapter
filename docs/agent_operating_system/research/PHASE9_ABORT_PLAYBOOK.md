@@ -126,6 +126,30 @@ After-call audit failure means the call is spent, the phase cannot pass, and the
 Owner receives an on-screen incident summary pending a separate recovery
 instruction.
 
+### 4.4b Burn-boundary codes state what is known, not what is hoped
+
+The pre-call burn boundary reports one of four codes. They are not
+interchangeable, and on execution day the Owner reads them to decide whether the
+attempt was consumed. `BURN_DURABLE_UNVERIFIED` is the only one that means the
+token may already be spent.
+
+| Code | Scenario | What is established | Execution-day reading |
+|---|---|---|---|
+| `BURN_NOT_ATTEMPTED` | `PRECALL_AUDIT_FAILURE` | the ledger lock was never entered; no byte was written | the attempt did not start; a future attempt still needs a new ceremony |
+| `BURN_WRITE_FAILED` | `PRECALL_AUDIT_FAILURE` | commit failed and a physical re-read **proves** no record landed | the burn did not happen; nothing was consumed |
+| `BURN_DURABLE_UNVERIFIED` | `CRASH_AFTER_BURN` | the record landed, **or** durability could not be ruled out | **treat the token as consumed. Do not retry on the day.** The Owner decides whether the rehearsal ends |
+| `BURN_VERIFY_FAILED` | `PRECALL_AUDIT_FAILURE` | the replay barrier could not be read, or a landed burn failed verification | verification is unusable; the gate stays closed |
+
+Two rules govern this mapping and must not be relaxed:
+
+1. Durability is decided by re-reading the physical ledger while the exclusive
+   lock is still held — never by assuming that a failed call wrote nothing.
+2. If that durability probe itself fails, the conservative disposition applies.
+   A burn that may be durable must never be reported with a code that reads as
+   “safe to retry”. Scenario 13 in the failure matrix governs the aftermath.
+
+In every case the executor is not reached and the run ends at `CLOSED_DENY`.
+
 ### 4.5 Owner stop is edge-triggered and irreversible
 
 Any clear stop phrase takes priority over prior approval. A later conversational

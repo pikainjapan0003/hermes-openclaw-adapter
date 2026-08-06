@@ -281,6 +281,41 @@ class MaskedInternalDenialLedger(TmpBurnLedger):
             raise OSError("SENSITIVE-LEDGER-WRAPPER") from denial
 
 
+class DurableThenFailingCommitLedger(TmpBurnLedger):
+    """The record reaches the ledger, then the commit call fails.
+
+    This is the dangerous case: the burn really happened, so any code that
+    reads as "nothing was written, retry is safe" would be wrong.
+    """
+
+    def commit(self, record) -> BurnReceipt:
+        super().commit(record)
+        raise OSError("synthetic failure after the record became durable")
+
+
+class UnreadableAfterCommitFailureLedger(TmpBurnLedger):
+    """Commit fails and the durability probe cannot answer either."""
+
+    def __init__(self, target: Path) -> None:
+        super().__init__(target)
+        self._commit_attempted = False
+
+    def commit(self, record) -> BurnReceipt:
+        self._commit_attempted = True
+        raise OSError("synthetic commit failure")
+
+    def contains(self, token_digest: str) -> bool:
+        if self._commit_attempted:
+            raise OSError("synthetic ledger read failure")
+        return super().contains(token_digest)
+
+
+def _physical_record_count(target: Path) -> int:
+    if not target.exists():
+        return 0
+    return len([line for line in target.read_text().splitlines() if line])
+
+
 class CountingExecutor:
     test_double = True
 
@@ -596,18 +631,93 @@ def test_ledger_exclusive_lock_unavailable_fails_closed(tmp_path: Path) -> None:
         ledger=ledger,
     )
 
-    with pytest.raises(GateDenied, match="BURN_WRITE_FAILED"):
+    # The lock was never entered, so nothing was written.  Reporting a write
+    # failure here would misdescribe the state on execution day.
+    with pytest.raises(GateDenied, match="BURN_NOT_ATTEMPTED") as denial:
         gate.run(
             request,
             presented_raw_token=raw,
             owner_authorization_text=owner_text,
         )
 
+    assert denial.value.scenario is AbortScenario.PRECALL_AUDIT_FAILURE
     assert ledger.lock_entries == 0
     assert ledger.commits == 0
     assert executor.calls == 0
     assert gate.state is GateState.CLOSED_DENY
     assert gate.freeze.rejection_count == 1
+
+
+def test_commit_failure_after_durability_reports_crash_after_burn(
+    tmp_path: Path,
+) -> None:
+    target = tmp_path / "burn.jsonl"
+    ledger = DurableThenFailingCommitLedger(target)
+    gate, request, raw, owner_text, _ledger, executor, _presence, _root = _fixture(
+        tmp_path,
+        ledger=ledger,
+    )
+
+    with pytest.raises(GateDenied, match="BURN_DURABLE_UNVERIFIED") as denial:
+        gate.run(
+            request,
+            presented_raw_token=raw,
+            owner_authorization_text=owner_text,
+        )
+
+    # The record really landed, so the abort must not read as "safe to retry".
+    assert denial.value.scenario is AbortScenario.CRASH_AFTER_BURN
+    assert _physical_record_count(target) == 1
+    assert executor.calls == 0
+    assert gate.state is GateState.CLOSED_DENY
+    assert gate.freeze.rejection_count == 1
+
+
+def test_commit_failure_with_unreadable_probe_stays_conservative(
+    tmp_path: Path,
+) -> None:
+    target = tmp_path / "burn.jsonl"
+    ledger = UnreadableAfterCommitFailureLedger(target)
+    gate, request, raw, owner_text, _ledger, executor, _presence, _root = _fixture(
+        tmp_path,
+        ledger=ledger,
+    )
+
+    # Durability cannot be ruled out, so the conservative disposition applies.
+    with pytest.raises(GateDenied, match="BURN_DURABLE_UNVERIFIED") as denial:
+        gate.run(
+            request,
+            presented_raw_token=raw,
+            owner_authorization_text=owner_text,
+        )
+
+    assert denial.value.scenario is AbortScenario.CRASH_AFTER_BURN
+    assert executor.calls == 0
+    assert gate.state is GateState.CLOSED_DENY
+    assert gate.freeze.rejection_count == 1
+
+
+def test_commit_failure_proven_not_durable_reports_write_failure(
+    tmp_path: Path,
+) -> None:
+    target = tmp_path / "burn.jsonl"
+    ledger = TmpBurnLedger(target, fail=True)
+    gate, request, raw, owner_text, _ledger, executor, _presence, _root = _fixture(
+        tmp_path,
+        ledger=ledger,
+    )
+
+    with pytest.raises(GateDenied, match="BURN_WRITE_FAILED") as denial:
+        gate.run(
+            request,
+            presented_raw_token=raw,
+            owner_authorization_text=owner_text,
+        )
+
+    assert denial.value.scenario is AbortScenario.PRECALL_AUDIT_FAILURE
+    assert _physical_record_count(target) == 0
+    assert executor.calls == 0
+    assert gate.state is GateState.CLOSED_DENY
 
 
 def test_process_coordination_lock_release_failure_fails_closed(
