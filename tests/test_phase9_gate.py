@@ -20,6 +20,8 @@ from app.phase9_gate import (
     EXPECTED_OPENCLAW_VERSION,
     PHASE9_AUDIT_SCOPE,
     ActionRequest,
+    AuditChainReceipt,
+    BurnRecord,
     BurnReceipt,
     DirectorySnapshotter,
     ExecutionResult,
@@ -259,6 +261,34 @@ class TmpBurnLedger:
         return BurnReceipt(record.token_digest, digest, durable=True, verified=True)
 
 
+class RecordingAuditChainWriter:
+    def __init__(
+        self,
+        *,
+        fail: bool = False,
+        durable: bool = True,
+        verified: bool = True,
+    ) -> None:
+        self.fail = fail
+        self.durable = durable
+        self.verified = verified
+        self.calls = 0
+        self.records: list[BurnRecord] = []
+
+    def append_burn_evidence(self, record: BurnRecord) -> AuditChainReceipt:
+        self.calls += 1
+        self.records.append(record)
+        if self.fail:
+            raise OSError("synthetic audit-chain append failure")
+        return AuditChainReceipt(
+            event_id="audit-event-phase9-burn-001",
+            entry_hash="9" * 64,
+            chain_length=4,
+            durable=self.durable,
+            verified=self.verified,
+        )
+
+
 class ExitFailingLedger(TmpBurnLedger):
     @contextmanager
     def exclusive_lock(self, *, timeout_seconds: float) -> Iterator[None]:
@@ -361,6 +391,7 @@ def _fixture(
     verbatim: bool = True,
     executor: CountingExecutor | None = None,
     ledger: TmpBurnLedger | None = None,
+    audit_chain_writer: RecordingAuditChainWriter | None = None,
     gate_token_audit_coordination_lock: Any | None = None,
 ):
     state_root = tmp_path / "openclaw-state"
@@ -420,6 +451,7 @@ def _fixture(
         )
     )
     selected_executor = executor or CountingExecutor()
+    selected_audit_chain_writer = audit_chain_writer or RecordingAuditChainWriter()
     selected_coordination_lock = (
         gate_token_audit_coordination_lock
         if gate_token_audit_coordination_lock is not None
@@ -432,6 +464,7 @@ def _fixture(
         preflight_verifier=StaticVerifier(),
         audit_authorization_verifier=StaticAuditVerifier(),
         burn_ledger=selected_ledger,
+        audit_chain_writer=selected_audit_chain_writer,
         version_probe=StaticVersionProbe(version),
         snapshotter=DirectorySnapshotter(state_root),
         presence_channel=presence,
@@ -453,7 +486,11 @@ def _fixture(
 
 
 def test_exact_fake_flow_burns_before_one_call_and_closes(tmp_path: Path) -> None:
-    gate, request, raw, owner_text, ledger, executor, presence, _root = _fixture(tmp_path)
+    audit_chain_writer = RecordingAuditChainWriter()
+    gate, request, raw, owner_text, ledger, executor, presence, _root = _fixture(
+        tmp_path,
+        audit_chain_writer=audit_chain_writer,
+    )
 
     assert raw not in repr(request)
     assert owner_text not in repr(request)
@@ -465,6 +502,8 @@ def test_exact_fake_flow_burns_before_one_call_and_closes(tmp_path: Path) -> Non
     )
 
     assert ledger.commits == 1
+    assert audit_chain_writer.calls == 1
+    assert len(audit_chain_writer.records) == 1
     assert executor.calls == 1
     assert result.state is GateState.CLOSED_DENY
     assert result.retry_permitted is False
@@ -476,6 +515,12 @@ def test_exact_fake_flow_burns_before_one_call_and_closes(tmp_path: Path) -> Non
     assert result.trace.index("10:BURN_DURABLE_AND_VERIFIED") < result.trace.index(
         "13:ONE_SHOT_CONSUMED"
     )
+    assert result.trace.index(
+        "10:BURN_DURABLE_AND_VERIFIED"
+    ) < result.trace.index(
+        "10A:AUDIT_CHAIN_EVIDENCE_DURABLE_AND_VERIFIED"
+    ) < result.trace.index("11:ONE_SHOT_CAPABILITY_CREATED")
+    assert result.audit_chain_receipt.verified is True
     assert result.trace.index("8:SECOND_CHALLENGE_COMPLETED") < result.trace.index(
         "9:SIX_PREDICATES_RECOMPUTED"
     ) < result.trace.index("10:BURN_DURABLE_AND_VERIFIED")
@@ -495,6 +540,7 @@ def test_exact_fake_flow_burns_before_one_call_and_closes(tmp_path: Path) -> Non
         "8:SECOND_CHALLENGE_COMPLETED",
         "9:SIX_PREDICATES_RECOMPUTED",
         "10:BURN_DURABLE_AND_VERIFIED",
+        "10A:AUDIT_CHAIN_EVIDENCE_DURABLE_AND_VERIFIED",
         "11:ONE_SHOT_CAPABILITY_CREATED",
         "12:ARGV_REVALIDATED",
         "13:ONE_SHOT_CONSUMED",
@@ -504,6 +550,76 @@ def test_exact_fake_flow_burns_before_one_call_and_closes(tmp_path: Path) -> Non
     burn_text = ledger.target.read_text(encoding="utf-8")
     assert owner_text not in burn_text
     assert "owner_instruction_digest" in burn_text
+
+
+def test_audit_chain_failure_after_burn_consumes_token_and_never_executes(
+    tmp_path: Path,
+) -> None:
+    target = tmp_path / "burn.jsonl"
+    ledger = TmpBurnLedger(target)
+    audit_chain_writer = RecordingAuditChainWriter(fail=True)
+    gate, request, raw, owner_text, _ledger, executor, _presence, _root = _fixture(
+        tmp_path,
+        ledger=ledger,
+        audit_chain_writer=audit_chain_writer,
+    )
+
+    with pytest.raises(GateDenied, match="BURN_DURABLE_UNVERIFIED") as denial:
+        gate.run(
+            request,
+            presented_raw_token=raw,
+            owner_authorization_text=owner_text,
+        )
+
+    assert denial.value.scenario is AbortScenario.CRASH_AFTER_BURN
+    assert denial.value.context == ("AUDIT_CHAIN_EVIDENCE_APPEND_FAILED",)
+    assert _physical_record_count(target) == 1
+    assert ledger.contains(request.issued_token.binding.nonce_digest) is True
+    assert audit_chain_writer.calls == 1
+    assert executor.calls == 0
+    assert gate.state is GateState.CLOSED_DENY
+    assert gate.freeze.rejection_count == 1
+    assert "10:BURN_DURABLE_AND_VERIFIED" in gate.trace
+    assert "10A:AUDIT_CHAIN_EVIDENCE_DURABLE_AND_VERIFIED" not in gate.trace
+
+
+@pytest.mark.parametrize(
+    ("durable", "verified"),
+    ((False, True), (True, False)),
+)
+def test_unverified_audit_chain_receipt_fails_after_physical_burn(
+    tmp_path: Path,
+    durable: bool,
+    verified: bool,
+) -> None:
+    target = tmp_path / "burn.jsonl"
+    ledger = TmpBurnLedger(target)
+    audit_chain_writer = RecordingAuditChainWriter(
+        durable=durable,
+        verified=verified,
+    )
+    gate, request, raw, owner_text, _ledger, executor, _presence, _root = _fixture(
+        tmp_path,
+        ledger=ledger,
+        audit_chain_writer=audit_chain_writer,
+    )
+
+    with pytest.raises(GateDenied, match="BURN_DURABLE_UNVERIFIED") as denial:
+        gate.run(
+            request,
+            presented_raw_token=raw,
+            owner_authorization_text=owner_text,
+        )
+
+    assert denial.value.scenario is AbortScenario.CRASH_AFTER_BURN
+    assert denial.value.context == ("AUDIT_CHAIN_EVIDENCE_VERIFY_FAILED",)
+    assert _physical_record_count(target) == 1
+    assert ledger.contains(request.issued_token.binding.nonce_digest) is True
+    assert audit_chain_writer.calls == 1
+    assert executor.calls == 0
+    assert gate.freeze.rejection_count == 1
+    assert "10:BURN_DURABLE_AND_VERIFIED" in gate.trace
+    assert "10A:AUDIT_CHAIN_EVIDENCE_DURABLE_AND_VERIFIED" not in gate.trace
 
 
 def test_coordination_lock_is_a_required_constructor_argument(tmp_path: Path) -> None:
@@ -518,6 +634,7 @@ def test_coordination_lock_is_a_required_constructor_argument(tmp_path: Path) ->
             preflight_verifier=StaticVerifier(),
             audit_authorization_verifier=StaticAuditVerifier(),
             burn_ledger=ledger,
+            audit_chain_writer=RecordingAuditChainWriter(),
             version_probe=StaticVersionProbe(),
             snapshotter=DirectorySnapshotter(state_root),
             presence_channel=SameEndpointPresence(),
@@ -566,6 +683,7 @@ def test_concurrent_same_token_is_burned_once_and_executes_once(
         preflight_verifier=StaticVerifier(),
         audit_authorization_verifier=StaticAuditVerifier(),
         burn_ledger=ledger,
+        audit_chain_writer=gate_one.audit_chain_writer,
         version_probe=StaticVersionProbe(),
         snapshotter=DirectorySnapshotter(root),
         presence_channel=BarrierPresence(barrier),
@@ -1126,4 +1244,12 @@ def test_gate_source_has_no_subprocess_or_runtime_wiring() -> None:
     }
 
     assert "subprocess" not in imports
-    assert not {"Popen", "run", "check_call", "check_output"} & call_names
+    assert "socket" not in imports
+    assert "app.audit_writer_local" not in imports
+    assert not {
+        "Popen",
+        "run",
+        "check_call",
+        "check_output",
+        "system",
+    } & call_names

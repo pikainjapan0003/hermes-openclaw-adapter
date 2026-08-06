@@ -361,6 +361,17 @@ class BurnReceipt:
 
 
 @dataclass(frozen=True)
+class AuditChainReceipt:
+    """Non-secret proof that the pre-call burn event reached a valid chain."""
+
+    event_id: str
+    entry_hash: str
+    chain_length: int
+    durable: bool
+    verified: bool
+
+
+@dataclass(frozen=True)
 class ExecutionResult:
     exit_code: int | None
     timed_out: bool
@@ -386,6 +397,7 @@ class GateResult:
     argv: tuple[str, ...]
     effective_timeout_seconds: int
     burn_receipt: BurnReceipt
+    audit_chain_receipt: AuditChainReceipt
     execution_result: ExecutionResult
     presence: PresenceResult
     filesystem_before_digest: str
@@ -429,6 +441,13 @@ class BurnLedger(Protocol):
 
     def commit(self, record: BurnRecord) -> BurnReceipt:
         """Durably append and verify one redacted burn record."""
+
+
+class AuditChainWriter(Protocol):
+    """Injected evidence layer; it never participates in replay decisions."""
+
+    def append_burn_evidence(self, record: BurnRecord) -> AuditChainReceipt:
+        """Append one pre-call event and return post-append chain evidence."""
 
 
 class GateTokenAuditCoordinationLock(Protocol):
@@ -544,6 +563,7 @@ class Phase9Gate:
         preflight_verifier: BooleanGateVerifier,
         audit_authorization_verifier: AuditAuthorizationVerifier | None,
         burn_ledger: BurnLedger,
+        audit_chain_writer: AuditChainWriter,
         version_probe: VersionProbe,
         snapshotter: Snapshotter,
         presence_channel: PresenceChannel,
@@ -557,6 +577,7 @@ class Phase9Gate:
         self.preflight_verifier = preflight_verifier
         self.audit_authorization_verifier = audit_authorization_verifier
         self.burn_ledger = burn_ledger
+        self.audit_chain_writer = audit_chain_writer
         self.version_probe = version_probe
         self.snapshotter = snapshotter
         self.presence_channel = presence_channel
@@ -772,6 +793,8 @@ class Phase9Gate:
 
         coordination_lock_release_required = False
         receipt: BurnReceipt | None = None
+        audit_chain_receipt: AuditChainReceipt | None = None
+        burn_record: BurnRecord | None = None
         pending_denial: GateDenied | None = None
         burn_boundary_stage = "ledger_lock"
         # Both lock layers protect the pre-call audit burn boundary.  Any
@@ -811,7 +834,7 @@ class Phase9Gate:
                                 "TOKEN_ALREADY_BURNED",
                                 AbortScenario.TOKEN_INVALID_OR_REPLAYED,
                             )
-                        burn = BurnRecord(
+                        burn_record = BurnRecord(
                             rehearsal_id=self.rehearsal_id,
                             approval_packet_hash=binding.approval_packet_hash,
                             action_hash=action_hash,
@@ -831,7 +854,7 @@ class Phase9Gate:
                         self.state = GateState.BURNING
                         burn_boundary_stage = "commit"
                         try:
-                            receipt = self.burn_ledger.commit(burn)
+                            receipt = self.burn_ledger.commit(burn_record)
                         except GateDenied:
                             raise
                         except Exception:
@@ -853,6 +876,55 @@ class Phase9Gate:
                                 "BURN_VERIFY_FAILED",
                                 AbortScenario.PRECALL_AUDIT_FAILURE,
                             )
+                    if pending_denial is None:
+                        if receipt is None or burn_record is None:
+                            pending_denial = self._closed_denial(
+                                "BURN_DURABLE_UNVERIFIED",
+                                AbortScenario.CRASH_AFTER_BURN,
+                            )
+                        else:
+                            self.trace.append("10:BURN_DURABLE_AND_VERIFIED")
+                            try:
+                                audit_chain_receipt = (
+                                    self.audit_chain_writer.append_burn_evidence(
+                                        burn_record
+                                    )
+                                )
+                            except Exception:
+                                pending_denial = self._closed_denial(
+                                    "BURN_DURABLE_UNVERIFIED",
+                                    AbortScenario.CRASH_AFTER_BURN,
+                                )
+                                pending_denial.add_context(
+                                    "AUDIT_CHAIN_EVIDENCE_APPEND_FAILED"
+                                )
+                            else:
+                                if (
+                                    not isinstance(
+                                        audit_chain_receipt, AuditChainReceipt
+                                    )
+                                    or not audit_chain_receipt.event_id
+                                    or len(audit_chain_receipt.entry_hash) != 64
+                                    or any(
+                                        character not in "0123456789abcdef"
+                                        for character in audit_chain_receipt.entry_hash
+                                    )
+                                    or type(audit_chain_receipt.chain_length) is not int
+                                    or audit_chain_receipt.chain_length < 1
+                                    or audit_chain_receipt.durable is not True
+                                    or audit_chain_receipt.verified is not True
+                                ):
+                                    pending_denial = self._closed_denial(
+                                        "BURN_DURABLE_UNVERIFIED",
+                                        AbortScenario.CRASH_AFTER_BURN,
+                                    )
+                                    pending_denial.add_context(
+                                        "AUDIT_CHAIN_EVIDENCE_VERIFY_FAILED"
+                                    )
+                                else:
+                                    self.trace.append(
+                                        "10A:AUDIT_CHAIN_EVIDENCE_DURABLE_AND_VERIFIED"
+                                    )
                 except GateDenied as exc:
                     # A denial raised inside the ledger context must reach the
                     # terminal fail-closed state even when the context exits
@@ -893,7 +965,8 @@ class Phase9Gate:
             raise pending_denial
         if receipt is None:
             self._deny("BURN_VERIFY_FAILED", AbortScenario.PRECALL_AUDIT_FAILURE)
-        self.trace.append("10:BURN_DURABLE_AND_VERIFIED")
+        if audit_chain_receipt is None:
+            self._deny("BURN_DURABLE_UNVERIFIED", AbortScenario.CRASH_AFTER_BURN)
 
         self.state = GateState.ONE_SHOT_READY
         self.trace.append("11:ONE_SHOT_CAPABILITY_CREATED")
@@ -927,6 +1000,7 @@ class Phase9Gate:
             argv=argv,
             effective_timeout_seconds=request.action.effective_timeout_seconds,
             burn_receipt=receipt,
+            audit_chain_receipt=audit_chain_receipt,
             execution_result=execution_result,
             presence=presence,
             filesystem_before_digest=before.digest,

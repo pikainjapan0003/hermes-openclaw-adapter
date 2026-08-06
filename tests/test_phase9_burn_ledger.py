@@ -25,6 +25,7 @@ from app.phase9_gate import (
     EXPECTED_OPENCLAW_VERSION,
     PHASE9_AUDIT_SCOPE,
     ActionRequest,
+    AuditChainReceipt,
     BurnReceipt,
     BurnRecord,
     DirectorySnapshotter,
@@ -79,6 +80,19 @@ class TrueAuditVerifier:
 class StaticVersionProbe:
     def probe_version(self) -> str:
         return EXPECTED_OPENCLAW_VERSION
+
+
+class VerifiedAuditChainWriter:
+    """Process-safe test double for the separate B-C evidence layer."""
+
+    def append_burn_evidence(self, record: BurnRecord) -> AuditChainReceipt:
+        return AuditChainReceipt(
+            event_id=f"audit-{record.authorization_record_id}",
+            entry_hash="9" * 64,
+            chain_length=4,
+            durable=True,
+            verified=True,
+        )
 
 
 def _green(challenge: FreshChallenge, source: EvidenceSource) -> PredicateEvidence:
@@ -252,6 +266,7 @@ def _local_gate_fixture(
         preflight_verifier=TrueVerifier(),
         audit_authorization_verifier=TrueAuditVerifier(),
         burn_ledger=ledger,
+        audit_chain_writer=VerifiedAuditChainWriter(),
         version_probe=StaticVersionProbe(),
         snapshotter=DirectorySnapshotter(state_root),
         presence_channel=ProcessBarrierPresence(_ImmediateBarrier()),
@@ -329,6 +344,7 @@ def _process_worker(
         preflight_verifier=TrueVerifier(),
         audit_authorization_verifier=TrueAuditVerifier(),
         burn_ledger=ledger,
+        audit_chain_writer=VerifiedAuditChainWriter(),
         version_probe=StaticVersionProbe(),
         snapshotter=DirectorySnapshotter(Path(state_root)),
         presence_channel=ProcessBarrierPresence(start_barrier),
@@ -584,6 +600,7 @@ def test_shared_file_ledger_instance_waits_and_reports_replay_for_150_rounds(
             preflight_verifier=TrueVerifier(),
             audit_authorization_verifier=TrueAuditVerifier(),
             burn_ledger=ledger,
+            audit_chain_writer=gate_one.audit_chain_writer,
             version_probe=StaticVersionProbe(),
             snapshotter=gate_one.snapshotter,
             presence_channel=ProcessBarrierPresence(barrier),
@@ -660,6 +677,7 @@ def test_independent_file_ledger_instances_share_os_lock_for_twenty_rounds(
             preflight_verifier=TrueVerifier(),
             audit_authorization_verifier=TrueAuditVerifier(),
             burn_ledger=ledger_two,
+            audit_chain_writer=gate_one.audit_chain_writer,
             version_probe=StaticVersionProbe(),
             snapshotter=gate_one.snapshotter,
             presence_channel=ProcessBarrierPresence(barrier),
