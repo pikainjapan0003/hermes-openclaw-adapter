@@ -1,9 +1,10 @@
 """Fail-closed Phase 9 one-shot gate with injectable, non-runtime boundaries.
 
 The real-type OpenClaw executor and version probe have an explicit injectable
-subprocess boundary, but no route or runtime constructs them.  This package
-still rejects non-test executors at the gate while compensating proofs are
-pending.  Tests inject counters, tmp-path ledgers, and synthetic snapshots.
+process boundary, but no route or runtime constructs them.  A real-type
+executor is structurally reachable only after every Owner, token, audit,
+preflight, presence, replay, and version check is green.  Tests inject process
+runners, counters, tmp-path ledgers, and synthetic snapshots.
 
 The mandatory gate/token-audit lock protects callers inside one process.  The
 ledger's mandatory ``exclusive_lock`` supplies cross-process exclusion.  Both
@@ -872,8 +873,6 @@ class Phase9Gate:
         authorization_check_time = self._utc_now()
         if not self._audit_authorized(request, authorization_check_time):
             self._deny("PHASE9_AUDIT_AUTHORIZATION_MISSING", AbortScenario.PRECALL_AUDIT_FAILURE)
-        if self.executor.test_double is not True:
-            self._deny("EXECUTION_AUTHORIZATION_MISSING", AbortScenario.CLI_INTERFACE_UNVERIFIED)
         self.trace.append("7:PREFLIGHT_REVALIDATED")
 
         challenge = self._second_challenge(request, self._utc_now())

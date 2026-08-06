@@ -41,6 +41,7 @@ from app.phase9_gate import (
     build_openclaw_argv,
     validate_openclaw_argv,
 )
+from app.phase9_openclaw_executor import ProcessOutcome
 from app.phase9_presence import EvidenceSource, PredicateEvidence, PresenceInputs
 from app.phase9_token import TokenPresentation, issue_token
 
@@ -398,6 +399,20 @@ class CountingExecutor:
         return ExecutionResult(0, False, "1" * 64, "2" * 64)
 
 
+class RealTypeFakeProcessRunner:
+    def __init__(self) -> None:
+        self.calls: list[tuple[tuple[str, ...], int]] = []
+
+    def invoke(
+        self,
+        argv: tuple[str, ...],
+        *,
+        timeout_seconds: int,
+    ) -> ProcessOutcome:
+        self.calls.append((argv, timeout_seconds))
+        return ProcessOutcome(0, False, b'{"status":"synthetic-ok"}', b"")
+
+
 def _fixture(
     tmp_path: Path,
     *,
@@ -406,7 +421,7 @@ def _fixture(
     displayed_copy: bool = False,
     version: str = EXPECTED_OPENCLAW_VERSION,
     verbatim: bool = True,
-    executor: CountingExecutor | None = None,
+    executor: Any | None = None,
     ledger: TmpBurnLedger | None = None,
     audit_chain_writer: RecordingAuditChainWriter | None = None,
     gate_token_audit_coordination_lock: Any | None = None,
@@ -1361,33 +1376,119 @@ def test_post_snapshot_difference_is_evidence_not_ignored(tmp_path: Path) -> Non
     assert result.retry_permitted is False
 
 
-def test_real_runtime_types_are_not_wired_or_accepted_by_gate(tmp_path: Path) -> None:
-    class NeverCalledRunner:
-        def __init__(self) -> None:
-            self.calls = 0
-
-        def invoke(self, argv, *, timeout_seconds):
-            del argv, timeout_seconds
-            self.calls += 1
-            raise AssertionError("the real-type process boundary must stay unreachable")
-
-    runner = NeverCalledRunner()
+def test_real_type_executor_reaches_one_fake_process_only_when_all_gates_are_green(
+    tmp_path: Path,
+) -> None:
+    runner = RealTypeFakeProcessRunner()
     executor = OwnerAuthorizedOpenClawExecutor(runner)
     gate, request, raw, owner_text, ledger, _executor, _presence, _root = _fixture(
         tmp_path,
-        executor=executor,  # type: ignore[arg-type]
+        executor=executor,
     )
 
-    with pytest.raises(GateDenied, match="EXECUTION_AUTHORIZATION_MISSING"):
+    result = gate.run(
+        request,
+        presented_raw_token=raw,
+        owner_authorization_text=owner_text,
+    )
+
+    assert executor.test_double is False
+    assert runner.calls == [(result.argv, 12)]
+    assert ledger.commits == 1
+    assert result.state is GateState.CLOSED_DENY
+    assert result.trace == (
+        "1:DENY_ALL_TO_CHECKING",
+        "2:CONTRACTS_VERIFIED",
+        "3:HASHES_RECOMPUTED",
+        "4:PHASE9_CONTRACT_ACCEPTED",
+        "5:OWNER_PROCEDURE_CHECKED",
+        "6:TOKEN_VERIFIED",
+        "7:PREFLIGHT_REVALIDATED",
+        "8:SECOND_CHALLENGE_COMPLETED",
+        "9:SIX_PREDICATES_RECOMPUTED",
+        "10:BURN_DURABLE_AND_VERIFIED",
+        "10A:AUDIT_CHAIN_EVIDENCE_DURABLE_AND_VERIFIED",
+        "11:ONE_SHOT_CAPABILITY_CREATED",
+        "12:ARGV_REVALIDATED",
+        "13:ONE_SHOT_CONSUMED",
+        "14:CLOSED_DENY",
+        "15:POST_ATTEMPT_EVIDENCE_COMPUTED",
+    )
+
+
+@pytest.mark.parametrize(
+    ("blocked_state", "expected_code"),
+    (
+        ("owner_absent", "OWNER_PRESENCE_DENIED"),
+        ("invalid_or_missing_token", "TOKEN_DENIED"),
+        ("token_already_burned", "TOKEN_ALREADY_BURNED"),
+        ("expired_audit_authorization", "PHASE9_AUDIT_AUTHORIZATION_MISSING"),
+        ("audit_scope_mismatch", "PHASE9_AUDIT_AUTHORIZATION_MISSING"),
+        ("preflight_drift", "PREFLIGHT_DENIED"),
+        ("version_mismatch", "OPENCLAW_VERSION_DRIFT"),
+    ),
+)
+def test_real_type_executor_remains_unreachable_for_each_denied_state(
+    tmp_path: Path,
+    blocked_state: str,
+    expected_code: str,
+) -> None:
+    runner = RealTypeFakeProcessRunner()
+    executor = OwnerAuthorizedOpenClawExecutor(runner)
+    gate, request, raw, owner_text, ledger, _executor, _presence, _root = _fixture(
+        tmp_path,
+        verbatim=blocked_state != "owner_absent",
+        version=(
+            "OpenClaw unexpected-version"
+            if blocked_state == "version_mismatch"
+            else EXPECTED_OPENCLAW_VERSION
+        ),
+        executor=executor,
+    )
+    presented_token = raw
+    if blocked_state == "invalid_or_missing_token":
+        presented_token = ""
+    elif blocked_state == "token_already_burned":
+        ledger.target.write_text(
+            json.dumps(
+                {"token_digest": request.issued_token.binding.nonce_digest},
+                sort_keys=True,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+    elif blocked_state in {"expired_audit_authorization", "audit_scope_mismatch"}:
+        authorization = request.phase9_audit_authorization
+        assert authorization is not None
+        request = replace(
+            request,
+            phase9_audit_authorization=replace(
+                authorization,
+                valid_until=(
+                    NOW + timedelta(seconds=1)
+                    if blocked_state == "expired_audit_authorization"
+                    else authorization.valid_until
+                ),
+                scope=(
+                    "not-the-authorized-scope"
+                    if blocked_state == "audit_scope_mismatch"
+                    else authorization.scope
+                ),
+            ),
+        )
+    elif blocked_state == "preflight_drift":
+        gate.preflight_verifier = StaticVerifier(False)
+
+    with pytest.raises(GateDenied, match=expected_code) as denial:
         gate.run(
             request,
-            presented_raw_token=raw,
+            presented_raw_token=presented_token,
             owner_authorization_text=owner_text,
         )
 
-    assert executor.test_double is False
-    assert runner.calls == 0
-    assert ledger.commits == 0
+    assert denial.value.code == expected_code
+    assert runner.calls == []
+    assert gate.state is GateState.CLOSED_DENY
 
 
 def test_gate_source_has_no_subprocess_or_runtime_wiring() -> None:
