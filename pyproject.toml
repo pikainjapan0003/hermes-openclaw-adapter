@@ -40,4 +40,5 @@ files = [
   "app/phase9_abort.py",
   "app/phase9_gate.py",
   "app/phase9_burn_ledger.py",
+  "app/phase9_burn_evidence.py",
 ]

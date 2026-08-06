@@ -2,8 +2,8 @@
 
 This complements the queue-claim guard.  It does not authorize any legacy POST
 route or execution path; it freezes the current inventory and fails if new code
-introduces a non-null execution token, the Phase 7 audit target, a new POST
-surface, or an approve-to-dispatch call path.
+introduces a non-null execution token, an unauthorized audit-target reference,
+a new POST surface, or an approve-to-dispatch call path.
 """
 
 from __future__ import annotations
@@ -21,6 +21,12 @@ APPROVAL_SCHEMA = (
 )
 TOKEN_FIELD = "single_use_execution_token"
 AUDIT_TARGET = "data/audit_dev.jsonl"
+AUTHORIZED_AUDIT_TARGET_REFERENCES = {
+    "app/audit_writer_local.py",
+    # Owner-authorized Phase 9 evidence label only; the module's separate AST
+    # test proves it has no I/O and cannot append this target itself.
+    "app/phase9_burn_evidence.py",
+}
 
 KNOWN_POST_ROUTES = {
     ("app/main.py", "/tasks/dispatch"),
@@ -137,9 +143,7 @@ def _token_text_occurrences(sources: dict[str, str]) -> set[tuple[str, str]]:
 def _audit_text_violations(sources: dict[str, str]) -> list[str]:
     violations: list[str] = []
     for filename, source in sources.items():
-        if filename.endswith("/audit_writer_local.py"):
-            # Phase 7 is explicitly authorized; its exact write scope is guarded
-            # by test_audit_write_scope_proof.py.
+        if filename in AUTHORIZED_AUDIT_TARGET_REFERENCES:
             continue
         for line_number, line in enumerate(source.splitlines(), start=1):
             if AUDIT_TARGET in line.replace("\\", "/"):
@@ -241,9 +245,10 @@ def test_execution_token_remains_null_in_schema_ast_and_source_text() -> None:
     }
 
 
-def test_phase7_audit_writer_is_the_only_authorized_audit_surface() -> None:
+def test_only_authorized_audit_surfaces_reference_the_target() -> None:
     assert _audit_text_violations(_app_sources()) == []
     assert (APP_DIR / "audit_writer_local.py").exists()
+    assert (APP_DIR / "phase9_burn_evidence.py").exists()
 
 
 def test_post_route_inventory_is_exact_and_rejects_new_surface() -> None:
