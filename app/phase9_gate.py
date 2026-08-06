@@ -18,7 +18,7 @@ import secrets
 import unicodedata
 from collections import deque
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Callable, ContextManager, NoReturn, Protocol, Sequence
@@ -37,6 +37,19 @@ from app.phase9_token import (
 OPENCLAW_EXECUTION_MODE = "--local"
 EXPECTED_OPENCLAW_VERSION = "OpenClaw 2026.6.1 (2e08f0f)"
 PHASE9_AUDIT_SCOPE = "phase9-pre-call-burn-and-post-attempt"
+PHASE9_AUDIT_AUTHORIZATION_SOURCE = (
+    "docs/agent_operating_system/05_VERIFIED_LONG_TERM_PLAN.md §6.19 item 2"
+)
+PHASE9_AUDIT_AUTHORIZATION_GRANTED_ON = date(2026, 8, 6)
+PHASE9_AUDIT_AUTHORIZATION_GRANT_TEXT = (
+    "2. **稽核寫入授權已取得**（長期有效，至 Owner 收回；收回不需理由或特定格式）："
+    "範圍限於上列兩檔的「token 已作廢」紀錄。**不解鎖**呼叫 OpenClaw、執行時機"
+    "自決、稽核鏈其他用途或其他寫入者、`docs/schemas/` 變更、Replit 或任何遠端接線。"
+    "§6.15 的 Phase 7 授權與本項**互不沿用**。"
+)
+PHASE9_AUDIT_AUTHORIZATION_GRANT_SHA256 = (
+    "f57f3aeda4fc5285018b4681ae764c03f531e3f79062a6a949ad4411fb7c2666"
+)
 COORDINATION_LOCK_TIMEOUT_SECONDS = 5.0
 ALLOWED_AGENT_FLAGS = frozenset(
     {
@@ -412,7 +425,14 @@ class BooleanGateVerifier(Protocol):
         """Return a freshly computed contract or preflight result."""
 
 
-class AuditAuthorizationVerifier(Protocol):
+class AuditAuthorizationVerifier:
+    """Verify a per-rehearsal citation of the recorded Owner grant.
+
+    This verifier never manufactures a record or grants authority by default.
+    Its digest is bound to the exact authority text in 05 §6.19 item 2; any
+    withdrawal or wording change therefore fails closed until reviewed.
+    """
+
     def verify(
         self,
         record: Phase9AuditAuthorizationRecord,
@@ -421,7 +441,36 @@ class AuditAuthorizationVerifier(Protocol):
         action_hash: str,
         now: datetime,
     ) -> bool:
-        """Authenticate the separately granted Phase 9 audit scope."""
+        """Authenticate the separately granted, time-bounded audit scope."""
+
+        if any(
+            not isinstance(value, datetime)
+            or value.tzinfo is None
+            or value.utcoffset() is None
+            for value in (record.authorized_at, record.valid_until, now)
+        ):
+            return False
+        try:
+            authorized_at = record.authorized_at.astimezone(timezone.utc)
+            valid_until = record.valid_until.astimezone(timezone.utc)
+            observed_at = now.astimezone(timezone.utc)
+        except (AttributeError, TypeError, ValueError):
+            return False
+        return (
+            record.scope == PHASE9_AUDIT_SCOPE
+            and record.rehearsal_id == rehearsal_id
+            and isinstance(record.record_id, str)
+            and bool(record.record_id.strip())
+            and isinstance(record.owner_instruction_digest, str)
+            and secrets.compare_digest(
+                record.owner_instruction_digest,
+                PHASE9_AUDIT_AUTHORIZATION_GRANT_SHA256,
+            )
+            and isinstance(action_hash, str)
+            and len(action_hash) == 64
+            and all(character in "0123456789abcdef" for character in action_hash)
+            and authorized_at <= observed_at < valid_until
+        )
 
 
 class BurnLedger(Protocol):
@@ -682,11 +731,35 @@ class Phase9Gate:
         verifier = self.audit_authorization_verifier
         if record is None or verifier is None:
             return False
+        if any(
+            not isinstance(value, datetime)
+            or value.tzinfo is None
+            or value.utcoffset() is None
+            for value in (
+                record.authorized_at,
+                record.valid_until,
+                request.issued_token.binding.expires_at,
+                now,
+            )
+        ):
+            return False
+        try:
+            record_valid_until = record.valid_until.astimezone(timezone.utc)
+            session_valid_until = request.issued_token.binding.expires_at.astimezone(
+                timezone.utc
+            )
+            observed_at = now.astimezone(timezone.utc)
+            record_authorized_at = record.authorized_at.astimezone(timezone.utc)
+        except (AttributeError, TypeError, ValueError):
+            return False
         if (
             record.scope != PHASE9_AUDIT_SCOPE
             or record.rehearsal_id != self.rehearsal_id
-            or record.valid_until <= now
-            or record.authorized_at > now
+            or record.owner_instruction_digest
+            != PHASE9_AUDIT_AUTHORIZATION_GRANT_SHA256
+            or record_valid_until <= observed_at
+            or record_authorized_at > observed_at
+            or record_valid_until > session_valid_until
         ):
             return False
         return verifier.verify(

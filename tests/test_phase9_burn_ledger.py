@@ -23,6 +23,7 @@ import pytest
 from app.phase9_burn_ledger import BurnLedgerError, FileBurnLedger
 from app.phase9_gate import (
     EXPECTED_OPENCLAW_VERSION,
+    PHASE9_AUDIT_AUTHORIZATION_GRANT_SHA256,
     PHASE9_AUDIT_SCOPE,
     ActionRequest,
     AuditChainReceipt,
@@ -254,7 +255,7 @@ def _local_gate_fixture(
             record_id="owner-audit-auth-001",
             rehearsal_id="rehearsal-001",
             scope=PHASE9_AUDIT_SCOPE,
-            owner_instruction_digest="f" * 64,
+            owner_instruction_digest=PHASE9_AUDIT_AUTHORIZATION_GRANT_SHA256,
             authorized_at=NOW - timedelta(seconds=1),
             valid_until=NOW + timedelta(minutes=3),
         ),
@@ -327,7 +328,7 @@ def _process_worker(
             record_id="owner-audit-auth-001",
             rehearsal_id="rehearsal-001",
             scope=PHASE9_AUDIT_SCOPE,
-            owner_instruction_digest="f" * 64,
+            owner_instruction_digest=PHASE9_AUDIT_AUTHORIZATION_GRANT_SHA256,
             authorized_at=NOW - timedelta(seconds=1),
             valid_until=NOW + timedelta(minutes=3),
         ),

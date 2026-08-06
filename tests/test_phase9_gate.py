@@ -18,8 +18,12 @@ import pytest
 from app.phase9_abort import AbortScenario
 from app.phase9_gate import (
     EXPECTED_OPENCLAW_VERSION,
+    PHASE9_AUDIT_AUTHORIZATION_GRANTED_ON,
+    PHASE9_AUDIT_AUTHORIZATION_GRANT_SHA256,
+    PHASE9_AUDIT_AUTHORIZATION_GRANT_TEXT,
     PHASE9_AUDIT_SCOPE,
     ActionRequest,
+    AuditAuthorizationVerifier,
     AuditChainReceipt,
     BurnRecord,
     BurnReceipt,
@@ -434,7 +438,7 @@ def _fixture(
                 record_id="owner-audit-auth-001",
                 rehearsal_id="rehearsal-001",
                 scope=PHASE9_AUDIT_SCOPE,
-                owner_instruction_digest="f" * 64,
+                owner_instruction_digest=PHASE9_AUDIT_AUTHORIZATION_GRANT_SHA256,
                 authorized_at=NOW - timedelta(seconds=1),
                 valid_until=NOW + timedelta(minutes=3),
             )
@@ -1124,6 +1128,110 @@ def test_missing_phase9_audit_authorization_record_refuses_start(tmp_path: Path)
     gate, request, raw, owner_text, ledger, executor, _presence, _root = _fixture(
         tmp_path, audit_record=False
     )
+
+    with pytest.raises(GateDenied, match="PHASE9_AUDIT_AUTHORIZATION_MISSING"):
+        gate.run(
+            request,
+            presented_raw_token=raw,
+            owner_authorization_text=owner_text,
+        )
+
+    assert ledger.commits == 0
+    assert executor.calls == 0
+
+
+def test_recorded_owner_audit_grant_text_and_digest_match_05() -> None:
+    authority = (
+        Path("docs/agent_operating_system/05_VERIFIED_LONG_TERM_PLAN.md")
+        .read_text(encoding="utf-8")
+        .splitlines()
+    )
+    matching = [
+        line
+        for line in authority
+        if line.startswith("2. **稽核寫入授權已取得**")
+    ]
+
+    assert PHASE9_AUDIT_AUTHORIZATION_GRANTED_ON.isoformat() == "2026-08-06"
+    assert matching == [PHASE9_AUDIT_AUTHORIZATION_GRANT_TEXT]
+    assert (
+        hashlib.sha256(matching[0].encode("utf-8")).hexdigest()
+        == PHASE9_AUDIT_AUTHORIZATION_GRANT_SHA256
+    )
+    mutated = matching[0].replace("長期有效", "長期失效", 1)
+    assert (
+        hashlib.sha256(mutated.encode("utf-8")).hexdigest()
+        != PHASE9_AUDIT_AUTHORIZATION_GRANT_SHA256
+    )
+
+
+def test_concrete_audit_authorization_verifier_accepts_recorded_grant(
+    tmp_path: Path,
+) -> None:
+    gate, request, raw, owner_text, ledger, executor, _presence, _root = _fixture(
+        tmp_path
+    )
+    gate.audit_authorization_verifier = AuditAuthorizationVerifier()
+
+    result = gate.run(
+        request,
+        presented_raw_token=raw,
+        owner_authorization_text=owner_text,
+    )
+
+    assert result.state is GateState.CLOSED_DENY
+    assert ledger.commits == 1
+    assert executor.calls == 1
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    ("scope", "rehearsal", "expired", "beyond_session", "grant_digest"),
+)
+def test_concrete_audit_authorization_verifier_fails_closed_before_executor(
+    tmp_path: Path,
+    mutation: str,
+) -> None:
+    gate, request, raw, owner_text, ledger, executor, _presence, _root = _fixture(
+        tmp_path
+    )
+    gate.audit_authorization_verifier = AuditAuthorizationVerifier()
+    record = request.phase9_audit_authorization
+    assert record is not None
+    changes: dict[str, object]
+    if mutation == "scope":
+        changes = {"scope": "different-scope"}
+    elif mutation == "rehearsal":
+        changes = {"rehearsal_id": "different-rehearsal"}
+    elif mutation == "expired":
+        changes = {"valid_until": NOW}
+    elif mutation == "beyond_session":
+        changes = {"valid_until": request.issued_token.binding.expires_at + timedelta(seconds=1)}
+    else:
+        changes = {"owner_instruction_digest": "0" * 64}
+    denied_request = replace(
+        request,
+        phase9_audit_authorization=replace(record, **changes),
+    )
+
+    with pytest.raises(GateDenied, match="PHASE9_AUDIT_AUTHORIZATION_MISSING"):
+        gate.run(
+            denied_request,
+            presented_raw_token=raw,
+            owner_authorization_text=owner_text,
+        )
+
+    assert ledger.commits == 0
+    assert executor.calls == 0
+
+
+def test_audit_authority_is_never_implicit_when_verifier_is_absent(
+    tmp_path: Path,
+) -> None:
+    gate, request, raw, owner_text, ledger, executor, _presence, _root = _fixture(
+        tmp_path
+    )
+    gate.audit_authorization_verifier = None
 
     with pytest.raises(GateDenied, match="PHASE9_AUDIT_AUTHORIZATION_MISSING"):
         gate.run(
