@@ -977,6 +977,9 @@ class Phase9Gate:
                                         audit_chain_receipt, AuditChainReceipt
                                     )
                                     or not audit_chain_receipt.event_id
+                                    or not isinstance(
+                                        audit_chain_receipt.entry_hash, str
+                                    )
                                     or len(audit_chain_receipt.entry_hash) != 64
                                     or any(
                                         character not in "0123456789abcdef"

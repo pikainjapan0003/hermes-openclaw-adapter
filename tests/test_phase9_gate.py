@@ -293,6 +293,19 @@ class RecordingAuditChainWriter:
         )
 
 
+class NonStringHashAuditChainWriter(RecordingAuditChainWriter):
+    def append_burn_evidence(self, record: BurnRecord) -> AuditChainReceipt:
+        self.calls += 1
+        self.records.append(record)
+        return AuditChainReceipt(
+            event_id="audit-event-phase9-burn-001",
+            entry_hash=None,  # type: ignore[arg-type]
+            chain_length=4,
+            durable=True,
+            verified=True,
+        )
+
+
 class ExitFailingLedger(TmpBurnLedger):
     @contextmanager
     def exclusive_lock(self, *, timeout_seconds: float) -> Iterator[None]:
@@ -624,6 +637,31 @@ def test_unverified_audit_chain_receipt_fails_after_physical_burn(
     assert gate.freeze.rejection_count == 1
     assert "10:BURN_DURABLE_AND_VERIFIED" in gate.trace
     assert "10A:AUDIT_CHAIN_EVIDENCE_DURABLE_AND_VERIFIED" not in gate.trace
+
+
+def test_non_string_audit_chain_hash_is_classified_without_typeerror(
+    tmp_path: Path,
+) -> None:
+    target = tmp_path / "burn.jsonl"
+    ledger = TmpBurnLedger(target)
+    audit_chain_writer = NonStringHashAuditChainWriter()
+    gate, request, raw, owner_text, _ledger, executor, _presence, _root = _fixture(
+        tmp_path,
+        ledger=ledger,
+        audit_chain_writer=audit_chain_writer,
+    )
+
+    with pytest.raises(GateDenied, match="BURN_DURABLE_UNVERIFIED") as denial:
+        gate.run(
+            request,
+            presented_raw_token=raw,
+            owner_authorization_text=owner_text,
+        )
+
+    assert denial.value.scenario is AbortScenario.CRASH_AFTER_BURN
+    assert denial.value.context == ("AUDIT_CHAIN_EVIDENCE_VERIFY_FAILED",)
+    assert ledger.contains(request.issued_token.binding.nonce_digest) is True
+    assert executor.calls == 0
 
 
 def test_coordination_lock_is_a_required_constructor_argument(tmp_path: Path) -> None:
@@ -1341,6 +1379,11 @@ def test_gate_source_has_no_subprocess_or_runtime_wiring() -> None:
         if isinstance(node, (ast.Import, ast.ImportFrom))
         for alias in node.names
     }
+    import_from_modules = {
+        node.module
+        for node in ast.walk(tree)
+        if isinstance(node, ast.ImportFrom) and node.module is not None
+    }
     call_names = {
         node.func.attr
         if isinstance(node.func, ast.Attribute)
@@ -1353,7 +1396,7 @@ def test_gate_source_has_no_subprocess_or_runtime_wiring() -> None:
 
     assert "subprocess" not in imports
     assert "socket" not in imports
-    assert "app.audit_writer_local" not in imports
+    assert "app.audit_writer_local" not in imports | import_from_modules
     assert not {
         "Popen",
         "run",

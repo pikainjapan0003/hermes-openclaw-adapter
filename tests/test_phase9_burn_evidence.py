@@ -198,6 +198,11 @@ def test_builder_source_is_pure_and_does_not_import_the_writer() -> None:
         if isinstance(node, (ast.Import, ast.ImportFrom))
         for alias in node.names
     }
+    import_from_modules = {
+        node.module
+        for node in ast.walk(tree)
+        if isinstance(node, ast.ImportFrom) and node.module is not None
+    }
     calls = {
         node.func.attr
         if isinstance(node.func, ast.Attribute)
@@ -208,5 +213,5 @@ def test_builder_source_is_pure_and_does_not_import_the_writer() -> None:
         if isinstance(node, ast.Call)
     }
 
-    assert "app.audit_writer_local" not in imports
+    assert "app.audit_writer_local" not in imports | import_from_modules
     assert not {"open", "write_text", "write_bytes", "mkdir", "unlink"} & calls
