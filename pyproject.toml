@@ -42,4 +42,5 @@ files = [
   "app/phase9_burn_ledger.py",
   "app/phase9_burn_evidence.py",
   "app/phase9_audit_chain_writer.py",
+  "app/phase9_openclaw_executor.py",
 ]

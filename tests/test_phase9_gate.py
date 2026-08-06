@@ -1361,13 +1361,33 @@ def test_post_snapshot_difference_is_evidence_not_ignored(tmp_path: Path) -> Non
     assert result.retry_permitted is False
 
 
-def test_real_runtime_placeholders_require_owner_execution_authorization() -> None:
-    with pytest.raises(NotImplementedError, match="需 Owner 執行授權"):
-        OwnerAuthorizedOpenClawExecutor().execute(
-            ("openclaw", "agent"), timeout_seconds=1
+def test_real_runtime_types_are_not_wired_or_accepted_by_gate(tmp_path: Path) -> None:
+    class NeverCalledRunner:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def invoke(self, argv, *, timeout_seconds):
+            del argv, timeout_seconds
+            self.calls += 1
+            raise AssertionError("the real-type process boundary must stay unreachable")
+
+    runner = NeverCalledRunner()
+    executor = OwnerAuthorizedOpenClawExecutor(runner)
+    gate, request, raw, owner_text, ledger, _executor, _presence, _root = _fixture(
+        tmp_path,
+        executor=executor,  # type: ignore[arg-type]
+    )
+
+    with pytest.raises(GateDenied, match="EXECUTION_AUTHORIZATION_MISSING"):
+        gate.run(
+            request,
+            presented_raw_token=raw,
+            owner_authorization_text=owner_text,
         )
-    with pytest.raises(NotImplementedError, match="需 Owner 執行授權"):
-        OwnerAuthorizedOpenClawVersionProbe().probe_version()
+
+    assert executor.test_double is False
+    assert runner.calls == 0
+    assert ledger.commits == 0
 
 
 def test_gate_source_has_no_subprocess_or_runtime_wiring() -> None:

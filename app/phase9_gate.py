@@ -1,9 +1,9 @@
 """Fail-closed Phase 9 one-shot gate with injectable, non-runtime boundaries.
 
-This first implementation package contains the braking system only.  The real
-OpenClaw executor and version probe are intentionally unavailable and raise
-``NotImplementedError``.  Tests may inject counters, a tmp-path burn ledger,
-and synthetic snapshots; no route or runtime imports this module.
+The real-type OpenClaw executor and version probe have an explicit injectable
+subprocess boundary, but no route or runtime constructs them.  This package
+still rejects non-test executors at the gate while compensating proofs are
+pending.  Tests inject counters, tmp-path ledgers, and synthetic snapshots.
 
 The mandatory gate/token-audit lock protects callers inside one process.  The
 ledger's mandatory ``exclusive_lock`` supplies cross-process exclusion.  Both
@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Callable, ContextManager, NoReturn, Protocol, Sequence
+from typing import TYPE_CHECKING, Callable, ContextManager, NoReturn, Protocol, Sequence
 
 from app.hash_chain import canonical_json
 from app.phase9_abort import AbortScenario, RehearsalFreeze
@@ -32,6 +32,9 @@ from app.phase9_token import (
     TokenPresentation,
     verify_token_presentation,
 )
+
+if TYPE_CHECKING:
+    from app.phase9_openclaw_executor import ProcessRunner
 
 
 OPENCLAW_EXECUTION_MODE = "--local"
@@ -542,9 +545,16 @@ class Executor(Protocol):
 
 
 class OwnerAuthorizedOpenClawExecutor:
-    """Placeholder for a later package with separate execution authorization."""
+    """Owner-selected real executor boundary; no runtime constructs it yet."""
 
     test_double = False
+
+    def __init__(self, process_runner: ProcessRunner | None = None) -> None:
+        if process_runner is None:
+            from app.phase9_openclaw_executor import ForegroundSubprocessRunner
+
+            process_runner = ForegroundSubprocessRunner()
+        self._process_runner = process_runner
 
     def execute(
         self,
@@ -552,15 +562,40 @@ class OwnerAuthorizedOpenClawExecutor:
         *,
         timeout_seconds: int,
     ) -> ExecutionResult:
-        del argv, timeout_seconds
-        raise NotImplementedError("需 Owner 執行授權")
+        validate_openclaw_argv(argv)
+        outcome = self._process_runner.invoke(
+            argv,
+            timeout_seconds=timeout_seconds,
+        )
+        return ExecutionResult(
+            exit_code=outcome.exit_code,
+            timed_out=outcome.timed_out,
+            stdout_digest=hashlib.sha256(outcome.stdout).hexdigest(),
+            stderr_digest=hashlib.sha256(outcome.stderr).hexdigest(),
+        )
 
 
 class OwnerAuthorizedOpenClawVersionProbe:
-    """Placeholder: this package must not execute even the version subcommand."""
+    """Owner-selected version probe boundary; no runtime constructs it yet."""
+
+    def __init__(self, process_runner: ProcessRunner | None = None) -> None:
+        if process_runner is None:
+            from app.phase9_openclaw_executor import ForegroundSubprocessRunner
+
+            process_runner = ForegroundSubprocessRunner()
+        self._process_runner = process_runner
 
     def probe_version(self) -> str:
-        raise NotImplementedError("需 Owner 執行授權")
+        try:
+            outcome = self._process_runner.invoke(
+                ("openclaw", "--version"),
+                timeout_seconds=5,
+            )
+            if outcome.timed_out or outcome.exit_code != 0:
+                return ""
+            return outcome.stdout.decode("utf-8", errors="strict").strip()
+        except (OSError, RuntimeError, UnicodeError, ValueError):
+            return ""
 
 
 class DirectorySnapshotter:
