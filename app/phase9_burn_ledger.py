@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import importlib
 import json
+import math
 import os
 import threading
 import time
@@ -101,10 +102,27 @@ class FileBurnLedger:
                 fcntl.LOCK_EX | fcntl.LOCK_NB,
             )
 
-    def _acquire_os_lock(self, handle: BinaryIO, timeout_seconds: float) -> None:
-        if not isinstance(timeout_seconds, (int, float)) or timeout_seconds <= 0:
+    @staticmethod
+    def _validated_timeout(timeout_seconds: float) -> float:
+        """Reject any timeout that cannot produce a finite deadline.
+
+        ``nan`` passes a bare ``<= 0`` test, then makes ``deadline`` nan and
+        every ``monotonic() >= deadline`` comparison False, which turns the
+        bounded retry loop into an unbounded busy spin.  Infinities remove the
+        bound outright.  Both are rejected here so the polling loops keep the
+        bounded-failure contract.
+        """
+
+        if isinstance(timeout_seconds, bool) or not isinstance(
+            timeout_seconds, (int, float)
+        ):
             raise BurnLedgerError("burn ledger lock timeout is invalid")
-        deadline = self._monotonic() + float(timeout_seconds)
+        if not math.isfinite(timeout_seconds) or timeout_seconds <= 0:
+            raise BurnLedgerError("burn ledger lock timeout is invalid")
+        return float(timeout_seconds)
+
+    def _acquire_os_lock(self, handle: BinaryIO, timeout_seconds: float) -> None:
+        deadline = self._monotonic() + self._validated_timeout(timeout_seconds)
         while True:
             try:
                 self._try_lock_once(handle)
@@ -143,9 +161,7 @@ class FileBurnLedger:
         it is not a substitute for cross-process exclusion.
         """
 
-        if not isinstance(timeout_seconds, (int, float)) or timeout_seconds <= 0:
-            raise BurnLedgerError("burn ledger lock timeout is invalid")
-        deadline = self._monotonic() + float(timeout_seconds)
+        deadline = self._monotonic() + self._validated_timeout(timeout_seconds)
         remaining = max(0.0, deadline - self._monotonic())
         if not self._instance_call_lock.acquire(timeout=remaining):
             raise BurnLedgerError("burn ledger lock unavailable")

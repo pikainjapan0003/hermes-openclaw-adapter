@@ -11,6 +11,7 @@ import ast
 import inspect
 import multiprocessing
 import threading
+import time
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -504,6 +505,53 @@ def test_corrupt_replay_barrier_is_verify_failure_and_never_executes(
     assert executor.calls == 0
     assert gate.state.value == "CLOSED_DENY"
     assert gate.freeze.frozen is True
+
+
+@pytest.mark.parametrize(
+    "timeout_seconds",
+    [
+        float("nan"),
+        float("inf"),
+        float("-inf"),
+        0,
+        0.0,
+        -1.0,
+        "1.0",
+        None,
+        True,
+    ],
+)
+def test_non_finite_or_non_positive_timeout_fails_immediately(
+    tmp_path: Path, timeout_seconds: Any
+) -> None:
+    # A nan timeout used to pass the bare `<= 0` test and then make every
+    # deadline comparison False, turning the bounded retry loop into an
+    # unbounded busy spin.  Every rejected value must fail at once.
+    ledger = FileBurnLedger(tmp_path / "burn.jsonl")
+    started = time.monotonic()
+
+    with pytest.raises(BurnLedgerError, match="timeout is invalid"):
+        with ledger.exclusive_lock(timeout_seconds=timeout_seconds):
+            pass
+
+    assert time.monotonic() - started < 0.1
+
+
+def test_non_finite_timeout_leaves_no_record_and_holds_no_lock(
+    tmp_path: Path,
+) -> None:
+    target = tmp_path / "burn.jsonl"
+    ledger = FileBurnLedger(target)
+
+    with pytest.raises(BurnLedgerError, match="timeout is invalid"):
+        with ledger.exclusive_lock(timeout_seconds=float("nan")):
+            pass
+
+    # The rejection happens before any file work, and the instance lock must
+    # not be left held: a valid call still succeeds afterwards.
+    assert not target.exists()
+    with ledger.exclusive_lock(timeout_seconds=1.0):
+        assert ledger.contains("0" * 64) is False
 
 
 def test_commit_requires_exclusive_lock(tmp_path: Path) -> None:

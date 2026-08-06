@@ -582,6 +582,12 @@ FIX09 = Fable 5 pass／Opus 5 conditional pass，**零阻擋**。
 
 ### 【NB-27 八包遺留、本批未修的 P3】（來源：Opus 5 八包審查）
 
+> **NB-28 已消耗四項（2026-08-06）**：burn 邊界中止碼三分
+> （`BURN_NOT_ATTEMPTED`／`BURN_WRITE_FAILED`／`BURN_DURABLE_UNVERIFIED`，
+> 落盤與否以持鎖狀態下重讀 ledger 判定，判定失敗一律保守）、乾淨退出路徑的
+> denial 收斂、`_find_in_flight_denial` 改為雙鏈廣度優先、非有限 timeout 拒絕。
+> 下表其餘各項與上表【夜跑可做】各項**均未消耗**，仍為 NB-29 以後的存貨。
+
 | 條目 | 邊界 |
 |---|---|
 | 乾淨退出路徑的 denial 未收斂（`app/phase9_gate.py:800`，`except GateDenied` 分支）：`__exit__` 乾淨時停在 `CHECKING`／`frozen=False`／`rejection_count=0`。僅 BurnLedger 實作自拋裸 `GateDenied` 才觸發，executor 恆 0 | 修法為導向 `_converge_existing_denial`（冪等）；不得順手擴大 |
