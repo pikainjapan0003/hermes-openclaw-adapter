@@ -614,3 +614,20 @@ FIX09 = Fable 5 pass／Opus 5 conditional pass，**零阻擋**。
 | `_find_in_flight_denial` 的 `__cause__` 盲點（`app/phase9_gate.py:98`）：`current.__context__ or current.__cause__`，若 `__context__` 是非 denial 的鏈而 denial 只掛 `__cause__` 就會漏找。基線零 diff | 兩條鏈都要走 |
 | 同執行緒重入診斷品質下降：改用不可重入 `threading.Lock` 後，重入會耗掉整個 timeout（gate 常數 5.0s）才回報通用的 `lock unavailable`，無法區分「重入」與「競爭」 | 恢復專屬訊息或快速路徑；不得放寬有界失敗 |
 | Windows `msvcrt` 分支無持續 CI 覆蓋：兩輪四份審查的 Windows 證據皆為手動、不具持續性 | 提案 only；不得偽稱 CI-covered |
+
+## NIGHT-BATCH-29 補貨 — 2026-08-06（雙審 findings 登記，排 NB-30）
+
+NB-29（四包：稽核鏈遷移／burn evidence builder／gate 接線／Owner grant verifier）
+獨立複審：Fable 5 = pass、第二審（fresh-context, Opus）= conditional pass，**零阻擋**。
+與 NB-27 相同先例（八包／FIX09 亦為 pass + conditional pass、零阻擋）下 ff-merge。
+以下為兩份審查登記、非本批範圍內修的 P2/P3；**不構成任何後續實作或執行授權**。
+
+| 條目 | 來源 | 邊界 |
+|---|---|---|
+| **`AuditChainReceipt` 欄位驗證對非字串 `entry_hash` 無 `isinstance` 保護**：`app/phase9_gate.py` 的 receipt 驗證區塊在呼叫 `len(audit_chain_receipt.entry_hash)` 前未先確認其為 `str`。若注入的 `AuditChainWriter` 回傳 `entry_hash=None`／整數等畸形值，`TypeError` 會逃逸到外層 `except Exception`，被 `_burn_boundary_disposition("burn_verification", receipt)` 分類為 `BURN_VERIFY_FAILED`／`PRECALL_AUDIT_FAILURE`，而非更精確的 `CRASH_AFTER_BURN`。executor 仍恆為 0、gate 仍收斂 `CLOSED_DENY`、token 仍視為消耗（`burn_ledger.contains()` 仍 True），**非執行或重放安全洞**；但 `PHASE9_ABORT_PLAYBOOK.md` §4.4b 明文禁止「已落盤的燒錄用讀來安全可重試的碼回報」，此為分類精確度缺陷。本批尚無真實 `AuditChainWriter` 實作，故此路徑目前不可達 | 第二審（fresh-context, Opus）Q1 | 加 `or not isinstance(audit_chain_receipt.entry_hash, str)` 到驗證條件；tests only，**不得**放寬任何 fail-closed 條件 |
+| **「不 import audit_writer_local」的 AST 守門測試對 `from X import Y` 形式無效**：`tests/test_phase9_burn_evidence.py` 與 `tests/test_phase9_gate.py` 的 `imports` 集合由 `alias.name` 組成，對 `from app.audit_writer_local import append_audit_event` 只會收到 `append_audit_event`，斷言 `"app.audit_writer_local" not in imports` 恆真、不構成有效防線。目前兩檔實際皆為零 import，非本批引入的漏洞，屬既有測試盲點 | 第二審 Q7-3 | 改用 `ast.ImportFrom.module` 比對；tests only |
+| **B-C evidence 的 3 個 safety_flags／`event_notes` 可讀性偏樂觀**：`app/phase9_burn_evidence.py` 的 `synthetic_local_only=False`／`mock_only=False`／`dry_run=False` 與 `event_notes`「consumed before any OpenClaw call」在 gate 目前恆要求 `executor.test_double is True`（`app/phase9_gate.py:840`）的前提下，未反映「本次仍是受控假件」的事實；該事件也會是 `data/audit_dev.jsonl` 中第一筆三旗皆 False 的紀錄，日後讀者易誤讀為「真實呼叫已發生」。未發現任何旗或欄位**謊報**已取得執行授權（`openclaw_call_allowed`／`external_side_effects_*` 等仍誠實為 False） | 第二審 Q6 | 待 Owner 或下一批裁決是否讓旗/文字反映 `test_double` 事實；docs/measurement only，**不得**藉此放寬任何一旗 |
+| **`AuditChainWriter.append_burn_evidence` 的 Protocol 簽章傳整個 `BurnRecord`**（含 `token_digest`／`binding_hash`）而非已白名單化的投影；純函式 builder 本身不外洩，但介面本身不結構性強制未來 writer 也不外洩 | 第二審 Q7-1 | 待真實 writer 落地時一併設計；本批僅為 Protocol 注入點，設計選擇 only |
+| `AuditAuthorizationVerifier` 類別 docstring 稱「wording change therefore fails closed until reviewed」，但實際 runtime 比對的是硬編常數，非即時讀檔；05 文字被改動時只有測試會紅，不是 runtime fail-closed | 第二審 Q4 | 措辭修正 only；不影響安全（`test_recorded_owner_audit_grant_text_and_digest_match_05` 已鎖此不變式） |
+
+**獨立複核（Fable 5，2026-08-06）**：對上列前兩項均已用真實碼路徑再驗證（`entry_hash=None` 確實觸發 `TypeError`→`BURN_VERIFY_FAILED`；`from…import` 形式確實逃過 AST 守門），確認非誇大。V6（暫改 05 §6.19 第 2 項一字、確認 digest guard 變紅、還原後零 diff 且測試轉綠）已獨立重跑通過。
