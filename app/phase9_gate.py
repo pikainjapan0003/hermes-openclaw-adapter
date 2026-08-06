@@ -845,7 +845,11 @@ class Phase9Gate:
                                 AbortScenario.PRECALL_AUDIT_FAILURE,
                             )
                 except GateDenied as exc:
-                    pending_denial = exc
+                    # A denial raised inside the ledger context must reach the
+                    # terminal fail-closed state even when the context exits
+                    # cleanly.  _converge_existing_denial is idempotent, so a
+                    # denial already closed by _deny is not counted twice.
+                    pending_denial = self._converge_existing_denial(exc)
                 except Exception as exc:
                     masked_denial = _find_in_flight_denial(exc)
                     if masked_denial is not None:

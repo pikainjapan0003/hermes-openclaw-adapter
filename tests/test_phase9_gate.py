@@ -310,6 +310,16 @@ class UnreadableAfterCommitFailureLedger(TmpBurnLedger):
         return super().contains(token_digest)
 
 
+class CleanExitRawDenialLedger(TmpBurnLedger):
+    """Raises a bare denial from a context that then exits cleanly."""
+
+    def contains(self, token_digest: str) -> bool:
+        raise GateDenied(
+            "SYNTHETIC_RAW_DENIAL",
+            AbortScenario.PRECALL_AUDIT_FAILURE,
+        )
+
+
 def _physical_record_count(target: Path) -> int:
     if not target.exists():
         return 0
@@ -718,6 +728,30 @@ def test_commit_failure_proven_not_durable_reports_write_failure(
     assert _physical_record_count(target) == 0
     assert executor.calls == 0
     assert gate.state is GateState.CLOSED_DENY
+
+
+def test_raw_denial_on_clean_ledger_exit_converges_to_closed_deny(
+    tmp_path: Path,
+) -> None:
+    ledger = CleanExitRawDenialLedger(tmp_path / "burn.jsonl")
+    gate, request, raw, owner_text, _ledger, executor, _presence, _root = _fixture(
+        tmp_path,
+        ledger=ledger,
+    )
+
+    with pytest.raises(GateDenied, match="SYNTHETIC_RAW_DENIAL"):
+        gate.run(
+            request,
+            presented_raw_token=raw,
+            owner_authorization_text=owner_text,
+        )
+
+    # The clean-exit path must reach the same terminal state as the masked one.
+    assert gate.state is GateState.CLOSED_DENY
+    assert gate.freeze.frozen is True
+    assert gate.freeze.rejection_count == 1
+    assert executor.calls == 0
+    assert gate.trace[-1] == "CLOSED_DENY"
 
 
 def test_process_coordination_lock_release_failure_fails_closed(
