@@ -25,6 +25,10 @@ PATH_REFERENCE = re.compile(
 INTENTIONALLY_ABSENT_PATH_REFERENCES = {
     "app/connector_scope_gate.py": "Phase 10 future output",
     "data/audit_dev.jsonl": "Phase 7 target; formal data path must remain absent",
+    "data/phase9_burn.jsonl": (
+        "Phase 9 burn ledger target named by 05 6.19; created only when the "
+        "authorized implementation runs, never by a docs batch"
+    ),
     "data/blackboard_dev/": "planning-only board layout",
     "tests/v1_1_write_probe.txt": "planning-only v1.1 target",
     "data/results.jsonl": "historical README architecture record",

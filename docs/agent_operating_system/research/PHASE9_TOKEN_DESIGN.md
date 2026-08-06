@@ -426,8 +426,13 @@ Required channel-specific isolation/authentication evidence: **每場新 HMAC �
 
 Token-production option (`T-A`, `T-B`, or `T-C`): **`T-B`**
 
-Burn/persistence option (`B-A` or `B-C`; `B-B` cannot stand alone): **`B-C`
-（另須取得 Phase 9 audit 寫入授權；不得沿用 §6.15 的 Phase 7 授權）**
+Burn/persistence option (`B-A` or `B-C`; `B-B` cannot stand alone): **原選
+`B-C`；2026-08-06 Owner 改為 `B-A`＋`B-C` 疊層**——`B-A`
+（`data/phase9_burn.jsonl`）負責跨行程單發保證，`B-C`
+（`data/audit_dev.jsonl` 加一筆作廢事件，不改 schema）負責防篡改證據。
+**Phase 9 audit 寫入授權已於 2026-08-06 取得**（長期有效，至 Owner 收回；
+仍不得沿用或擴張 §6.15 的 Phase 7 授權）。變更緣由與完整範圍見
+`05` §6.19 與 `PHASE9_BURN_PERSISTENCE_DESIGN_20260806.md`。
 
 Maximum validity window (must end no later than the synchronous session): **10
 分鐘，且 Owner 在場時段結束時立即提前失效（以先到者為準）**

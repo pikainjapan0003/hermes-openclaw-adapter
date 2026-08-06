@@ -29,7 +29,7 @@
 
 順序原則：0–1 隨時做；2 是 3–7 的前提；3→4→5 有依賴鏈；6 可與 4、5 並行；**7 依賴 Phase 5 的 evidence bundle，必須在 5 之後**；8 規劃可提早；9 必須在 3+4+5+7 全部完成後；10 在 9 之後（先證明執行紀律，再開外部讀取）；11 貫穿全程。
 
-**二次補強（2026-07-08）**：Owner 盤問 20 題的裁決與各 Phase 修訂記錄於**第 6 節**；第 3 節內容與第 6 節衝突時以第 6 節為準。要點：Phase 9 併入 v1.0（6.3）、Phase 8 升為 v1.0 後第一優先、Phase 10 無限期停留規劃。**L0 裁決速查**：6.12 Phase 3 施工期｜6.13 夜跑批次治理（含 2b 免逐次蓋章）｜6.14 mock_e2e 凍結｜6.15 Phase 7 寫入授權（限 `data/audit_dev.jsonl` append-only）｜6.16 Phase 9 威脅模型（防不小心、不防故意）｜6.17 同端點回送＝presence-only｜6.18 Phase 9 設計選案（**選案 ≠ 實作授權 ≠ 執行授權**）。
+**二次補強（2026-07-08）**：Owner 盤問 20 題的裁決與各 Phase 修訂記錄於**第 6 節**；第 3 節內容與第 6 節衝突時以第 6 節為準。要點：Phase 9 併入 v1.0（6.3）、Phase 8 升為 v1.0 後第一優先、Phase 10 無限期停留規劃。**L0 裁決速查**：6.12 Phase 3 施工期｜6.13 夜跑批次治理（含 2b 免逐次蓋章）｜6.14 mock_e2e 凍結｜6.15 Phase 7 寫入授權（限 `data/audit_dev.jsonl` append-only）｜6.16 Phase 9 威脅模型（防不小心、不防故意）｜6.17 同端點回送＝presence-only｜6.18 Phase 9 設計選案（**選案 ≠ 實作授權 ≠ 執行授權**）｜6.19 Phase 9 作廢紀錄改採 `B-A`＋`B-C` 疊層、**稽核寫入授權已取得**（長期有效，至 Owner 收回）、且**不需要 Owner 自撰授權句**（要授權 ≠ 要儀式）。
 
 ---
 
@@ -279,10 +279,7 @@
 
 ## 5. 狀態追蹤（每次 phase closeout 後更新本節）
 
-弱模型入口摘要：**可做**＝Owner 明列工作與 §6.13 已派夜跑包；
-**不可做**＝未獲逐字授權的 Phase 7 寫入、未有 Owner 同步在場的 Phase 9、
-未另行解鎖的 v1.1/v1.2；**主線下一步**＝先滿足 Phase 7 專屬授權，再由
-Owner 在場進行 Phase 9 N=1。表格按 Phase 數字排列，不以列序推導授權。
+弱模型入口摘要：**可做**＝Owner 明列工作與 §6.13 已派夜跑包；**不可做**＝未獲逐字授權的 Phase 7 寫入、未有 Owner 同步在場的 Phase 9、未另行解鎖的 v1.1/v1.2；**主線下一步**＝先滿足 Phase 7 專屬授權，再由 Owner 在場進行 Phase 9 N=1。表格按 Phase 數字排列，不以列序推導授權。
 
 | Phase | 狀態 | 最後更新 | 備註 |
 |---|---|---|---|
@@ -340,8 +337,7 @@ Owner 在場進行 Phase 9 N=1。表格按 Phase 數字排列，不以列序推�
 - 長期形態：同一條 loop 橫向擴成多 worker 並行（角色化），錯誤狀態上浮給 Owner；並行擴張屬 v1.2 之後，本計劃表內不實作。
 
 ### 6.3 v1.0 Definition Candidate（供 Phase 2 正式凍結）
-Phase 2 已完成；凍結正本＝`02_V1_0_DEFINITION.md`。本候選、包含／不包含、
-Q4 差異與簽核前措辭的歷史原文存於 `research/05_COMPACTION_RULE_CROSSWALK_20260723.md` §2，現況不得回退成候選。
+Phase 2 已完成；凍結正本＝`02_V1_0_DEFINITION.md`。本候選、包含／不包含、Q4 差異與簽核前措辭的歷史原文存於 `research/05_COMPACTION_RULE_CROSSWALK_20260723.md` §2，現況不得回退成候選。
 
 ### 6.4 Risk Tolerance Matrix
 | 風險 | Owner 容忍度 | 防禦配置（弱模型照做） |
@@ -392,8 +388,7 @@ OWNER_MANUAL   高風險（花錢/不可逆） 不進派工佇列；Hermes 在�
 
 ### 6.9 Phase 2 Owner Decision Checklist（弱模型帶著 Owner 逐條簽）
 
-Phase 2 已完成；簽核結果與逐字正本見 `02_V1_0_DEFINITION.md`。歷史 checklist
-及 Q4/Q5/Q8 預裁決規則原文存於 `research/05_COMPACTION_RULE_CROSSWALK_20260723.md` §3。
+Phase 2 已完成；簽核結果與逐字正本見 `02_V1_0_DEFINITION.md`。歷史 checklist 及 Q4/Q5/Q8 預裁決規則原文存於 `research/05_COMPACTION_RULE_CROSSWALK_20260723.md` §3。
 
 ### 6.10 Phase 3–11 Adjustment Notes（對第 3 節的修訂，衝突時以本節為準）
 
@@ -422,8 +417,7 @@ T4 Hermes 腦供應商/條款變動 → 重問 Q16、Q20
 OPEN QUESTIONS（Owner 尚未裁決，遇到即 HOLD）：
 
 ```text
-O1 「計劃級授權」的正式格式未定義——Owner 批准 Hermes 切分計劃後，AUTO 級任務自動派發
-   的授權要長什麼樣（一句話？簽核欄？）。首次多 worker 並行（v1.2 後）前必須定。
+O1 「計劃級授權」的正式格式未定義——Owner 批准 Hermes 切分計劃後，AUTO 級任務自動派發的授權要長什麼樣（一句話？簽核欄？）。首次多 worker 並行（v1.2 後）前必須定。
    在定義之前：AUTO 級任務照現行 01 §2/§4 逐字授權規則處理（fail closed）。
 O2 角色化 worker（工程師/測試員/安審…）的角色定義與 prompt 由誰維護、存哪——v1.2 前定。
 ```
@@ -475,20 +469,27 @@ Owner 裁決（選案「丙」，不加裝置、據實記帳）——ingress 與
   文件不得宣稱此組合構成雙因子認證。
 ```
 
-**理由**：逐字授權句源自 Owner 本人而非系統輸出，模型讀盡畫面也無法產生；記在它身上才是事實。此裁決不降低實際保護力，而是消除「後續設計在回音上疊加信任」的風險。**本節僅規範語意，不等於選定任何 §8 選項**（選案見 §6.18）；日後改採甲（顯示端與回送端相異）或乙（Owner 持有驗證器）不需翻案本節，僅需在 §8 另行選定。
+**理由**：逐字授權句源自 Owner 本人而非系統輸出，模型讀盡畫面也無法產生。此裁決不降低保護力，而是消除「在回音上疊加信任」。**本節僅規範語意，不等於選定 §8 任何選項**（見 §6.18）；日後改採甲（顯示端與回送端相異）或乙（Owner 持驗證器）不需翻案本節，僅需於 §8 另選。
 
 ### 6.18 Phase 9 設計選案（2026-08-04 Owner 拍板，L0）
 
-Owner 回覆「**接受**」，並就建議表未列的一欄逐字裁決：
+Owner 回覆「**接受**」，並逐字裁決建議表未列的一欄：
 
 ```text
 授權句由我當天臨場自己想，不事先寫下、不讓任何 AI 代擬；句子裡要講出當天的
 動作和目標，系統只檢查有沒有講到，以及不能跟畫面上任何一句一模一樣。
 ```
 
-已填入 `PHASE9_TOKEN_DESIGN.md §8` 與 `PHASE9_TOKEN_SCHEMA_PROPOSAL.md §8`：ingress `OOB-C`／egress `E-A`／token `T-B`／schema `S-A`／burn `B-C`／有效期 10 分鐘且隨在場時段結束提前失效／`rejection_freeze_threshold = 1`／遮罩用每場新 HMAC（禁 `sha256(token)[0:8]`）／逐字授權句方法如上。
+**此裁決的適用對象僅為執行日的在場證明**（`owner_verbatim_authorization_verified`），**不適用於任何寫入授權**（見 §6.19 第 3 點）。已填入 `PHASE9_TOKEN_DESIGN.md §8` 與 `PHASE9_TOKEN_SCHEMA_PROPOSAL.md §8`：ingress `OOB-C`／egress `E-A`／token `T-B`／schema `S-A`／burn 改見 §6.19／有效期 10 分鐘且隨在場時段結束提前失效／`rejection_freeze_threshold = 1`／遮罩用每場新 HMAC（禁 `sha256(token)[0:8]`）。
 
-**僅為設計選案，實作授權尚未給予**：撰寫 gate、產生真 token、改 `docs/schemas/*.json`、新增 Phase 9 audit 寫入、呼叫 OpenClaw，一律仍須另一張精確授權；執行當天另須 Owner 在場並給只限該一發的執行指令。**選案 ≠ 實作授權 ≠ 執行授權**，三層互不包含。`B-C` 另受拘束：Phase 9 audit 寫入授權未取得，不得沿用 §6.15 的 Phase 7 授權（嚴格限於 `data/audit_dev.jsonl` append-only local dev）。
+**僅為設計選案**：撰寫 gate、產生真 token、改 `docs/schemas/*.json`、呼叫 OpenClaw 一律仍須另一張精確授權；執行當天另須 Owner 在場並給只限該一發的執行指令。**選案 ≠ 實作授權 ≠ 執行授權**，三層互不包含。
+
+### 6.19 Phase 9 作廢紀錄與稽核寫入授權（2026-08-06 Owner 拍板，L0）
+
+1. **burn 選案由 `B-C` 改為疊層**：`B-A`（`data/phase9_burn.jsonl`，NB-26～28 已實作、四份雙審通過）負責跨行程單發保證；`B-C`（`data/audit_dev.jsonl` 加一筆作廢事件，**不改 schema**）負責防篡改證據。原 §6.18 選 `B-C`，但 NB-26 派工單未對照選案即實作為 `B-A`——此偏差由 Fable 5 造成，Owner 2026-08-06 裁定改採疊層。細節見 `research/PHASE9_BURN_PERSISTENCE_DESIGN_20260806.md`。
+2. **稽核寫入授權已取得**（長期有效，至 Owner 收回；收回不需理由或特定格式）：範圍限於上列兩檔的「token 已作廢」紀錄。**不解鎖**呼叫 OpenClaw、執行時機自決、稽核鏈其他用途或其他寫入者、`docs/schemas/` 變更、Replit 或任何遠端接線。§6.15 的 Phase 7 授權與本項**互不沿用**。
+3. **不需要 Owner 自撰授權句**：§6.13 第 3 條的 Phase 9 硬閘為「Owner 在場＋單次 token」，不含授權句；`01` §5 (c) 要求的是**明示授權**，不是特定句式。先前要求 Owner 撰句係 Fable 5 誤加（誤把 §6.18 的執行日在場證明規則套用於寫入授權），已撤除。**要授權 ≠ 要儀式。**
+4. **執行環境**：稽核鏈自 Windows 工作副本移入 WSL 正牌 repo `data/`；搬移前後各驗雜湊鏈與 SHA-256，任一不符即停並回報；目標已存在不得覆蓋；來源檔保留不刪。
 
 ### 6.14 `mock_e2e_v0_7` 保留並凍結（2026-07-20 Fable 5 裁決，Owner 可翻案）
 
@@ -496,5 +497,4 @@ Owner 回覆「**接受**」，並就建議表未列的一欄逐字裁決：
 
 ### 6.12 Phase 3 施工期裁決（2026-07-18 Owner 親答，L0）
 
-Phase 3 已完成；四項 Owner 原話（16 面旗、舊投影、9 公共欄／role、歷史交付法）
-逐字存於 `research/05_COMPACTION_RULE_CROSSWALK_20260723.md` §4；schema 正本見 §6.10 與 INDEX。
+Phase 3 已完成；四項 Owner 原話（16 面旗、舊投影、9 公共欄／role、歷史交付法）逐字存於 `research/05_COMPACTION_RULE_CROSSWALK_20260723.md` §4；schema 正本見 §6.10 與 INDEX。
