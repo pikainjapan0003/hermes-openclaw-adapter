@@ -138,7 +138,13 @@ token may already be spent.
 | `BURN_NOT_ATTEMPTED` | `PRECALL_AUDIT_FAILURE` | the ledger lock was never entered; no byte was written | the attempt did not start; a future attempt still needs a new ceremony |
 | `BURN_WRITE_FAILED` | `PRECALL_AUDIT_FAILURE` | commit failed and a physical re-read **proves** no record landed | the burn did not happen; nothing was consumed |
 | `BURN_DURABLE_UNVERIFIED` | `CRASH_AFTER_BURN` | the record landed, **or** durability could not be ruled out | **treat the token as consumed. Do not retry on the day.** The Owner decides whether the rehearsal ends |
-| `BURN_VERIFY_FAILED` | `PRECALL_AUDIT_FAILURE` | the replay barrier could not be read, or a landed burn failed verification | verification is unusable; the gate stays closed |
+| `BURN_VERIFY_FAILED` | `PRECALL_AUDIT_FAILURE` | the replay barrier could not be read, **or** a record that already reached the file failed verification | verification is unusable and the gate stays closed. **If the failure came after the record was written — including an `fsync` that could not confirm durability — the token is consumed exactly as under `BURN_DURABLE_UNVERIFIED`: do not retry on the day** |
+
+`BURN_VERIFY_FAILED` therefore covers two different situations. One of them
+(a record that reached the file, then failed durability confirmation or
+verification) leaves the token spent. On execution day, do not read this code as
+“nothing happened”. If the run reached the commit step at all, treat the attempt
+as consumed until the ledger is inspected with the Owner present.
 
 Two rules govern this mapping and must not be relaxed:
 

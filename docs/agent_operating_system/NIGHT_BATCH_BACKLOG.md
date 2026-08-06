@@ -588,6 +588,23 @@ FIX09 = Fable 5 pass／Opus 5 conditional pass，**零阻擋**。
 > denial 收斂、`_find_in_flight_denial` 改為雙鏈廣度優先、非有限 timeout 拒絕。
 > 下表其餘各項與上表【夜跑可做】各項**均未消耗**，仍為 NB-29 以後的存貨。
 
+### 【NB-28 雙審 findings 登記，排 NB-29】
+
+雙審結論：Fable 5 = conditional pass、Opus 5 = PASS，**零阻擋**。
+**利益衝突揭露**：NB-28 的派工規格與程式實作同源（皆為派工者），
+故兩審皆被要求加嚴，且兩份 findings 全數列此。
+
+| 條目 | 來源 | 邊界 |
+|---|---|---|
+| **`commit()` 的 fsync 失敗路徑繞過新分類**：`phase9_burn_ledger.py:285-292` 在 `write()+flush()` **成功後** fsync 失敗時**直接 return `durable=False` 而不拋例外**，因此不經 `_commit_failure_disposition`，落入 gate 既有的 burn_verification 檢查而回報 `BURN_VERIFY_FAILED`——但紀錄**物理上已在檔案內**（第一審以真實 `FileBurnLedger` 實測 `contains()` 回 True）。NB-28 已先以文件修正（§4.4b 明記此碼可能代表 token 已消耗），**程式面未改** | Fable 5 NB-28 P1-1 | 比照 readback 失敗改為拋例外並走 `_commit_failure_disposition`；**不得**放寬任何 fail-closed 條件 |
+| **包1 的核心主張無真實 ledger 測試**：NB-28 新增的 6 個 gate 測試**全部注入 `TmpBurnLedger` 假件**，其 `contains()` 走與生產完全不同的路徑（重讀檔案文字、無 handle 重用、無 flush）。第二審自行補跑真實 `FileBurnLedger` 的四個場景（全過）並建議收編為正式測試 | Opus 5 NB-28 補證 | tests only；把真實 ledger 的四場景收為提交測試 |
+| **本批新增兩行零測試覆蓋**（coverage 實測）：`_burn_boundary_disposition` 的 `"commit"` 保守分支與 `except GateDenied: raise` 一行 | Opus 5 NB-28 finding 2 | tests only；第二審已 probe 證明後者正確，前者實務上近乎不可達 |
+| **`_commit_failure_disposition` 用裸 `except Exception` 包住 `contains()`**，會吞掉 `GateDenied`（`RuntimeError` 子類），原始拒絕碼消失。與相隔約 240 行的 `except GateDenied: raise` 處理相反，屬同檔自相矛盾。安全方向保守（替代碼為不可重試的 `CRASH_AFTER_BURN`），生產 `FileBurnLedger.contains()` 亦只拋 `BurnLedgerError` | Opus 5 NB-28 finding 1 | 統一兩處對 `GateDenied` 的處理 |
+| **包1 正確性依賴一條未寫入契約的不變式**：`_read_physical_records` 的**持鎖分支會先 `handle.flush()`**，非持鎖分支不會。第二審實測：改用非持鎖探測時，`contains()` 會在資料仍在緩衝區時回 False——**那就會是真正的反向漏洞**。日後若有人「優化」掉該 flush 或改走非持鎖分支，包1 靜默失效 | Opus 5 NB-28 finding 3 | 在 `contains()`／`_read_physical_records` docstring 明記此不變式；牽涉推遲中的「`contains()` 持鎖對稱性」，**待 Owner 裁決是否落成程式契約** |
+| `_burn_boundary_disposition` 的 `"commit"` 分支是否真的可達（第二審無法構造可達案例）：留作 defence-in-depth 或收斂 | Opus 5 NB-28 未解問題 2 | **待 Owner 拍板**；不得逕自刪除 |
+| `BurnLedger` Protocol 未約束 `contains()` 可拋哪些例外，決定上列裸 `except` 的風險大小 | Opus 5 NB-28 未解問題 3 | 契約設計 only |
+| backlog 的四項消耗只以前言宣告，表內對應列未逐列標記，日後易重複派工 | Opus 5 NB-28 finding 5 | docs only |
+
 | 條目 | 邊界 |
 |---|---|
 | 乾淨退出路徑的 denial 未收斂（`app/phase9_gate.py:800`，`except GateDenied` 分支）：`__exit__` 乾淨時停在 `CHECKING`／`frozen=False`／`rejection_count=0`。僅 BurnLedger 實作自拋裸 `GateDenied` 才觸發，executor 恆 0 | 修法為導向 `_converge_existing_denial`（冪等）；不得順手擴大 |
