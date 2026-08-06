@@ -16,6 +16,7 @@ import hashlib
 import json
 import secrets
 import unicodedata
+from collections import deque
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from enum import Enum
@@ -89,13 +90,21 @@ class GateDenied(RuntimeError):
 def _find_in_flight_denial(error: BaseException) -> GateDenied | None:
     """Recover a denial masked by a failing context-manager exit."""
 
-    current: BaseException | None = error
+    # Both links are walked breadth-first: a denial can hang off __cause__
+    # while __context__ leads down an unrelated chain.  Following only the
+    # first non-None link would miss it.
+    pending: deque[BaseException] = deque([error])
     seen: set[int] = set()
-    while current is not None and id(current) not in seen:
+    while pending:
+        current = pending.popleft()
+        if id(current) in seen:
+            continue
         seen.add(id(current))
         if isinstance(current, GateDenied):
             return current
-        current = current.__context__ or current.__cause__
+        for linked in (current.__context__, current.__cause__):
+            if linked is not None and id(linked) not in seen:
+                pending.append(linked)
     return None
 
 

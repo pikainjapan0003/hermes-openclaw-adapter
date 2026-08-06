@@ -754,6 +754,37 @@ def test_raw_denial_on_clean_ledger_exit_converges_to_closed_deny(
     assert gate.trace[-1] == "CLOSED_DENY"
 
 
+def test_find_in_flight_denial_follows_cause_behind_unrelated_context() -> None:
+    denial = GateDenied("MASKED_ON_CAUSE", AbortScenario.PRECALL_AUDIT_FAILURE)
+
+    unrelated: BaseException = RuntimeError("unrelated-tail")
+    for index in range(120):
+        nxt = RuntimeError(f"unrelated-{index}")
+        nxt.__context__ = unrelated
+        unrelated = nxt
+
+    wrapper = OSError("wrapper")
+    wrapper.__context__ = unrelated
+    wrapper.__cause__ = denial
+
+    assert _find_in_flight_denial(wrapper) is denial
+
+
+def test_find_in_flight_denial_terminates_on_self_and_long_chains() -> None:
+    loop = RuntimeError("self-loop")
+    loop.__context__ = loop
+    loop.__cause__ = loop
+    assert _find_in_flight_denial(loop) is None
+
+    denial = GateDenied("DEEP", AbortScenario.PRECALL_AUDIT_FAILURE)
+    current: BaseException = denial
+    for index in range(1200):
+        nxt = RuntimeError(f"link-{index}")
+        nxt.__context__ = current
+        current = nxt
+    assert _find_in_flight_denial(current) is denial
+
+
 def test_process_coordination_lock_release_failure_fails_closed(
     tmp_path: Path,
 ) -> None:
