@@ -631,3 +631,18 @@ NB-29（四包：稽核鏈遷移／burn evidence builder／gate 接線／Owner g
 | `AuditAuthorizationVerifier` 類別 docstring 稱「wording change therefore fails closed until reviewed」，但實際 runtime 比對的是硬編常數，非即時讀檔；05 文字被改動時只有測試會紅，不是 runtime fail-closed | 第二審 Q4 | 措辭修正 only；不影響安全（`test_recorded_owner_audit_grant_text_and_digest_match_05` 已鎖此不變式） |
 
 **獨立複核（Fable 5，2026-08-06）**：對上列前兩項均已用真實碼路徑再驗證（`entry_hash=None` 確實觸發 `TypeError`→`BURN_VERIFY_FAILED`；`from…import` 形式確實逃過 AST 守門），確認非誇大。V6（暫改 05 §6.19 第 2 項一字、確認 digest guard 變紅、還原後零 diff 且測試轉綠）已獨立重跑通過。
+
+## NIGHT-BATCH-30 補貨 — 2026-08-07（雙審 findings 登記，排 NB-31）
+
+NB-30（四包：真實 `AuditChainWriter`／真實 executor 骨架／補償證明＋解除 blanket deny／六步閉環演練）
+雙審結論：主審 Fable 5 = pass、第二審（fresh-context）= pass，**零阻擋**，已 ff-merge 並 push（`bbfc013`）。
+findings 僅存在於審查報告、未經登記，由 Opus 5 於合併後補登。以下**不構成任何後續實作或執行授權**。
+
+| 條目 | 來源 | 邊界 |
+|---|---|---|
+| **演練報告的「真實 OpenClaw 呼叫 0」是硬編字面值，不是量出來的**：`tests/test_phase9_n1_rehearsal.py` 第 171 行把 `real_openclaw_call_count` 直接寫成 `0`，第 222 行對它的斷言因此是同義反覆；`research/PHASE9_N1_REHEARSAL_DRYRUN_20260807.md` 複述同一未實測數字。該值目前為真，靠的是 AST 接線檢查與 `app/` 內零建構點這兩個**獨立**事實，不是這一步量到的。文件讀起來像實測證據，實際不是 | 第二審 | 改以真實 instrumentation（例如 monkeypatch 全域 `subprocess.run` 並斷言呼叫數）取代字面值；tests/docs only，**不得**藉此放寬任何斷言 |
+| **執行器與版本探針的 `process_runner=None` 預設會靜默建構真實 runner**：`app/phase9_gate.py` 第 553 行與第 582 行附近，未顯式傳入時會拿到真實 `ForegroundSubprocessRunner()` 而非報錯。目前 `app/` 內零建構點故不可達，但這是「忘記傳參數就取得真實執行能力」的形狀 | 第二審 | 改為必填關鍵字參數；**接線前必須先做**，屬執行日前置硬化 |
+| **死碼與失效屬性**：`app/phase9_gate.py` 第 862 行附近的 `except NotImplementedError` 分支自 exec02 起不可能觸發（兩個真實類別都不再拋該例外）；`Executor.test_double` 自 exec03 起 `run()` 內已無任何邏輯讀取，僅供測試辨識 | 主審 | 清理 only；移除前須確認沒有測試依賴該分支 |
+| **entry-state check-then-act 的理論競態**（`app/phase9_gate.py` 第 817 行附近）：多執行緒場景下理論上可競態。**非本批 diff 引入**（既存碼），且 `Phase9Gate` 在 `app/` 內零建構點故不可達 | 第二審 | 真正接線時一併處理；本批不構成阻擋 |
+
+**Opus 5 獨立複核（2026-08-07）**：已自行核對 master＝origin＝`bbfc013`、四個 commit 無額外自撰 commit、`10 files changed, 1108 insertions(+), 21 deletions(-)`、`data/audit_dev.jsonl` SHA-256 未變、`data/phase9_burn.jsonl` 不存在、四處紅線檔零 diff、`app/phase9_gate.py` 無 `threading`／`subprocess` import。
