@@ -234,6 +234,7 @@
 - 模型與流程：可用的最強模型主導；Owner 同步在場逐步確認；全程不委派有副作用的步驟給 subagent。
 - 進入下一階段：Owner 對 N=1 結果簽核，並明文決定是否擴大白名單（每次擴大都是新的 Owner 決定）。
 - **二次補強**：本 Phase 已併入 v1.0 範圍（Q4）；白名單動作已由 Owner 預指定＝無害查詢型 `openclaw agent` 調用、零寫入（Q5，見 6.8 階梯）；屆時仍需逐字授權 + Owner 在場。
+- **實作交付物**：本節「輸出」欄描述的是執行日**事後**要交出的報告，不是「那天跑得起來需要先做出哪些程式」。實作交付物與缺口的逐項盤點另立於 `research/PHASE9_IMPLEMENTATION_INVENTORY_20260807.md`（2026-08-07 建立，因先前六批實作無對照清單而漏掉 `PresenceChannel`）；新增或完成任一項時同步更新該檔與 §5 狀態表第 9 列。該盤點檔**不構成任何授權**。
 
 ### Phase 10：Connector Read-only Expansion
 
@@ -273,7 +274,7 @@
 
 ## 5. 狀態追蹤（每次 phase closeout 後更新本節）
 
-弱模型入口摘要：**可做**＝Owner 明列工作與 §6.13 已派夜跑包；**不可做**＝未獲逐字授權的 Phase 7 寫入、未有 Owner 同步在場的 Phase 9、未另行解鎖的 v1.1/v1.2；**主線下一步**＝先滿足 Phase 7 專屬授權，再由 Owner 在場進行 Phase 9 N=1。表格按 Phase 數字排列，不以列序推導授權。
+弱模型入口摘要：**可做**＝Owner 明列工作與 §6.13 已派夜跑包；**不可做**＝未有 Owner 同步在場的 Phase 9 執行、未另行解鎖的 v1.1/v1.2；**主線下一步**＝補齊 Phase 9 缺口實作（見狀態表第 9 列與 `research/PHASE9_IMPLEMENTATION_INVENTORY_20260807.md`），再由 Owner 在場進行 Phase 9 N=1。Phase 7 專屬授權已於 2026-08-03 滿足並簽核完成（見第 7 列），**不得再被當成待辦**。表格按 Phase 數字排列，不以列序推導授權。
 
 | Phase | 狀態 | 最後更新 | 備註 |
 |---|---|---|---|
@@ -286,7 +287,7 @@
 | 6 | **完成** | 2026-07-19 | 動態 route 盤點＋七條 POST 白名單＋注入 button 必紅＋approve 行為測試（`9f79657`）；queue-claim guard 二版於 NIGHT-BATCH-3 補強（已知風險：approve→queued 後若外部啟動 worker 可被 claim，execution gate 屬 Phase 9） |
 | 7 | **完成** | 2026-08-03 | 設計＝`07_AUDIT_WRITE_DESIGN.md`；Owner 逐字授權句見 §6.15；writer＝`app/audit_writer_local.py`（NB-23，append-only／拒 hardlink／realpath 鎖定／hash-chain 前置驗證）。**Owner 已於 2026-08-03 檢視實際 `data/audit_dev.jsonl` 三筆內容後簽核**（`research/PHASE7_OWNER_ACCEPTANCE.md`）。簽核只關閉 Phase 7，**不解鎖 Phase 9**：token schema、live token、execution gate、Owner 在場、fresh token、runtime 授權六項仍 fail-closed |
 | 8 | **規劃完成** | 2026-07-19 | docs 方案＋OWASP 對照（`3edbc0b`）；離線 projection contract（`51f657f`，超包，Owner 2026-07-19 追認）；遠端接線／remote API 仍未授權 |
-| 9–11 | 未開始 | — | 本列僅為表格壓縮：**Phase 9 是 v1.0 唯一剩餘關卡**，需 Owner 同步在場＋另案 token/gate 授權；Phase 7 簽核不解鎖它。Phase 10 的 scope 研究與 Phase 11 的健康報告都不構成實作解鎖 |
+| 9–11 | 9 實作中／10–11 未開始 | 2026-08-07 | 本列為表格壓縮。Phase 9 實作自 2026-08-04 起分批進行（NB-25～30，8 個 `app/phase9_*.py` 模組、232 測試全綠，master `4dc5df6`）；**尚未完成**：`PresenceChannel`／`BooleanGateVerifier`／`GateTokenAuditCoordinationLock` 三個 Protocol 無具體實作、token 發放路徑與執行日進入點皆不存在——逐項盤點見 `research/PHASE9_IMPLEMENTATION_INVENTORY_20260807.md`。**實作進度不解鎖執行**：Phase 9 仍是 v1.0 唯一剩餘關卡，仍需 Owner 同步在場＋單次 token（§6.13 第 3 條）；§6.19／§6.20 給的是稽核寫入與執行器實作授權，**皆非執行授權**；Phase 7 簽核不解鎖它。真實 OpenClaw 呼叫數仍為 0。Phase 10 的 scope 研究與 Phase 11 的健康報告都不構成實作解鎖 |
 
 ---
 

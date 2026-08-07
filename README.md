@@ -22,11 +22,12 @@ data/results.jsonl  ──(GET /tasks/{id}/result)──────────
 
 ---
 
-## 目前狀態（2026-08-03 更新 — 本節取代下方所有舊版本狀態描述）
+## 目前狀態（2026-08-07 更新 — 本節取代下方所有舊版本狀態描述）
 
 - Phase 2（v1.0 Definition Freeze）與 Phase 3–7 已完成（Phase 7 audit write 已由 Owner 於 2026-08-03 簽核）；Phase 8 規劃與離線 projection contract 已完成，remote 接線仍未授權。正確狀態與 commit 證據見 `docs/agent_operating_system/05_VERIFIED_LONG_TERM_PLAN.md` 第 5 節。
 - 全套測試與 mypy 白名單目前全綠；實際測試數量以 CI 或當次本機實跑輸出為準，不在本檔寫死浮動數字。
 - v1.0 仍未完成：**唯一剩餘關卡是 Phase 9 N=1**，需 Owner 本人同步在場與另案 token/gate 授權。Phase 7 已於 2026-08-03 簽核完成，但其簽核**不解鎖 Phase 9**。仍然無 Worker dispatch、無 real OpenClaw call、無 Hermes runtime activation、無 connector call、無外部副作用。
+- Phase 9 **實作**自 2026-08-04 起分批進行（8 個 `app/phase9_*.py` 模組、232 測試全綠）。尚未完成：`PresenceChannel`／`BooleanGateVerifier`／`GateTokenAuditCoordinationLock` 三個 Protocol 無具體實作，token 發放路徑與執行日進入點皆不存在；逐項盤點見 `docs/agent_operating_system/research/PHASE9_IMPLEMENTATION_INVENTORY_20260807.md`。Owner 另於 2026-08-06 給稽核寫入授權（`05` §6.19）、2026-08-07 給執行器實作授權（`05` §6.20）——**兩者皆非執行授權**，實作進度不解鎖執行。
 - 治理制度與長期路線圖已建立於 **`docs/agent_operating_system/`**：
   - 入口索引：`README.md`｜安全邊界正本：`01_SAFETY_BOUNDARIES.md`｜Phase 0–11 計劃表：`05_VERIFIED_LONG_TERM_PLAN.md`
   - 任何 AI session 開工前，先讀 `CLAUDE.md` 第 12 節路由。

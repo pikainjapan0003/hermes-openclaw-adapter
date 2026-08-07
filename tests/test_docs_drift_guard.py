@@ -91,7 +91,14 @@ def test_readme_current_phase_claims_match_plan_status_table() -> None:
     assert "Phase 8 規劃與離線 projection contract 已完成" in current
     assert rows["8"] == "規劃完成"
     assert "Phase 9 N=1 需 Owner 在場" in current
-    assert rows["9–11"] == "未開始"
+    # Phase 9 implementation has been landing in batches since 2026-08-04, so the
+    # row must state that while still denying any execution unlock.  Guarding the
+    # old "未開始" wording would have kept both documents agreeing with each other
+    # and disagreeing with the repository.
+    assert rows["9–11"] == "9 實作中／10–11 未開始"
+    assert "實作進度不解鎖執行" in PLAN.read_text(encoding="utf-8")
+    assert "Phase 9 **實作**自 2026-08-04 起分批進行" in current
+    assert "兩者皆非執行授權" in current
     assert "493 passed" not in current
     assert "實際測試數量以 CI 或當次本機實跑輸出為準" in current
 
