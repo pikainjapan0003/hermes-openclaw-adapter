@@ -12,9 +12,9 @@ from tests.test_artifact_integrity_v4 import EXPECTED_ARTIFACT_SHA256, ROOT
 
 pytestmark = pytest.mark.contract
 
-EXPECTED_V5_PATH_COUNT = 279
+EXPECTED_V5_PATH_COUNT = 280
 EXPECTED_V5_MANIFEST_SHA256 = (
-    "adc1e7bdfa7f5f1ba13a26bb1298cfc44f7d1c8428b66c9276b0829aedd094e5"
+    "5081da738c227b8e2830fd9ba6ca6681f1d174b92a0f6f123e6ce8612a813023"
 )
 
 
@@ -56,7 +56,7 @@ def test_v5_inventory_is_closed_and_extends_all_v4_artifacts() -> None:
 
     assert set(EXPECTED_ARTIFACT_SHA256) <= paths
     assert len(paths) == EXPECTED_V5_PATH_COUNT
-    assert sum(path.startswith("scripts/") for path in paths) == 213
+    assert sum(path.startswith("scripts/") for path in paths) == 214
     assert sum(path.startswith("docs/schemas/") for path in paths) == 16
     assert "docs/schemas/blackboard/INDEX.md" in paths
 
