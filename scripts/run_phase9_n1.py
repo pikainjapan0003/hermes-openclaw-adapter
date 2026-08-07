@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import importlib
 import json
+import os
 import sys
 import threading
 from contextlib import AbstractContextManager
@@ -174,8 +175,16 @@ class _StaticPresenceReader:
 class _ControlledPresenceChannel:
     """Feed a synthetic response through the real JSON presence parser."""
 
-    def __init__(self, *, response_path: Path) -> None:
+    def __init__(
+        self,
+        *,
+        response_path: Path,
+        gate_principal: str,
+        expected_owner_principal: str,
+    ) -> None:
         self._response_path = response_path
+        self._gate_principal = gate_principal
+        self._expected_owner_principal = expected_owner_principal
 
     def collect_after_second_challenge(
         self,
@@ -185,8 +194,8 @@ class _ControlledPresenceChannel:
         endpoint = PresenceEndpoint(
             path=self._response_path,
             medium="rehearsal-memory",
-            gate_principal="uid:1000",
-            expected_owner_principal="uid:2000",
+            gate_principal=self._gate_principal,
+            expected_owner_principal=self._expected_owner_principal,
             contract_digest="c" * 64,
             continuity_id="rehearsal-continuity",
             max_validity_seconds=60,
@@ -208,7 +217,7 @@ class _ControlledPresenceChannel:
                 payload=payload,
                 endpoint_path=self._response_path,
                 medium="rehearsal-memory",
-                owner_principal="uid:2000",
+                owner_principal=self._expected_owner_principal,
                 permissions_verified=True,
                 observed_at=observed_at,
             )
@@ -218,6 +227,10 @@ class _ControlledPresenceChannel:
             reader=reader,
             clock=lambda: observed_at,
         ).collect_after_second_challenge(challenge)
+
+
+def _runtime_gate_principal() -> str:
+    return f"uid:{os.getuid()}"
 
 
 def _workspace_factory() -> AbstractContextManager[str]:
@@ -254,6 +267,7 @@ def run_dry_rehearsal(
     *,
     output: TextIO,
     real_executor_factory: RealExecutorFactory,
+    expected_owner_principal: str,
     workspace_factory: WorkspaceFactory = _workspace_factory,
 ) -> RehearsalReport:
     """Run exactly one controlled attempt; never construct the real executor."""
@@ -331,7 +345,9 @@ def run_dry_rehearsal(
                 ),
                 snapshotter=DirectorySnapshotter(state_root),
                 presence_channel=_ControlledPresenceChannel(
-                    response_path=workspace / "synthetic-owner-response"
+                    response_path=workspace / "synthetic-owner-response",
+                    gate_principal=_runtime_gate_principal(),
+                    expected_owner_principal=expected_owner_principal,
                 ),
                 executor=fake_executor,
                 clock=_SteppingClock(),
@@ -377,6 +393,7 @@ def main(
     *,
     output: TextIO,
     real_executor_factory: RealExecutorFactory | None = None,
+    expected_owner_principal: str | None = None,
     workspace_factory: WorkspaceFactory = _workspace_factory,
 ) -> int:
     """Select rehearsal mode; every real or malformed request stays denied."""
@@ -393,10 +410,16 @@ def main(
             "停止：參數不受支援。只允許不帶參數或 --dry-run 安全演練。\n"
         )
         return 2
+    if expected_owner_principal is None or not expected_owner_principal.strip():
+        output.write(
+            "停止：未設定 Owner principal；請設定 PHASE9_OWNER_PRINCIPAL。\n"
+        )
+        return 2
     try:
         report = run_dry_rehearsal(
             output=output,
             real_executor_factory=factory,
+            expected_owner_principal=expected_owner_principal,
             workspace_factory=workspace_factory,
         )
     except Exception:
@@ -408,7 +431,13 @@ def main(
 
 
 if __name__ == "__main__":
-    raise SystemExit(main(sys.argv[1:], output=sys.stdout))
+    raise SystemExit(
+        main(
+            sys.argv[1:],
+            output=sys.stdout,
+            expected_owner_principal=os.environ.get("PHASE9_OWNER_PRINCIPAL"),
+        )
+    )
 
 
 __all__ = ["RehearsalReport", "main", "run_dry_rehearsal"]

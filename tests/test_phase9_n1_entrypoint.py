@@ -5,14 +5,15 @@ from __future__ import annotations
 import ast
 import base64
 import io
+import os
 import subprocess
-from contextlib import contextmanager
+from contextlib import AbstractContextManager, contextmanager
 from pathlib import Path
 from typing import Iterator
 
 import pytest
 
-from scripts.run_phase9_n1 import main, run_dry_rehearsal
+from scripts.run_phase9_n1 import _runtime_gate_principal, main, run_dry_rehearsal
 
 
 pytestmark = pytest.mark.contract
@@ -33,6 +34,10 @@ def _workspace(path: Path) -> Iterator[str]:
     yield str(path)
 
 
+def _owner_principal_distinct_from_gate() -> str:
+    return f"uid:{os.getuid() + 1}"
+
+
 def test_default_rehearsal_runs_all_thirteen_owner_readable_steps(
     tmp_path: Path,
 ) -> None:
@@ -41,6 +46,7 @@ def test_default_rehearsal_runs_all_thirteen_owner_readable_steps(
     report = run_dry_rehearsal(
         output=output,
         real_executor_factory=factory,
+        expected_owner_principal=_owner_principal_distinct_from_gate(),
         workspace_factory=lambda: _workspace(tmp_path),
     )
     text = output.getvalue()
@@ -93,12 +99,45 @@ def test_every_argument_shape_keeps_real_process_and_executor_calls_at_zero(
     output = io.StringIO()
     factory = CountingRealExecutorFactory()
 
-    status = main(argv, output=output, real_executor_factory=factory)
+    status = main(
+        argv,
+        output=output,
+        real_executor_factory=factory,
+        expected_owner_principal=_owner_principal_distinct_from_gate(),
+    )
 
     assert status == expected_status
     assert factory.calls == 0
     assert process_calls == 0
     assert "Traceback" not in output.getvalue()
+
+
+def test_missing_owner_principal_rejects_before_thirteen_steps() -> None:
+    output = io.StringIO()
+    factory = CountingRealExecutorFactory()
+
+    def forbidden_workspace() -> AbstractContextManager[str]:
+        raise AssertionError("thirteen-step rehearsal must not start")
+
+    status = main(
+        (),
+        output=output,
+        real_executor_factory=factory,
+        workspace_factory=forbidden_workspace,
+    )
+
+    text = output.getvalue()
+    assert status == 2
+    assert factory.calls == 0
+    assert "未設定 Owner principal" in text
+    assert "[1/13]" not in text
+    assert "Traceback" not in text
+
+
+def test_gate_principal_uses_runtime_uid_format(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(os, "getuid", lambda: 4242)
+
+    assert _runtime_gate_principal() == "uid:4242"
 
 
 def test_entrypoint_is_not_wired_to_routes_main_or_worker() -> None:
