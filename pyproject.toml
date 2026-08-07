@@ -44,4 +44,5 @@ files = [
   "app/phase9_audit_chain_writer.py",
   "app/phase9_openclaw_executor.py",
   "app/phase9_presence_channel.py",
+  "app/phase9_preflight.py",
 ]
