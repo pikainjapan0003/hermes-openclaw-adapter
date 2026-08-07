@@ -49,14 +49,17 @@ from app.phase9_preflight import (
 from app.phase9_presence import PresenceInputs
 from app.phase9_presence_channel import (
     JsonPresenceChannel,
+    PresenceChannelError,
     PresenceEndpoint,
     PresenceRead,
+    RegularFilePresenceReader,
 )
 from app.phase9_token import TokenPresentation, issue_token
 
 
 REHEARSAL_NOW = datetime(2026, 8, 7, 10, 0, tzinfo=timezone.utc)
 REHEARSAL_ID = "phase9-n1-entrypoint-rehearsal"
+OOB_RESPONSE_FILENAME = "owner-response.json"
 
 
 class RealExecutorFactory(Protocol):
@@ -233,11 +236,31 @@ def _runtime_gate_principal() -> str:
     return f"uid:{os.getuid()}"
 
 
+def _validated_oob_directory(value: Path) -> Path:
+    directory = Path(value)
+    normalized = directory.as_posix().rstrip("/") or "/"
+    # Execution-day OOB must live on WSL's native filesystem. DrvFS under
+    # /mnt/c reports Windows files as the gate uid, defeating st_uid isolation.
+    if normalized == "/mnt/c" or normalized.startswith("/mnt/c/"):
+        raise ValueError("OOB directory must use WSL native storage, not /mnt/c")
+    return directory
+
+
 def _workspace_factory() -> AbstractContextManager[str]:
     return TemporaryDirectory(prefix="phase9-n1-rehearsal-")
 
 
-def _print_owner_report(output: TextIO, report: RehearsalReport) -> None:
+def _print_owner_report(
+    output: TextIO,
+    report: RehearsalReport,
+    *,
+    synthetic_presence: bool,
+) -> None:
+    presence_message = (
+        "第二道新挑戰已完成（合成 Owner 回應）。"
+        if synthetic_presence
+        else "第二道新挑戰已完成（真實 OOB 檔案讀取）。"
+    )
     messages = (
         "契約格式已重新確認。",
         "這張單與這個動作的摘要已重新比對。",
@@ -245,7 +268,7 @@ def _print_owner_report(output: TextIO, report: RehearsalReport) -> None:
         "Owner 授權文字的動作與目標已核對（僅演練）。",
         "固定測試 token 已驗證；沒有產生真實 token。",
         "預檢、版本假件與檔案快照已通過。",
-        "第二道新挑戰已完成（合成 Owner 回應）。",
+        presence_message,
         "六個在場條件已重新計算並全部通過。",
         "測試 token 已先寫入暫存作廢帳本。",
         "作廢證據已寫入暫存稽核鏈並驗證。",
@@ -254,6 +277,8 @@ def _print_owner_report(output: TextIO, report: RehearsalReport) -> None:
         "受控演練完成後已回到全禁狀態，沒有自動重試。",
     )
     output.write("Phase 9 N=1 安全演練（不會呼叫真實 OpenClaw）\n")
+    if synthetic_presence:
+        output.write("⚠ 本次為合成回應，未經真實 OOB 管道。\n")
     for index, message in enumerate(messages, start=1):
         output.write(f"[{index}/13] {message}\n")
     output.write(f"受控假 executor 呼叫：{report.fake_executor_calls}\n")
@@ -268,10 +293,19 @@ def run_dry_rehearsal(
     output: TextIO,
     real_executor_factory: RealExecutorFactory,
     expected_owner_principal: str,
+    oob_directory: Path | None = None,
+    synthetic_presence: bool = False,
     workspace_factory: WorkspaceFactory = _workspace_factory,
 ) -> RehearsalReport:
     """Run exactly one controlled attempt; never construct the real executor."""
 
+    if synthetic_presence and oob_directory is not None:
+        raise ValueError("synthetic presence and real OOB directory are mutually exclusive")
+    if not synthetic_presence and oob_directory is None:
+        raise ValueError("real OOB directory is required")
+    real_oob_directory = (
+        None if oob_directory is None else _validated_oob_directory(oob_directory)
+    )
     real_calls_before = int(getattr(real_executor_factory, "calls", 0))
     with workspace_factory() as workspace_text:
         workspace = Path(workspace_text)
@@ -330,6 +364,32 @@ def run_dry_rehearsal(
         audit_writer = _audit_writer()
         original_root = audit_writer.REPO_ROOT
         original_path = audit_writer.AUDIT_PATH
+        clock = _SteppingClock()
+        gate_principal = _runtime_gate_principal()
+        if synthetic_presence:
+            presence_channel = _ControlledPresenceChannel(
+                response_path=workspace / "synthetic-owner-response",
+                gate_principal=gate_principal,
+                expected_owner_principal=expected_owner_principal,
+            )
+        elif real_oob_directory is not None:
+            response_path = real_oob_directory / OOB_RESPONSE_FILENAME
+            endpoint = PresenceEndpoint(
+                path=response_path,
+                medium="file",
+                gate_principal=gate_principal,
+                expected_owner_principal=expected_owner_principal,
+                contract_digest="c" * 64,
+                continuity_id="rehearsal-continuity",
+                max_validity_seconds=60,
+            )
+            presence_channel = JsonPresenceChannel(
+                endpoint=endpoint,
+                reader=RegularFilePresenceReader(clock=clock),
+                clock=clock,
+            )
+        else:
+            raise RuntimeError("presence channel configuration is unavailable")
         try:
             audit_writer.REPO_ROOT = workspace
             audit_writer.AUDIT_PATH = audit_target
@@ -344,13 +404,9 @@ def run_dry_rehearsal(
                     process_runner=version_runner
                 ),
                 snapshotter=DirectorySnapshotter(state_root),
-                presence_channel=_ControlledPresenceChannel(
-                    response_path=workspace / "synthetic-owner-response",
-                    gate_principal=_runtime_gate_principal(),
-                    expected_owner_principal=expected_owner_principal,
-                ),
+                presence_channel=presence_channel,
                 executor=fake_executor,
-                clock=_SteppingClock(),
+                clock=clock,
                 gate_token_audit_coordination_lock=(
                     BoundedGateTokenAuditCoordinationLock(
                         mutex=threading.Lock(),
@@ -363,7 +419,7 @@ def run_dry_rehearsal(
                 request,
                 presented_raw_token=presented_value,
                 owner_authorization_text=(
-                    "Synthetic rehearsal authorizes n1_harmless_query for "
+                    "Controlled rehearsal authorizes n1_harmless_query for "
                     "target-local-demo only."
                 ),
             )
@@ -384,7 +440,11 @@ def run_dry_rehearsal(
             burn_records=burn_records,
             audit_records=len(audit_records),
         )
-        _print_owner_report(output, report)
+        _print_owner_report(
+            output,
+            report,
+            synthetic_presence=synthetic_presence,
+        )
         return report
 
 
@@ -394,6 +454,7 @@ def main(
     output: TextIO,
     real_executor_factory: RealExecutorFactory | None = None,
     expected_owner_principal: str | None = None,
+    oob_directory: Path | None = None,
     workspace_factory: WorkspaceFactory = _workspace_factory,
 ) -> int:
     """Select rehearsal mode; every real or malformed request stays denied."""
@@ -405,9 +466,13 @@ def main(
             "停止：本批沒有執行授權，真實 executor 不會被建立或呼叫。\n"
         )
         return 2
-    if arguments not in {(), ("--dry-run",)}:
+    allowed_arguments = {"--dry-run", "--synthetic-presence"}
+    if (
+        any(argument not in allowed_arguments for argument in arguments)
+        or len(arguments) != len(set(arguments))
+    ):
         output.write(
-            "停止：參數不受支援。只允許不帶參數或 --dry-run 安全演練。\n"
+            "停止：參數不受支援。只允許 --dry-run 或 --synthetic-presence。\n"
         )
         return 2
     if expected_owner_principal is None or not expected_owner_principal.strip():
@@ -415,13 +480,40 @@ def main(
             "停止：未設定 Owner principal；請設定 PHASE9_OWNER_PRINCIPAL。\n"
         )
         return 2
+    synthetic_presence = "--synthetic-presence" in arguments
+    if synthetic_presence and oob_directory is not None:
+        output.write("停止：合成回應與真實 OOB 目錄不可同時設定。\n")
+        return 2
+    if not synthetic_presence and oob_directory is None:
+        output.write(
+            "停止：未設定真實 OOB 目錄；請設定 PHASE9_OOB_DIRECTORY，或顯式使用 "
+            "--synthetic-presence。\n"
+        )
+        return 2
+    if oob_directory is not None:
+        try:
+            oob_directory = _validated_oob_directory(oob_directory)
+        except ValueError:
+            output.write(
+                "停止：OOB 目錄不可位於 /mnt/c；請使用 WSL 原生路徑，例如 "
+                "/var/hermes-phase9。\n"
+            )
+            return 2
     try:
         report = run_dry_rehearsal(
             output=output,
             real_executor_factory=factory,
             expected_owner_principal=expected_owner_principal,
+            oob_directory=oob_directory,
+            synthetic_presence=synthetic_presence,
             workspace_factory=workspace_factory,
         )
+    except PresenceChannelError:
+        output.write(
+            "停止：Owner OOB 回應不可用（檔案不存在、逾時、principal 不符或內容無效）；"
+            "未退回合成回應，也未啟動真實 executor。\n"
+        )
+        return 1
     except Exception:
         output.write(
             "停止：安全演練未完成；沒有重試，也沒有啟動真實 executor。\n"
@@ -431,11 +523,15 @@ def main(
 
 
 if __name__ == "__main__":
+    oob_directory_text = os.environ.get("PHASE9_OOB_DIRECTORY")
     raise SystemExit(
         main(
             sys.argv[1:],
             output=sys.stdout,
             expected_owner_principal=os.environ.get("PHASE9_OWNER_PRINCIPAL"),
+            oob_directory=(
+                Path(oob_directory_text) if oob_directory_text else None
+            ),
         )
     )
 

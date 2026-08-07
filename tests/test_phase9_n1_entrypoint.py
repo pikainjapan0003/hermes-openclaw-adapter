@@ -5,19 +5,31 @@ from __future__ import annotations
 import ast
 import base64
 import io
+import json
 import os
 import subprocess
 from contextlib import AbstractContextManager, contextmanager
+from dataclasses import replace
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Iterator
 
 import pytest
 
+from app.phase9_gate import FreshChallenge
+from app.phase9_presence import compute_owner_presence
+from app.phase9_presence_channel import (
+    JsonPresenceChannel,
+    PresenceChannelError,
+    PresenceEndpoint,
+    RegularFilePresenceReader,
+)
 from scripts.run_phase9_n1 import _runtime_gate_principal, main, run_dry_rehearsal
 
 
 pytestmark = pytest.mark.contract
 REPO_ROOT = Path(__file__).parents[1]
+PRESENCE_NOW = datetime(2026, 8, 7, 10, 0, tzinfo=timezone.utc)
 
 
 class CountingRealExecutorFactory:
@@ -38,7 +50,54 @@ def _owner_principal_distinct_from_gate() -> str:
     return f"uid:{os.getuid() + 1}"
 
 
-def test_default_rehearsal_runs_all_thirteen_owner_readable_steps(
+def _presence_challenge() -> FreshChallenge:
+    return FreshChallenge(
+        challenge_id="c2-real-reader-challenge",
+        rehearsal_id="phase9-n1-entrypoint-rehearsal",
+        approval_packet_hash="a" * 64,
+        action_hash="b" * 64,
+        issued_at=PRESENCE_NOW - timedelta(seconds=1),
+        deadline=PRESENCE_NOW + timedelta(seconds=30),
+    )
+
+
+def _presence_payload(challenge: FreshChallenge) -> bytes:
+    return json.dumps(
+        {
+            "action_hash": challenge.action_hash,
+            "approval_packet_hash": challenge.approval_packet_hash,
+            "challenge_id": challenge.challenge_id,
+            "continuity_id": "rehearsal-continuity",
+            "owner_confirmed": True,
+            "owner_verbatim_authorization_verified": True,
+            "rehearsal_id": challenge.rehearsal_id,
+        },
+        sort_keys=True,
+    ).encode("utf-8")
+
+
+def _real_presence_channel(
+    path: Path,
+    *,
+    expected_owner_principal: str,
+) -> JsonPresenceChannel:
+    endpoint = PresenceEndpoint(
+        path=path,
+        medium="file",
+        gate_principal=_runtime_gate_principal(),
+        expected_owner_principal=expected_owner_principal,
+        contract_digest="c" * 64,
+        continuity_id="rehearsal-continuity",
+        max_validity_seconds=60,
+    )
+    return JsonPresenceChannel(
+        endpoint=endpoint,
+        reader=RegularFilePresenceReader(clock=lambda: PRESENCE_NOW),
+        clock=lambda: PRESENCE_NOW,
+    )
+
+
+def test_explicit_synthetic_rehearsal_runs_all_thirteen_owner_readable_steps(
     tmp_path: Path,
 ) -> None:
     output = io.StringIO()
@@ -47,6 +106,7 @@ def test_default_rehearsal_runs_all_thirteen_owner_readable_steps(
         output=output,
         real_executor_factory=factory,
         expected_owner_principal=_owner_principal_distinct_from_gate(),
+        synthetic_presence=True,
         workspace_factory=lambda: _workspace(tmp_path),
     )
     text = output.getvalue()
@@ -62,6 +122,7 @@ def test_default_rehearsal_runs_all_thirteen_owner_readable_steps(
     assert all(f"[{index}/13]" in text for index in range(1, 14))
     assert "不會呼叫真實 OpenClaw" in text
     assert "真實 executor 呼叫：0" in text
+    assert "⚠ 本次為合成回應，未經真實 OOB 管道" in text
     assert "Traceback" not in text
     raw_fixed_value = base64.urlsafe_b64encode(b"d" * 32).rstrip(b"=").decode()
     assert raw_fixed_value not in text
@@ -72,11 +133,197 @@ def test_default_rehearsal_runs_all_thirteen_owner_readable_steps(
     )
 
 
+def test_t1_gate_owned_real_file_is_same_endpoint_and_not_authenticated(
+    tmp_path: Path,
+) -> None:
+    """T1 is a real lstat/read of a gate-owned WSL-native temporary file."""
+
+    challenge = _presence_challenge()
+    path = tmp_path / "owner-response.json"
+    path.write_bytes(_presence_payload(challenge))
+    path.chmod(0o600)
+    gate_principal = _runtime_gate_principal()
+
+    inputs = _real_presence_channel(
+        path,
+        expected_owner_principal=gate_principal,
+    ).collect_after_second_challenge(challenge)
+    result = compute_owner_presence(
+        inputs,
+        now=PRESENCE_NOW,
+        final_challenge_issued_at=challenge.issued_at,
+    )
+
+    assert f"uid:{path.lstat().st_uid}" == gate_principal
+    assert inputs.same_endpoint is True
+    assert inputs.owner_response_authenticated is not None
+    assert inputs.owner_response_authenticated.verified is False
+    assert result.owner_response_authenticated is False
+    assert result.owner_synchronously_present is False
+
+
+def test_t2_different_owner_principal_can_authenticate_only_under_simulation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """T2 simulates st_uid only; real cross-uid isolation is deferred to C4."""
+
+    challenge = _presence_challenge()
+    path = tmp_path / "owner-response.json"
+    path.write_bytes(_presence_payload(challenge))
+    path.chmod(0o600)
+    simulated_owner = _owner_principal_distinct_from_gate()
+    original_read = RegularFilePresenceReader.read
+
+    def simulated_different_owner_read(
+        self: RegularFilePresenceReader,
+        endpoint: PresenceEndpoint,
+        *,
+        deadline: datetime,
+    ) -> object:
+        observation = original_read(self, endpoint, deadline=deadline)
+        return replace(observation, owner_principal=simulated_owner)
+
+    monkeypatch.setattr(
+        RegularFilePresenceReader,
+        "read",
+        simulated_different_owner_read,
+    )
+    inputs = _real_presence_channel(
+        path,
+        expected_owner_principal=simulated_owner,
+    ).collect_after_second_challenge(challenge)
+    result = compute_owner_presence(
+        inputs,
+        now=PRESENCE_NOW,
+        final_challenge_issued_at=challenge.issued_at,
+    )
+
+    assert inputs.same_endpoint is False
+    assert inputs.owner_response_authenticated is not None
+    assert inputs.owner_response_authenticated.verified is True
+    assert result.owner_response_authenticated is True
+    assert result.owner_synchronously_present is True
+
+
+@pytest.mark.parametrize(
+    "failure_kind",
+    ("missing", "timeout", "principal", "json"),
+)
+def test_t3_real_oob_failures_close_without_synthetic_fallback(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    failure_kind: str,
+) -> None:
+    oob_directory = tmp_path / "oob"
+    oob_directory.mkdir()
+    response_path = oob_directory / "owner-response.json"
+    expected_owner = _runtime_gate_principal()
+
+    if failure_kind == "timeout":
+        def timed_out_read(
+            _self: RegularFilePresenceReader,
+            _endpoint: PresenceEndpoint,
+            *,
+            deadline: datetime,
+        ) -> object:
+            del deadline
+            raise PresenceChannelError("owner presence response is unavailable")
+
+        monkeypatch.setattr(RegularFilePresenceReader, "read", timed_out_read)
+    elif failure_kind == "principal":
+        response_path.write_text("{}", encoding="utf-8")
+        response_path.chmod(0o600)
+        expected_owner = _owner_principal_distinct_from_gate()
+    elif failure_kind == "json":
+        response_path.write_text("{not-json", encoding="utf-8")
+        response_path.chmod(0o600)
+
+    output = io.StringIO()
+    factory = CountingRealExecutorFactory()
+    status = main(
+        (),
+        output=output,
+        real_executor_factory=factory,
+        expected_owner_principal=expected_owner,
+        oob_directory=oob_directory,
+    )
+
+    text = output.getvalue()
+    assert status == 1
+    assert factory.calls == 0
+    assert "Owner OOB 回應不可用" in text
+    assert "未退回合成回應" in text
+    assert "合成回應，未經真實 OOB 管道" not in text
+    assert "Traceback" not in text
+
+
+def test_t4_synthetic_presence_requires_explicit_flag(tmp_path: Path) -> None:
+    output = io.StringIO()
+    owner = _owner_principal_distinct_from_gate()
+
+    denied = main((), output=output, expected_owner_principal=owner)
+
+    assert denied == 2
+    assert "未設定真實 OOB 目錄" in output.getvalue()
+    output = io.StringIO()
+    allowed = main(
+        ("--synthetic-presence",),
+        output=output,
+        expected_owner_principal=owner,
+        workspace_factory=lambda: _workspace(tmp_path / "synthetic-workspace"),
+    )
+    assert allowed == 0
+    assert "⚠ 本次為合成回應，未經真實 OOB 管道" in output.getvalue()
+
+
+def test_t4_synthetic_presence_and_real_oob_directory_are_mutually_exclusive(
+    tmp_path: Path,
+) -> None:
+    output = io.StringIO()
+
+    def forbidden_workspace() -> AbstractContextManager[str]:
+        raise AssertionError("mutually exclusive configuration must reject early")
+
+    status = main(
+        ("--synthetic-presence",),
+        output=output,
+        expected_owner_principal=_owner_principal_distinct_from_gate(),
+        oob_directory=tmp_path,
+        workspace_factory=forbidden_workspace,
+    )
+
+    assert status == 2
+    assert "不可同時設定" in output.getvalue()
+    assert "[1/13]" not in output.getvalue()
+
+
+def test_windows_mounted_oob_directory_is_rejected_before_rehearsal() -> None:
+    output = io.StringIO()
+
+    def forbidden_workspace() -> AbstractContextManager[str]:
+        raise AssertionError("/mnt/c OOB configuration must reject early")
+
+    status = main(
+        (),
+        output=output,
+        expected_owner_principal=_owner_principal_distinct_from_gate(),
+        oob_directory=Path("/mnt/c/unsafe-phase9-oob"),
+        workspace_factory=forbidden_workspace,
+    )
+
+    assert status == 2
+    assert "不可位於 /mnt/c" in output.getvalue()
+    assert "/var/hermes-phase9" in output.getvalue()
+
+
 @pytest.mark.parametrize(
     ("argv", "expected_status"),
     (
-        ((), 0),
-        (("--dry-run",), 0),
+        ((), 2),
+        (("--dry-run",), 2),
+        (("--synthetic-presence",), 0),
+        (("--dry-run", "--synthetic-presence"), 0),
         (("--real",), 2),
         (("--unknown",), 2),
         (("--real", "--dry-run"), 2),
