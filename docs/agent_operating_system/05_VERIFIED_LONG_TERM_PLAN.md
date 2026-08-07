@@ -488,8 +488,8 @@ Owner 回覆「**接受**」，並逐字裁決建議表未列的一欄：
 
 ### 6.20 Phase 9 執行器實作授權（2026-08-07 Owner 拍板，L0）
 
-1. **實作授權已取得**（範圍限本項）：允許實作真實 `OwnerAuthorizedOpenClawExecutor` 與 `OwnerAuthorizedOpenClawVersionProbe`，並解除 `app/phase9_gate.py` 對 `executor.test_double is not True` 的無條件拒絕，使 gate 在結構上能接受真實執行器（Owner 就「A＝執行日當天才解除／B＝現在給實作授權」明示選 B）。**解除的前提補償**（須與解除同批完成，未完成即不得解除）：必須以測試證明無 Owner 在場、無有效單次 token、token 已作廢、授權紀錄過期或 scope 不符時，**即使注入真實執行器仍一律拒絕且 executor 呼叫數為 0**。
-2. **不解鎖**：實際呼叫 OpenClaw；執行時機自決；白名單動作擴大（仍限無害查詢型、零寫入）；失敗自動重試；connector／Replit／任何遠端接線；`docs/schemas/` 變更。§6.13 第 3 條硬閘（Phase 9 需 Owner 在場＋單次 token）**維持不變**；§6.15、§6.19 與本項**互不沿用**。**實作期間零真實呼叫**：實作批次及其審查全程不得執行任何 openclaw 子命令（含 `--version`／`--help`），所有驗收以測試替身完成；真實呼叫僅得於 Owner 在場的執行日發生。
+1. **實作授權已取得**（範圍限本項）：允許實作真實 `OwnerAuthorizedOpenClawExecutor` 與 `OwnerAuthorizedOpenClawVersionProbe`，並解除 `app/phase9_gate.py` 對 `executor.test_double is not True` 的無條件拒絕，使 gate 在結構上能接受真實執行器（Owner 就「A＝執行日當天才解除／B＝現在給實作授權」明示選 B）。**解除的前提補償**（須與解除同批完成，未完成即不得解除）：必須以測試證明無 Owner 在場、無有效單次 token、token 已作廢、授權紀錄過期或 scope 不符時，**即使注入真實執行器仍一律拒絕且 executor 呼叫數為 0**。**同日追加**：Owner 就「甲＝現在給 token 產生器實作授權／乙＝之後再說」明示選甲，故 §6.18 所稱「另一張精確授權」就 token 產生器與發放路徑之**實作**已取得——僅限撰寫程式路徑，**不含產生任何真實 token**。
+2. **不解鎖**：實際呼叫 OpenClaw；**產生或發放任何真實 token**（僅得於 Owner 在場的執行日發生）；執行時機自決；白名單動作擴大（仍限無害查詢型、零寫入）；失敗自動重試；connector／Replit／任何遠端接線；`docs/schemas/` 變更。§6.13 第 3 條硬閘（Phase 9 需 Owner 在場＋單次 token）**維持不變**；§6.15、§6.19 與本項**互不沿用**。**實作期間零真實呼叫**：實作批次及其審查全程不得執行任何 openclaw 子命令（含 `--version`／`--help`），所有驗收以測試替身完成；真實呼叫僅得於 Owner 在場的執行日發生。
 
 ### 6.14 `mock_e2e_v0_7` 保留並凍結（2026-07-20 Fable 5 裁決，Owner 可翻案）
 
