@@ -375,8 +375,6 @@ def _physical_record_count(target: Path) -> int:
 
 
 class CountingExecutor:
-    test_double = True
-
     def __init__(self, *, mutate: Path | None = None) -> None:
         self.calls = 0
         self.argv: tuple[str, ...] | None = None
@@ -1380,7 +1378,7 @@ def test_real_type_executor_reaches_one_fake_process_only_when_all_gates_are_gre
     tmp_path: Path,
 ) -> None:
     runner = RealTypeFakeProcessRunner()
-    executor = OwnerAuthorizedOpenClawExecutor(runner)
+    executor = OwnerAuthorizedOpenClawExecutor(process_runner=runner)
     gate, request, raw, owner_text, ledger, _executor, _presence, _root = _fixture(
         tmp_path,
         executor=executor,
@@ -1392,7 +1390,6 @@ def test_real_type_executor_reaches_one_fake_process_only_when_all_gates_are_gre
         owner_authorization_text=owner_text,
     )
 
-    assert executor.test_double is False
     assert runner.calls == [(result.argv, 12)]
     assert ledger.commits == 1
     assert result.state is GateState.CLOSED_DENY
@@ -1434,7 +1431,7 @@ def test_real_type_executor_remains_unreachable_for_each_denied_state(
     expected_code: str,
 ) -> None:
     runner = RealTypeFakeProcessRunner()
-    executor = OwnerAuthorizedOpenClawExecutor(runner)
+    executor = OwnerAuthorizedOpenClawExecutor(process_runner=runner)
     gate, request, raw, owner_text, ledger, _executor, _presence, _root = _fixture(
         tmp_path,
         verbatim=blocked_state != "owner_absent",

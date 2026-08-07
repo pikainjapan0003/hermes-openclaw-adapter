@@ -532,10 +532,6 @@ class PresenceChannel(Protocol):
 
 
 class Executor(Protocol):
-    @property
-    def test_double(self) -> bool:
-        """True only for an in-memory or controlled fake executor."""
-
     def execute(
         self,
         argv: tuple[str, ...],
@@ -548,13 +544,7 @@ class Executor(Protocol):
 class OwnerAuthorizedOpenClawExecutor:
     """Owner-selected real executor boundary; no runtime constructs it yet."""
 
-    test_double = False
-
-    def __init__(self, process_runner: ProcessRunner | None = None) -> None:
-        if process_runner is None:
-            from app.phase9_openclaw_executor import ForegroundSubprocessRunner
-
-            process_runner = ForegroundSubprocessRunner()
+    def __init__(self, *, process_runner: ProcessRunner) -> None:
         self._process_runner = process_runner
 
     def execute(
@@ -579,11 +569,7 @@ class OwnerAuthorizedOpenClawExecutor:
 class OwnerAuthorizedOpenClawVersionProbe:
     """Owner-selected version probe boundary; no runtime constructs it yet."""
 
-    def __init__(self, process_runner: ProcessRunner | None = None) -> None:
-        if process_runner is None:
-            from app.phase9_openclaw_executor import ForegroundSubprocessRunner
-
-            process_runner = ForegroundSubprocessRunner()
+    def __init__(self, *, process_runner: ProcessRunner) -> None:
         self._process_runner = process_runner
 
     def probe_version(self) -> str:
@@ -859,10 +845,7 @@ class Phase9Gate:
 
         if not self.preflight_verifier.verify(request):
             self._deny("PREFLIGHT_DENIED", AbortScenario.PREFLIGHT_DRIFT)
-        try:
-            observed_version = self.version_probe.probe_version()
-        except NotImplementedError:
-            self._deny("EXECUTION_AUTHORIZATION_MISSING", AbortScenario.CLI_INTERFACE_UNVERIFIED)
+        observed_version = self.version_probe.probe_version()
         if observed_version != EXPECTED_OPENCLAW_VERSION:
             self._deny("OPENCLAW_VERSION_DRIFT", AbortScenario.CLI_INTERFACE_UNVERIFIED)
         try:

@@ -143,8 +143,6 @@ class ProcessBarrierPresence:
 
 
 class ProcessExecutor:
-    test_double = True
-
     def __init__(self, calls: Any) -> None:
         self._calls = calls
 
@@ -159,8 +157,6 @@ class ProcessExecutor:
 
 
 class LocalCountingExecutor:
-    test_double = True
-
     def __init__(self) -> None:
         self.calls = 0
         self._lock = threading.Lock()

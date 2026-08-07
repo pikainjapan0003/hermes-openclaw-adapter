@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import subprocess
 import threading
 from datetime import timedelta
 from pathlib import Path
@@ -27,6 +28,7 @@ from app.phase9_gate import (
     Phase9AuditAuthorizationRecord,
     Phase9Gate,
 )
+from app.phase9_openclaw_executor import ForegroundSubprocessRunner
 from app.phase9_token import TokenPresentation, issue_token
 
 from tests.test_full_chain_contract_rehearsal import _build_full_chain
@@ -81,6 +83,31 @@ def test_all_fake_six_step_rehearsal_persists_evidence_and_rejects_replay(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
+    real_openclaw_calls: list[tuple[str, ...]] = []
+
+    def forbid_subprocess_run(
+        argv: Any,
+        **_kwargs: Any,
+    ) -> subprocess.CompletedProcess[bytes]:
+        real_openclaw_calls.append(tuple(str(item) for item in argv))
+        raise AssertionError("real subprocess boundary must remain unused")
+
+    def forbid_foreground_invoke(
+        _runner: ForegroundSubprocessRunner,
+        argv: Any,
+        *,
+        timeout_seconds: int,
+    ) -> Any:
+        del timeout_seconds
+        real_openclaw_calls.append(tuple(str(item) for item in argv))
+        raise AssertionError("real foreground runner must remain unused")
+
+    monkeypatch.setattr(subprocess, "run", forbid_subprocess_run)
+    monkeypatch.setattr(
+        ForegroundSubprocessRunner,
+        "invoke",
+        forbid_foreground_invoke,
+    )
     rehearsal_root = tmp_path / "phase9-rehearsal"
     evidence_root = rehearsal_root / "evidence"
     audit_root = rehearsal_root / "repo"
@@ -168,7 +195,7 @@ def test_all_fake_six_step_rehearsal_persists_evidence_and_rejects_replay(
         "stdout_digest": result.execution_result.stdout_digest,
         "stderr_digest": result.execution_result.stderr_digest,
         "controlled_fake_executor_calls": fake_executor.calls,
-        "real_openclaw_call_count": 0,
+        "real_openclaw_call_count": len(real_openclaw_calls),
     }
     _persist_json(evidence_root / "03_one_shot_execution.json", execution_evidence)
 
@@ -217,9 +244,11 @@ def test_all_fake_six_step_rehearsal_persists_evidence_and_rejects_replay(
 
     assert replay.value.code == "TOKEN_ALREADY_BURNED"
     assert replay_gate.state is GateState.CLOSED_DENY
-    assert fake_executor.test_double is True
     assert fake_executor.calls == 1
-    assert execution_evidence["real_openclaw_call_count"] == 0
+    assert execution_evidence["real_openclaw_call_count"] == len(
+        real_openclaw_calls
+    )
+    assert real_openclaw_calls == []
     assert len(audit_entries) == 1
     assert post_verification == {
         "burn_present": True,

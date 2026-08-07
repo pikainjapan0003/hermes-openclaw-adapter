@@ -54,11 +54,10 @@ def test_real_type_executor_issues_one_fake_attempt_and_returns_only_digests() -
     stdout = b'{"status":"ok","secret":"FAKE-NOT-PERSISTED"}'
     stderr = b"synthetic diagnostic"
     runner = FakeProcessRunner(ProcessOutcome(0, False, stdout, stderr))
-    executor = OwnerAuthorizedOpenClawExecutor(runner)
+    executor = OwnerAuthorizedOpenClawExecutor(process_runner=runner)
 
     result = executor.execute(SAFE_ARGV, timeout_seconds=12)
 
-    assert executor.test_double is False
     assert runner.calls == [(SAFE_ARGV, 12)]
     assert result.exit_code == 0
     assert result.timed_out is False
@@ -69,7 +68,7 @@ def test_real_type_executor_issues_one_fake_attempt_and_returns_only_digests() -
 
 def test_real_type_executor_records_a_fake_timeout_without_retry() -> None:
     runner = FakeProcessRunner(ProcessOutcome(None, True, b"partial", b"timeout"))
-    executor = OwnerAuthorizedOpenClawExecutor(runner)
+    executor = OwnerAuthorizedOpenClawExecutor(process_runner=runner)
 
     result = executor.execute(SAFE_ARGV, timeout_seconds=7)
 
@@ -83,7 +82,9 @@ def test_version_probe_uses_exact_bounded_fake_argv() -> None:
         ProcessOutcome(0, False, f"{EXPECTED_OPENCLAW_VERSION}\n".encode(), b"")
     )
 
-    observed = OwnerAuthorizedOpenClawVersionProbe(runner).probe_version()
+    observed = OwnerAuthorizedOpenClawVersionProbe(
+        process_runner=runner
+    ).probe_version()
 
     assert observed == EXPECTED_OPENCLAW_VERSION
     assert runner.calls == [(('openclaw', '--version'), 5)]
@@ -102,7 +103,12 @@ def test_version_probe_fails_closed_for_unusable_fake_results(
 ) -> None:
     runner = FakeProcessRunner(outcome)
 
-    assert OwnerAuthorizedOpenClawVersionProbe(runner).probe_version() == ""
+    assert (
+        OwnerAuthorizedOpenClawVersionProbe(
+            process_runner=runner
+        ).probe_version()
+        == ""
+    )
     assert len(runner.calls) == 1
 
 
@@ -181,7 +187,22 @@ def test_first_real_probe_and_call_remain_execution_day_only() -> None:
     """This package constructs no default runner and invokes no real binary."""
 
     runner = FakeProcessRunner(ProcessOutcome(0, False, b"synthetic", b""))
-    OwnerAuthorizedOpenClawExecutor(runner)
-    OwnerAuthorizedOpenClawVersionProbe(runner)
+    OwnerAuthorizedOpenClawExecutor(process_runner=runner)
+    OwnerAuthorizedOpenClawVersionProbe(process_runner=runner)
+
+    assert runner.calls == []
+
+
+def test_real_wrappers_require_an_explicit_keyword_process_runner() -> None:
+    runner = FakeProcessRunner(ProcessOutcome(0, False, b"synthetic", b""))
+
+    with pytest.raises(TypeError):
+        OwnerAuthorizedOpenClawExecutor()  # type: ignore[call-arg]
+    with pytest.raises(TypeError):
+        OwnerAuthorizedOpenClawVersionProbe()  # type: ignore[call-arg]
+    with pytest.raises(TypeError):
+        OwnerAuthorizedOpenClawExecutor(runner)  # type: ignore[misc]
+    with pytest.raises(TypeError):
+        OwnerAuthorizedOpenClawVersionProbe(runner)  # type: ignore[misc]
 
     assert runner.calls == []

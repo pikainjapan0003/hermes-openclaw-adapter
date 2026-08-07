@@ -6,7 +6,8 @@
 ## Owner 先看這三句
 
 1. 這次把 Phase 9 的六個步驟用合成資料走完，確認每一步能留下可檢查的證據。
-2. 「執行」步驟用的是受控假件；真實 OpenClaw 呼叫數是 **0**。
+2. 「執行」步驟用的是受控假件；測試在 subprocess 與 foreground runner
+   邊界裝設計數 tripwire，實測真實 OpenClaw 呼叫數是 **0**。
 3. 真正執行那天仍要 Owner 在場，重新確認版本、動作、目標與一次性授權；本報告不能代替那次授權。
 
 ## 六步演習結果
@@ -15,7 +16,7 @@
 |---|---|---|---|
 | 1. Evidence bundle | 用既有 builder 產生 N=1 dry-run 證據並重算 hash | `01_evidence_bundle.json` | 通過 |
 | 2. Approval packet | 用既有 builder 產生 Owner 審閱資料；舊 schema 的 token 仍為 null | `02_approval_packet.json` | 通過 |
-| 3. One-shot attempt | gate 完成全部檢查後只呼叫受控假 executor 一次 | `03_one_shot_execution.json` | 假呼叫 1、真呼叫 0 |
+| 3. One-shot attempt | gate 完成全部檢查後只呼叫受控假 executor 一次 | `03_one_shot_execution.json` | 假呼叫 1、instrumentation 實測真呼叫 0 |
 | 4. Audit chain | burn ledger 與 audit event 都寫入 pytest 暫存目錄，並讀回驗鏈 | `04_audit_chain.json` | durable、verified |
 | 5. Post verification | 比對前後檔案快照、確認無變動、gate 回到全禁狀態 | `05_post_verification.json` | 通過 |
 | 6. Rollback preview | 產生「無副作用，因此無需 rollback」的描述性資料 | `06_rollback_preview.json` | 通過 |

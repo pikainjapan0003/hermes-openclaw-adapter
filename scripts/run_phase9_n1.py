@@ -138,8 +138,6 @@ class _ControlledVersionRunner:
 class _ControlledDryRunExecutor:
     """Foreground fake with no subprocess, network, retry, or side effect."""
 
-    test_double = True
-
     def __init__(self) -> None:
         self.calls = 0
 
