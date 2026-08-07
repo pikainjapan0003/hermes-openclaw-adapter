@@ -13,10 +13,10 @@
 本檔補上那一欄。**它是盤點與缺口清單，不是授權**——列在「未完成」不代表可以逕行實作，
 仍受 `05` §6.13 第 3 條硬閘與各項 Owner 裁決約束。
 
-## 1. 已完成（截至 master `4dc5df6`）
+## 1. 已完成（截至 NIGHT-BATCH-31）
 
-`app/` 內 8 個模組、`tests/` 內 9 個檔、232 個 Phase 9 測試全綠。
-首個模組落地 2026-08-04，最新 2026-08-07。
+首個模組落地 2026-08-04；NIGHT-BATCH-31 已補齊本檔原列五個程式缺口。
+本表只表示「零件存在且測試全綠」，不表示真實 token 或執行已獲授權。
 
 | 交付物 | 具體實作 | 首次落地 |
 |---|---|---|
@@ -31,18 +31,21 @@
 | 稽核授權驗證器 | `app/phase9_gate.py` 的 `AuditAuthorizationVerifier` | NIGHT-BATCH-29 |
 | 檔案系統快照器 | `app/phase9_gate.py` 的 `DirectorySnapshotter` | NIGHT-BATCH-25 |
 | 六步閉環演練（全假件） | `tests/test_phase9_n1_rehearsal.py`＋`research/PHASE9_N1_REHEARSAL_DRYRUN_20260807.md` | `bbfc013`（2026-08-07） |
+| Owner 互動管道 | `app/phase9_presence_channel.py` | `952bb61`（NIGHT-BATCH-31 pkg1） |
+| 凍結預檢驗證器＋有界協調鎖 | `app/phase9_preflight.py` | `2e491df`（NIGHT-BATCH-31 pkg2） |
+| 執行日 N=1 進入點（預設全假 rehearsal；真實模式仍鎖） | `scripts/run_phase9_n1.py` | `6598eba`（NIGHT-BATCH-31 pkg3） |
+| runner 必填注入＋演練 process instrumentation | `app/phase9_gate.py`＋既有 rehearsal | `7061a41`（NIGHT-BATCH-31 pkg4） |
+| token 產生與 OOB 發放邊界（formal path 仍拒絕） | `app/phase9_token_issuer.py` | `night-batch-31-phase9-gap05-token-issuer`（本 commit） |
 
-## 2. 未完成——執行日跑不起來的原因
+## 2. 未完成——只剩 Owner／執行日硬閘，不是程式缺口
 
-`app/phase9_gate.py` 定義 8 個注入式 Protocol，其中 3 個至今沒有任何具體實作：
+本檔原列五個程式缺口皆已補齊。下列事項刻意不能由本批自行完成：
 
-| 缺口 | Protocol | 為什麼那天需要它 |
+| 尚未解鎖事項 | 現況 | 為什麼不能在本批完成 |
 |---|---|---|
-| Owner 互動管道 | `PresenceChannel` | 執行日顯示挑戰、收 Owner 回應的那條路。§6.18 選 `OOB-C`＝Owner 於**不同本機使用者**的專用終端輸入，不得用模型所在終端或聊天室 |
-| 預檢驗證器 | `BooleanGateVerifier` | 十三步的 preflight 重驗；目前只有測試替身 |
-| gate/token 協調鎖 | `GateTokenAuditCoordinationLock` | 跨元件互斥；目前只有測試替身 |
-| token 產生與發放 | （無 Protocol） | §6.18 選 `T-B`＝另外授權的產生器隨機產生一次，Owner 看見後親自經 `OOB-C` 回送 |
-| **執行日進入點** | （無） | `Phase9Gate` 目前只在 `tests/` 內被建構，`app/` 零建構點。**沒有任何腳本能在執行日把它跑起來** |
+| 真實 token 產生與發放 | formal issuer 綁定 deny verifier；固定向量測試可走 | §6.20 明禁本批產生或發放任何真實 token；只可在 Owner 在場的執行日解鎖 |
+| 進入點真實模式 | 預設 rehearsal 可走完整十三步；`--real` 在建構 executor 前拒絕 | 尚無當次執行授權，§6.13 第 3 條硬閘不變 |
+| OOB-C 執行環境 | 讀取媒介、路徑與主體皆可注入 | Owner 必須在執行日準備不同本機使用者的專用終端並親自在場 |
 
 ## 3. 環境前置（與程式無關，Owner 自行準備）
 
