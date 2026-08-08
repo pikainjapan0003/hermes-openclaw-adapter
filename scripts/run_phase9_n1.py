@@ -40,6 +40,7 @@ from app.phase9_gate import (
     OwnerAuthorizedOpenClawVersionProbe,
     Phase9AuditAuthorizationRecord,
     Phase9Gate,
+    PresenceChannel,
 )
 from app.phase9_openclaw_executor import ProcessOutcome
 from app.phase9_preflight import (
@@ -54,7 +55,12 @@ from app.phase9_presence_channel import (
     PresenceRead,
     RegularFilePresenceReader,
 )
-from app.phase9_token import TokenPresentation, issue_token
+from app.phase9_token import TokenPresentation
+from app.phase9_token_issuer import (
+    OwnerPresenceProof,
+    Phase9TokenIssuer,
+    TokenIssuanceRequest,
+)
 
 
 REHEARSAL_NOW = datetime(2026, 8, 7, 10, 0, tzinfo=timezone.utc)
@@ -159,6 +165,65 @@ class _ControlledDryRunExecutor:
             stdout_digest=hashlib.sha256(b"controlled rehearsal output").hexdigest(),
             stderr_digest=hashlib.sha256(b"").hexdigest(),
         )
+
+
+class _ControlledTokenPresenceVerifier:
+    """Accept only the fixed rehearsal proof bound to the issuance request."""
+
+    def verify(
+        self,
+        proof: OwnerPresenceProof,
+        *,
+        request: TokenIssuanceRequest,
+    ) -> bool:
+        return (
+            proof.rehearsal_id == request.rehearsal_id == REHEARSAL_ID
+            and proof.approval_packet_hash == request.approval_packet_hash
+            and proof.action_hash == request.action_hash
+            and proof.observed_at <= request.now < proof.valid_until
+        )
+
+
+class _ControlledOwnerTokenEgress:
+    """Hold the fixed rehearsal value in memory until its single presentation."""
+
+    def __init__(self) -> None:
+        self._raw_value: str | None = None
+
+    def display_once(
+        self,
+        raw_value: str,
+        *,
+        mask_reference: str,
+        expires_at: datetime,
+    ) -> bool:
+        del mask_reference, expires_at
+        if self._raw_value is not None:
+            return False
+        self._raw_value = raw_value
+        return True
+
+    def take_for_rehearsal(self) -> str:
+        if self._raw_value is None:
+            raise RuntimeError("controlled token egress is empty")
+        raw_value = self._raw_value
+        self._raw_value = None
+        return raw_value
+
+
+class _FixedRehearsalRandom:
+    """Return the fixed HMAC key and token vectors; never call a CSPRNG."""
+
+    def __init__(self) -> None:
+        self._values = (b"k" * 32, b"d" * 32)
+        self.calls = 0
+
+    def __call__(self, size: int) -> bytes:
+        if size != 32 or self.calls >= len(self._values):
+            raise RuntimeError("fixed rehearsal random request is invalid")
+        value = self._values[self.calls]
+        self.calls += 1
+        return value
 
 
 class _StaticPresenceReader:
@@ -328,19 +393,37 @@ def run_dry_rehearsal(
             agent_id="main",
             model_id="safe-model",
         )
-        issued = issue_token(
+        token_request = TokenIssuanceRequest(
             approval_packet_id="packet-rehearsal-001",
             approval_packet_hash="a" * 64,
             evidence_bundle_hash="b" * 64,
             action_hash=action.digest(),
             rehearsal_id=REHEARSAL_ID,
             session_ends_at=REHEARSAL_NOW + timedelta(minutes=5),
-            session_hmac_key=b"k" * 32,
             key_id="rehearsal-key",
             now=REHEARSAL_NOW,
-            random_bytes=lambda size: b"d" * size,
+            validity_seconds=600,
         )
-        presented_value = issued.reveal_for_oob_once()
+        presence_proof = OwnerPresenceProof(
+            rehearsal_id=REHEARSAL_ID,
+            approval_packet_hash=token_request.approval_packet_hash,
+            action_hash=token_request.action_hash,
+            observed_at=REHEARSAL_NOW - timedelta(seconds=1),
+            valid_until=REHEARSAL_NOW + timedelta(minutes=1),
+            evidence_digest="c" * 64,
+        )
+        token_egress = _ControlledOwnerTokenEgress()
+        fixed_random = _FixedRehearsalRandom()
+        token_package = Phase9TokenIssuer(
+            rehearsal_id=REHEARSAL_ID,
+            presence_verifier=_ControlledTokenPresenceVerifier(),
+            owner_egress=token_egress,
+            random_bytes=fixed_random,
+        ).issue(token_request, presence_proof=presence_proof)
+        if fixed_random.calls != 2:
+            raise RuntimeError("fixed rehearsal token vectors were not consumed exactly once")
+        issued = token_package.issued_token
+        presented_value = token_egress.take_for_rehearsal()
         request = GateRequest(
             issued_token=issued,
             token_presentation=TokenPresentation.from_binding(issued.binding),
@@ -366,6 +449,7 @@ def run_dry_rehearsal(
         original_path = audit_writer.AUDIT_PATH
         clock = _SteppingClock()
         gate_principal = _runtime_gate_principal()
+        presence_channel: PresenceChannel
         if synthetic_presence:
             presence_channel = _ControlledPresenceChannel(
                 response_path=workspace / "synthetic-owner-response",

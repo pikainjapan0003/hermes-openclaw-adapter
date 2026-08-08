@@ -420,3 +420,35 @@ def test_entrypoint_is_not_wired_to_routes_main_or_worker() -> None:
         if isinstance(node, ast.Call)
     }
     assert observed.isdisjoint(forbidden_calls)
+
+
+def test_t6b_entrypoint_delegates_token_issuance_to_phase9_issuer() -> None:
+    entrypoint = REPO_ROOT / "scripts" / "run_phase9_n1.py"
+    tree = ast.parse(entrypoint.read_text(encoding="utf-8"))
+    imported_from_issuer = {
+        alias.name
+        for node in ast.walk(tree)
+        if isinstance(node, ast.ImportFrom)
+        and node.module == "app.phase9_token_issuer"
+        for alias in node.names
+    }
+    direct_issue_imports = {
+        alias.name
+        for node in ast.walk(tree)
+        if isinstance(node, ast.ImportFrom)
+        and node.module == "app.phase9_token"
+        for alias in node.names
+    }
+    direct_issue_calls = {
+        node.func.id
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+    }
+
+    assert {
+        "OwnerPresenceProof",
+        "Phase9TokenIssuer",
+        "TokenIssuanceRequest",
+    }.issubset(imported_from_issuer)
+    assert "issue_token" not in direct_issue_imports
+    assert "issue_token" not in direct_issue_calls
