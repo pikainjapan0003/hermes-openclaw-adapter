@@ -51,8 +51,51 @@ rehearsal issuer 接線（`7c66d05`），以及 Owner 唯讀自檢工具（`7a2b
 |---|---|---|
 | formal token 產生與一次性 Owner 發放 | `for_formal_runtime` 使用 deny verifier，且只有測試呼叫；固定向量 rehearsal 可走 | 當次 Owner 授權、真實在場驗證器，以及獲准的 formal runtime 建構／呼叫路徑 |
 | 進入點真實模式與 real executor | `--real` 在建構 executor 前拒絕；真實 executor 呼叫數保持零 | 當次執行授權，以及通過另案審查的 formal 接線；目前刻意未實作可執行分支 |
-| 真實跨 uid OOB 驗證 | regular-file reader 與唯讀自檢工具已存在；測試只做身份模擬 | Owner 必須在 `hermes-owner` 終端建立檔案後離開，再由 gate／lnovo 終端執行唯讀自檢；未做前不得宣稱端對端完成，Owner 在自己終端讀自己檔案不算證據 |
+| ~~真實跨 uid OOB 驗證~~ | **✅ 已於 2026-08-08 由 Owner 本人完成**，見 §2b | — |
 | 正式執行環境版本確認 | 版本常數已釘死；本批從未執行 OpenClaw 子命令 | 只能在獲授權的執行日探測並比對版本 |
+
+## 2b. 真實跨 uid OOB 驗證：已完成（2026-08-08）
+
+這是本專案第一次、也是唯一一次由 **Owner 本人**在真實檔案系統上完成的端對端驗證。
+自動化測試永遠做不到這件事——建立「由其他 uid 擁有的檔案」需要特權，
+故所有測試只能模擬身份。本節記錄的是實測，不是模擬。
+
+**環境前置**（Owner 於 2026-08-07～08 自行建立，AI 未代為執行）：
+
+| 項目 | 值 |
+|---|---|
+| Owner 專用帳號 | `hermes-owner`，uid 1001 |
+| OOB 目錄 | `/var/hermes-phase9`，`drwxr-xr-x hermes-owner hermes-owner` |
+| 專用群組 | `phase9-oob`，gid 1002 |
+| 群組成員 | 恰為 `lnovo`(1000) 與 `hermes-owner`(1001) 兩人 |
+
+**步驟一**：Owner 於 `wsl -u hermes-owner` 終端建立回應檔，結果：
+
+```text
+-rw-r----- 1 hermes-owner phase9-oob 0 Aug  8 20:47 /var/hermes-phase9/owner-response.json
+```
+
+**步驟二**：Owner 離開該終端，於 gate／`lnovo` 終端執行唯讀自檢，結果：
+
+```text
+✓ gate 讀到了，而且確認是 hermes-owner 寫的；專用群組與 0640 權限皆正確
+（exit code 0）
+```
+
+**此結果同時成立三件事**：檔案由 uid 1001 寫入；gate（uid 1000）讀取成功；
+gate 判定寫入者非自身，故不構成同端點。加上 `0640`，第三方無任何讀取權限。
+
+**此驗證不解鎖任何東西**。它只證明 OOB 管道的身份與可讀性接線正確。
+Phase 9 執行仍需 Owner 在場＋單次 token（`05` §6.13 第 3 條）；
+`05` §6.19／§6.20 皆非執行授權；真實 OpenClaw 呼叫數仍為 0。
+
+**背景**：此驗證在 2026-08-08 之前不可能成立。舊規則要求
+`S_IMODE & 0o077 == 0`，與「gate 必須能開啟該檔」互斥——`0600` 時 gate 讀不到，
+任何讓 gate 讀得到的權限則被規則拒絕。四份審查皆未發現，
+因為「不同 uid 寫的檔被接受」這條路從未在真實檔案系統上被執行過：
+既有測試若非用測試程序自建的同 uid 檔案（測拒絕路徑），
+就是以 monkeypatch 直接替換 principal（完全繞過檔案）。
+NIGHT-BATCH-33 改為專用群組模型後才成立。
 
 ## 3. 本次清單失準的教訓
 

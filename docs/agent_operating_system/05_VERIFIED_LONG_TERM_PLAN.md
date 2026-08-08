@@ -55,11 +55,7 @@
 
 ### 2.2 無法驗證（明確標註，禁止當事實引用）
 
-- Replit 登入後的 dashboard 內容（無 token 可用）。
-- Drive 資料夾內 PDF/docx 版教學報告（依標題判定與 deep-research-report 同內容，未開啟確認）。
-- v1.0-RC 各子階段在 Drive 報告中的 commit hash（報告未列；本機 closeout 文件有列，以本機為準）。
-- CrewAI / AG2 的 human-in-the-loop 細節（未第一手查證）。
-- OWASP Agentic Top 10 的完整十項內容（只驗證了發布頁，未讀全文 PDF）。
+- Replit 登入後的 dashboard 內容（無 token 可用）；Drive 資料夾內 PDF/docx 版教學報告（依標題判定與 deep-research-report 同內容，未開啟確認）；v1.0-RC 各子階段在 Drive 報告中的 commit hash（報告未列；本機 closeout 文件有列，以本機為準）；CrewAI / AG2 的 human-in-the-loop 細節（未第一手查證）；OWASP Agentic Top 10 的完整十項內容（只驗證了發布頁，未讀全文 PDF）。
 
 ### 2.3 開源與文獻參考（已驗證，含可借鑑/不可照抄）
 
@@ -287,7 +283,7 @@
 | 6 | **完成** | 2026-07-19 | 動態 route 盤點＋七條 POST 白名單＋注入 button 必紅＋approve 行為測試（`9f79657`）；queue-claim guard 二版於 NIGHT-BATCH-3 補強（已知風險：approve→queued 後若外部啟動 worker 可被 claim，execution gate 屬 Phase 9） |
 | 7 | **完成** | 2026-08-03 | 設計＝`07_AUDIT_WRITE_DESIGN.md`；Owner 逐字授權句見 §6.15；writer＝`app/audit_writer_local.py`（NB-23，append-only／拒 hardlink／realpath 鎖定／hash-chain 前置驗證）。**Owner 已於 2026-08-03 檢視實際 `data/audit_dev.jsonl` 三筆內容後簽核**（`research/PHASE7_OWNER_ACCEPTANCE.md`）。簽核只關閉 Phase 7，**不解鎖 Phase 9**：token schema、live token、execution gate、Owner 在場、fresh token、runtime 授權六項仍 fail-closed |
 | 8 | **規劃完成** | 2026-07-19 | docs 方案＋OWASP 對照（`3edbc0b`）；離線 projection contract（`51f657f`，超包，Owner 2026-07-19 追認）；遠端接線／remote API 仍未授權 |
-| 9–11 | 9 實作中／10–11 未開始 | 2026-08-08 | 本列為表格壓縮。Phase 9 自 2026-08-04 起分批實作（NB-25～33；11 個 `app/phase9_*.py` 模組、327 項 Phase 9 測試全綠；NIGHT-BATCH-33 起點 master `547f3a2`）；`JsonPresenceChannel`／`FrozenGateRequestVerifier`／`BoundedGateTokenAuditCoordinationLock` 與 token issuer、獨立 rehearsal 入口均已具體接線。**尚未完成**：專用 OOB 群組尚未由 Owner 建立，Owner 建檔→gate 讀取的真實跨 uid 證明仍待做；`for_formal_runtime` 只有測試呼叫，`--real` 與 real executor 仍無允許的呼叫路徑——逐項盤點見 `research/PHASE9_IMPLEMENTATION_INVENTORY_20260807.md`。**實作進度不解鎖執行**：Phase 9 仍是 v1.0 唯一剩餘關卡，仍需 Owner 同步在場＋單次 token（§6.13 第 3 條）；§6.19／§6.20 給的是稽核寫入與執行器實作授權，**皆非執行授權**；Phase 7 簽核不解鎖它。真實 OpenClaw 呼叫數仍為 0。Phase 10 的 scope 研究與 Phase 11 的健康報告都不構成實作解鎖 |
+| 9–11 | 9 實作中／10–11 未開始 | 2026-08-08 | 本列為表格壓縮。Phase 9 自 2026-08-04 起分批實作（NB-25～33；11 個 `app/phase9_*.py` 模組、327 項 Phase 9 測試全綠；NIGHT-BATCH-33 起點 master `547f3a2`）；`JsonPresenceChannel`／`FrozenGateRequestVerifier`／`BoundedGateTokenAuditCoordinationLock` 與 token issuer、獨立 rehearsal 入口均已具體接線。**環境前置已完成**：Owner 於 2026-08-08 建立專用群組 `phase9-oob`（成員恰為 gate 與 Owner 兩人），並親自完成 Owner 建檔→gate 讀取的真實跨 uid 驗證（實測輸出見盤點檔 §2b；此為專案首次真實端對端驗證，測試無法取代）。**仍未完成**：`for_formal_runtime` 只有測試呼叫，`--real` 與 real executor 仍無允許的呼叫路徑——逐項盤點見 `research/PHASE9_IMPLEMENTATION_INVENTORY_20260807.md`。**實作進度不解鎖執行**：Phase 9 仍是 v1.0 唯一剩餘關卡，仍需 Owner 同步在場＋單次 token（§6.13 第 3 條）；§6.19／§6.20 給的是稽核寫入與執行器實作授權，**皆非執行授權**；Phase 7 簽核不解鎖它。真實 OpenClaw 呼叫數仍為 0。Phase 10 的 scope 研究與 Phase 11 的健康報告都不構成實作解鎖 |
 
 ---
 
@@ -490,6 +486,7 @@ Owner 回覆「**接受**」，並逐字裁決建議表未列的一欄：
 
 1. **實作授權已取得**（範圍限本項）：允許實作真實 `OwnerAuthorizedOpenClawExecutor` 與 `OwnerAuthorizedOpenClawVersionProbe`，並解除 `app/phase9_gate.py` 對 `executor.test_double is not True` 的無條件拒絕，使 gate 在結構上能接受真實執行器（Owner 就「A＝執行日當天才解除／B＝現在給實作授權」明示選 B）。**解除的前提補償**（須與解除同批完成，未完成即不得解除）：必須以測試證明無 Owner 在場、無有效單次 token、token 已作廢、授權紀錄過期或 scope 不符時，**即使注入真實執行器仍一律拒絕且 executor 呼叫數為 0**。**同日追加**：Owner 就「甲＝現在給 token 產生器實作授權／乙＝之後再說」明示選甲，故 §6.18 所稱「另一張精確授權」就 token 產生器與發放路徑之**實作**已取得——僅限撰寫程式路徑，**不含產生任何真實 token**。
 2. **不解鎖**：實際呼叫 OpenClaw；**產生或發放任何真實 token**（僅得於 Owner 在場的執行日發生）；執行時機自決；白名單動作擴大（仍限無害查詢型、零寫入）；失敗自動重試；connector／Replit／任何遠端接線；`docs/schemas/` 變更。§6.13 第 3 條硬閘（Phase 9 需 Owner 在場＋單次 token）**維持不變**；§6.15、§6.19 與本項**互不沿用**。**實作期間零真實呼叫**：實作批次及其審查全程不得執行任何 openclaw 子命令（含 `--version`／`--help`），所有驗收以測試替身完成；真實呼叫僅得於 Owner 在場的執行日發生。
+3. **執行日路徑實作授權（2026-08-08 Owner 拍板，L0）**：Owner 就「甲＝現在給執行授權並開解鎖批次／乙＝先收工」明示選甲。授權範圍**僅限**：把 `ExecutionDayAuthorizationRequiredVerifier` 的恆拒與進入點對 `--real` 的無條件拒絕，替換為**受條件約束的真實驗證**（Owner 在場、有效未作廢的單次 token、稽核授權有效、preflight 未漂移、版本相符，全數通過才放行一次）。**這不是「准許呼叫 OpenClaw」**——呼叫仍只在當日全部條件通過時發生。**解除的前提補償**（須與解除同批完成，未完成即不得解除）：必須以測試證明在無 Owner 在場／無有效單次 token／token 已作廢／授權過期／scope 不符／preflight 漂移／版本不符之下，**即使鎖已拆除仍一律拒絕且 executor 與 subprocess 呼叫數皆為 0**。解除後被拒絕的狀態集合**只能少掉唯一一種**：全部條件皆通過的那一發。**仍不解鎖**：§6.20 第 2 條所列各項一律不變，且解鎖批次本身及其審查全程仍**零真實呼叫、零真實 token**；`rejection_freeze_threshold = 1`（首次不符即凍結整場）與「失敗不得重試」維持不變。
 
 ### 6.14 `mock_e2e_v0_7` 保留並凍結（2026-07-20 Fable 5 裁決，Owner 可翻案）
 
