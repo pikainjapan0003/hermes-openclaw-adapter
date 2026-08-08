@@ -481,20 +481,52 @@ def test_t6b_entrypoint_delegates_token_issuance_to_phase9_issuer() -> None:
 
 
 def test_t8_owner_preflight_accepts_distinct_expected_writer_under_simulation() -> None:
-    """這是模擬，非真實跨 uid 驗證。"""
+    """這是 gate 端模擬，非真實跨 uid 驗證。"""
 
     output = io.StringIO()
 
     status = wiring_main(
         (),
         output=output,
-        current_uid=lambda: 1001,
+        current_uid=lambda: 1000,
         owner_uid_lookup=lambda _name: 1001,
-        observer=lambda _path: OobFileObservation(writer_uid=1001),
+        observer=lambda _path: OobFileObservation(
+            writer_uid=1001,
+            group_gid=77,
+            file_mode=0o100640,
+        ),
+        expected_group_name="test-phase9-oob",
+        expected_group_gid=77,
+        group_member_resolver=lambda _name, _gid: frozenset({1000, 1001}),
     )
 
     assert status == 0
-    assert "✓ 讀到了，而且確認是 hermes-owner 寫的" in output.getvalue()
+    assert "✓ gate 讀到了，而且確認是 hermes-owner 寫的" in output.getvalue()
+
+
+def test_t8_owner_side_preflight_stops_before_self_observation() -> None:
+    """Owner creates the file; the decisive read must happen at the gate."""
+
+    output = io.StringIO()
+
+    def forbidden_observer(_path: Path) -> OobFileObservation:
+        raise AssertionError("owner-side self-observation must not run")
+
+    status = wiring_main(
+        (),
+        output=output,
+        current_uid=lambda: 1001,
+        owner_uid_lookup=lambda _name: 1001,
+        observer=forbidden_observer,
+        expected_group_name="test-phase9-oob",
+        expected_group_gid=77,
+    )
+
+    rendered = output.getvalue()
+    assert status == 1
+    assert "你正在 hermes-owner 視窗" in rendered
+    assert "證明不了 gate 讀不讀得到" in rendered
+    assert "✓" not in rendered
 
 
 def test_t8_owner_preflight_rejects_same_gate_principal_under_simulation() -> None:
@@ -507,11 +539,17 @@ def test_t8_owner_preflight_rejects_same_gate_principal_under_simulation() -> No
         output=output,
         current_uid=lambda: 1000,
         owner_uid_lookup=lambda _name: 1001,
-        observer=lambda _path: OobFileObservation(writer_uid=1000),
+        observer=lambda _path: OobFileObservation(
+            writer_uid=1000,
+            group_gid=77,
+            file_mode=0o100640,
+        ),
+        expected_group_name="test-phase9-oob",
+        expected_group_gid=77,
+        group_member_resolver=lambda _name, _gid: frozenset({1000, 1001}),
     )
 
     assert status == 1
-    assert "目前是 lnovo（uid 1000）" in output.getvalue()
     assert "寫入者是 lnovo → 同端點" in output.getvalue()
 
 
@@ -526,9 +564,12 @@ def test_t8_owner_preflight_reports_missing_file_under_simulation() -> None:
     status = wiring_main(
         (),
         output=output,
-        current_uid=lambda: 1001,
+        current_uid=lambda: 1000,
         owner_uid_lookup=lambda _name: 1001,
         observer=missing,
+        expected_group_name="test-phase9-oob",
+        expected_group_gid=77,
+        group_member_resolver=lambda _name, _gid: frozenset({1000, 1001}),
     )
 
     assert status == 1
@@ -547,9 +588,12 @@ def test_t8_owner_preflight_reports_unreadable_file_under_simulation() -> None:
     status = wiring_main(
         (),
         output=output,
-        current_uid=lambda: 1001,
+        current_uid=lambda: 1000,
         owner_uid_lookup=lambda _name: 1001,
         observer=unreadable,
+        expected_group_name="test-phase9-oob",
+        expected_group_gid=77,
+        group_member_resolver=lambda _name, _gid: frozenset({1000, 1001}),
     )
 
     assert status == 1
@@ -571,9 +615,12 @@ def test_t8_owner_preflight_rejects_windows_mount_before_observation() -> None:
     status = wiring_main(
         ("/mnt/c/phase9/owner-response.json",),
         output=output,
-        current_uid=lambda: 1001,
+        current_uid=lambda: 1000,
         owner_uid_lookup=lambda _name: 1001,
         observer=forbidden_observer,
+        expected_group_name="test-phase9-oob",
+        expected_group_gid=77,
+        group_member_resolver=lambda _name, _gid: frozenset({1000, 1001}),
     )
 
     assert status == 1

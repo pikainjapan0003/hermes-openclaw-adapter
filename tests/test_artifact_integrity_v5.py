@@ -14,7 +14,7 @@ pytestmark = pytest.mark.contract
 
 EXPECTED_V5_PATH_COUNT = 281
 EXPECTED_V5_MANIFEST_SHA256 = (
-    "524d3683db48b0dbf87cc0678ba3a8006aae990d606c0fb753aa3048db788455"
+    "e96eeb5870b1ae77b94d0fb966e46e673092585be0a6c7398e69355ba5d3f71f"
 )
 
 
