@@ -46,5 +46,6 @@ files = [
   "app/phase9_presence_channel.py",
   "app/phase9_preflight.py",
   "app/phase9_token_issuer.py",
+  "scripts/check_phase9_oob_wiring.py",
   "scripts/run_phase9_n1.py",
 ]

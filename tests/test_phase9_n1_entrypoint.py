@@ -16,6 +16,7 @@ from typing import Iterator
 
 import pytest
 
+from scripts.check_phase9_oob_wiring import OobFileObservation, main as wiring_main
 from app.phase9_gate import FreshChallenge
 from app.phase9_presence import compute_owner_presence
 from app.phase9_presence_channel import (
@@ -452,3 +453,104 @@ def test_t6b_entrypoint_delegates_token_issuance_to_phase9_issuer() -> None:
     }.issubset(imported_from_issuer)
     assert "issue_token" not in direct_issue_imports
     assert "issue_token" not in direct_issue_calls
+
+
+def test_t8_owner_preflight_accepts_distinct_expected_writer_under_simulation() -> None:
+    """這是模擬，非真實跨 uid 驗證。"""
+
+    output = io.StringIO()
+
+    status = wiring_main(
+        (),
+        output=output,
+        current_uid=lambda: 1001,
+        owner_uid_lookup=lambda _name: 1001,
+        observer=lambda _path: OobFileObservation(writer_uid=1001),
+    )
+
+    assert status == 0
+    assert "✓ 讀到了，而且確認是 hermes-owner 寫的" in output.getvalue()
+
+
+def test_t8_owner_preflight_rejects_same_gate_principal_under_simulation() -> None:
+    """這是模擬，非真實跨 uid 驗證。"""
+
+    output = io.StringIO()
+
+    status = wiring_main(
+        (),
+        output=output,
+        current_uid=lambda: 1000,
+        owner_uid_lookup=lambda _name: 1001,
+        observer=lambda _path: OobFileObservation(writer_uid=1000),
+    )
+
+    assert status == 1
+    assert "目前是 lnovo（uid 1000）" in output.getvalue()
+    assert "寫入者是 lnovo → 同端點" in output.getvalue()
+
+
+def test_t8_owner_preflight_reports_missing_file_under_simulation() -> None:
+    """這是模擬，非真實跨 uid 驗證。"""
+
+    output = io.StringIO()
+
+    def missing(_path: Path) -> OobFileObservation:
+        raise FileNotFoundError
+
+    status = wiring_main(
+        (),
+        output=output,
+        current_uid=lambda: 1001,
+        owner_uid_lookup=lambda _name: 1001,
+        observer=missing,
+    )
+
+    assert status == 1
+    assert "✗ 找不到" in output.getvalue()
+    assert "Traceback" not in output.getvalue()
+
+
+def test_t8_owner_preflight_reports_unreadable_file_under_simulation() -> None:
+    """這是模擬，非真實跨 uid 驗證。"""
+
+    output = io.StringIO()
+
+    def unreadable(_path: Path) -> OobFileObservation:
+        raise PermissionError
+
+    status = wiring_main(
+        (),
+        output=output,
+        current_uid=lambda: 1001,
+        owner_uid_lookup=lambda _name: 1001,
+        observer=unreadable,
+    )
+
+    assert status == 1
+    assert "✗ 無法安全讀取" in output.getvalue()
+    assert "Traceback" not in output.getvalue()
+
+
+def test_t8_owner_preflight_rejects_windows_mount_before_observation() -> None:
+    """這是模擬，非真實跨 uid 驗證。"""
+
+    output = io.StringIO()
+    observer_calls = 0
+
+    def forbidden_observer(_path: Path) -> OobFileObservation:
+        nonlocal observer_calls
+        observer_calls += 1
+        raise AssertionError("/mnt/c must reject before observation")
+
+    status = wiring_main(
+        ("/mnt/c/phase9/owner-response.json",),
+        output=output,
+        current_uid=lambda: 1001,
+        owner_uid_lookup=lambda _name: 1001,
+        observer=forbidden_observer,
+    )
+
+    assert status == 1
+    assert observer_calls == 0
+    assert "不可放在 /mnt/c" in output.getvalue()
