@@ -105,7 +105,7 @@ def check_oob_wiring(
     except ValueError:
         return OobWiringResult(
             False,
-            "✗ OOB 檔案不可放在 /mnt/c；請使用 /var/hermes-phase9。",
+            "✗ OOB 檔案不在可驗證的 WSL 原生 ext4 路徑；請使用 /var/hermes-phase9。",
         )
     try:
         observation = observer(path)

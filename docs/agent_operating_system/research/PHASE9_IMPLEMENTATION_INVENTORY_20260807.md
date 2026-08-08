@@ -39,8 +39,8 @@ rehearsal issuer 接線（`7c66d05`），以及 Owner 唯讀自檢工具（`7a2b
 | 凍結預檢驗證器＋有界協調鎖 | `app/phase9_preflight.py` | `2e491df`（NIGHT-BATCH-31） | N=1 進入點建構後注入 `Phase9Gate`，由 gate 呼叫。已接線於 rehearsal。 |
 | 執行日 N=1 進入點（真實模式仍鎖） | `scripts/run_phase9_n1.py` | `6598eba`；`69727a9`、`d237194`、`7c66d05` 更新 | 由 Owner 手動 CLI 呼叫；未由 `app/main.py` 或 `app/worker.py` 呼叫。獨立入口已接線，正式 real 分支未接線。 |
 | runner 必填注入＋演練 process instrumentation | `app/phase9_gate.py`＋既有 rehearsal | `7061a41`（NIGHT-BATCH-31） | N=1 進入點注入受控 runner，gate 呼叫；真實 runner 無建構者。rehearsal 已接線，formal 未接線。 |
-| token 產生與 OOB 發放邊界 | `app/phase9_token_issuer.py` | NIGHT-BATCH-31；`7c66d05` 接線 | N=1 進入點以固定向量建構並呼叫 issuer；`for_formal_runtime` 沒有呼叫者。rehearsal 已接線，formal 未接線。 |
-| Owner OOB 接線自檢 | `scripts/check_phase9_oob_wiring.py` | `7a2b596`（NIGHT-BATCH-32） | 由 Owner 手動 CLI 呼叫；只讀 regular file identity。工具已接線，真實 Owner 執行結果尚未完成。 |
+| token 產生與 OOB 發放邊界 | `app/phase9_token_issuer.py` | NIGHT-BATCH-31；`7c66d05` 接線 | N=1 進入點以固定向量建構並呼叫 issuer；`for_formal_runtime` 僅由 `tests/test_phase9_token_issuer.py` 建構／呼叫。rehearsal 已接線，formal 只有測試接線、runtime 未接線。 |
+| Owner OOB 接線自檢 | `scripts/check_phase9_oob_wiring.py` | `7a2b596`（NIGHT-BATCH-32）；NIGHT-BATCH-33 修正兩步流程 | Owner 先在 `hermes-owner` 終端建立檔案並離開，再由 gate／lnovo 終端手動呼叫；工具唯讀核對 writer uid、專用群組與精確 0640 權限。真實 Owner→gate 執行結果尚未完成。 |
 
 ## 2. 經接線核對後仍未完成
 
@@ -49,9 +49,9 @@ rehearsal issuer 接線（`7c66d05`），以及 Owner 唯讀自檢工具（`7a2b
 
 | 尚未完成事項 | 已核對現況 | 真正缺少什麼 |
 |---|---|---|
-| formal token 產生與一次性 Owner 發放 | `for_formal_runtime` 使用 deny verifier，且沒有允許的呼叫者；固定向量 rehearsal 可走 | 當次 Owner 授權、真實在場驗證器，以及獲准的 formal 建構／呼叫路徑 |
+| formal token 產生與一次性 Owner 發放 | `for_formal_runtime` 使用 deny verifier，且只有測試呼叫；固定向量 rehearsal 可走 | 當次 Owner 授權、真實在場驗證器，以及獲准的 formal runtime 建構／呼叫路徑 |
 | 進入點真實模式與 real executor | `--real` 在建構 executor 前拒絕；真實 executor 呼叫數保持零 | 當次執行授權，以及通過另案審查的 formal 接線；目前刻意未實作可執行分支 |
-| 真實跨 uid OOB 驗證 | regular-file reader 與唯讀自檢工具已存在；測試只做身份模擬 | Owner 必須在 `hermes-owner` 視窗建立檔案並親自跑自檢；未做前不得宣稱端對端完成 |
+| 真實跨 uid OOB 驗證 | regular-file reader 與唯讀自檢工具已存在；測試只做身份模擬 | Owner 必須在 `hermes-owner` 終端建立檔案後離開，再由 gate／lnovo 終端執行唯讀自檢；未做前不得宣稱端對端完成，Owner 在自己終端讀自己檔案不算證據 |
 | 正式執行環境版本確認 | 版本常數已釘死；本批從未執行 OpenClaw 子命令 | 只能在獲授權的執行日探測並比對版本 |
 
 ## 3. 本次清單失準的教訓

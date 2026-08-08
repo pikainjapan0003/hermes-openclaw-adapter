@@ -26,7 +26,13 @@ from app.phase9_presence_channel import (
     PresenceEndpoint,
     RegularFilePresenceReader,
 )
-from scripts.run_phase9_n1 import _runtime_gate_principal, main, run_dry_rehearsal
+from scripts.run_phase9_n1 import (
+    _MountFilesystem,
+    _runtime_gate_principal,
+    _validated_oob_directory,
+    main,
+    run_dry_rehearsal,
+)
 
 
 pytestmark = pytest.mark.contract
@@ -182,7 +188,7 @@ def test_t2_different_owner_principal_can_authenticate_only_under_simulation(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """T2 simulates st_uid only; real cross-uid isolation is deferred to C4."""
+    """T2 is simulation only; C4 exists, but Owner cross-uid proof is pending."""
 
     challenge = _presence_challenge()
     path = tmp_path / "owner-response.json"
@@ -319,7 +325,7 @@ def test_t4_synthetic_presence_and_real_oob_directory_are_mutually_exclusive(
     assert "[1/13]" not in output.getvalue()
 
 
-def test_windows_mounted_oob_directory_is_rejected_before_rehearsal() -> None:
+def test_non_native_oob_directory_is_rejected_before_rehearsal() -> None:
     output = io.StringIO()
 
     def forbidden_workspace() -> AbstractContextManager[str]:
@@ -339,8 +345,60 @@ def test_windows_mounted_oob_directory_is_rejected_before_rehearsal() -> None:
     )
 
     assert status == 2
-    assert "不可位於 /mnt/c" in output.getvalue()
+    assert "不是可驗證的 WSL 原生 ext4 路徑" in output.getvalue()
     assert "/var/hermes-phase9" in output.getvalue()
+
+
+@pytest.mark.parametrize(
+    "directory",
+    (
+        Path("//mnt/c/phase9-oob"),
+        Path("/mnt/C/phase9-oob"),
+        Path("/mnt/d/phase9-oob"),
+        Path("/mnt/wsl/phase9-oob"),
+    ),
+)
+def test_mount_guard_rejects_wsl_shared_and_drive_namespaces(
+    directory: Path,
+) -> None:
+    with pytest.raises(ValueError, match="WSL native ext4"):
+        _validated_oob_directory(directory)
+
+
+def test_mount_guard_resolves_alias_before_namespace_decision(tmp_path: Path) -> None:
+    alias = tmp_path / "windows-drive-alias"
+    alias.symlink_to("/mnt/c", target_is_directory=True)
+
+    with pytest.raises(ValueError, match="WSL native ext4"):
+        _validated_oob_directory(alias / "phase9-oob")
+
+
+def test_mount_guard_rejects_unresolvable_symlink_loop(tmp_path: Path) -> None:
+    first = tmp_path / "first"
+    second = tmp_path / "second"
+    first.symlink_to(second)
+    second.symlink_to(first)
+
+    with pytest.raises(ValueError, match="cannot verify OOB directory"):
+        _validated_oob_directory(first)
+
+
+def test_mount_guard_accepts_actual_wsl_native_ext4_directory(tmp_path: Path) -> None:
+    assert _validated_oob_directory(tmp_path) == tmp_path.resolve()
+
+
+def test_mount_guard_uses_backing_filesystem_type_not_string_only(
+    tmp_path: Path,
+) -> None:
+    drvfs = _MountFilesystem(
+        mount_point=tmp_path,
+        filesystem_type="9p",
+        mount_source="drvfs",
+        super_options=frozenset({"aname=drvfs;path=C:\\"}),
+    )
+
+    with pytest.raises(ValueError, match="WSL native ext4"):
+        _validated_oob_directory(tmp_path, filesystem_resolver=lambda _path: drvfs)
 
 
 @pytest.mark.parametrize(
@@ -625,4 +683,4 @@ def test_t8_owner_preflight_rejects_windows_mount_before_observation() -> None:
 
     assert status == 1
     assert observer_calls == 0
-    assert "不可放在 /mnt/c" in output.getvalue()
+    assert "不在可驗證的 WSL 原生 ext4 路徑" in output.getvalue()

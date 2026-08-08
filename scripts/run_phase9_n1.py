@@ -304,13 +304,105 @@ def _runtime_gate_principal() -> str:
     return f"uid:{os.getuid()}"
 
 
-def _validated_oob_directory(value: Path) -> Path:
-    directory = Path(value)
-    normalized = directory.as_posix().rstrip("/") or "/"
-    # Execution-day OOB must live on WSL's native filesystem. DrvFS under
-    # /mnt/c reports Windows files as the gate uid, defeating st_uid isolation.
-    if normalized == "/mnt/c" or normalized.startswith("/mnt/c/"):
-        raise ValueError("OOB directory must use WSL native storage, not /mnt/c")
+@dataclass(frozen=True)
+class _MountFilesystem:
+    """Non-payload mount identity selected from Linux mountinfo."""
+
+    mount_point: Path
+    filesystem_type: str
+    mount_source: str
+    super_options: frozenset[str]
+
+    @property
+    def is_drvfs(self) -> bool:
+        return self.filesystem_type.casefold() == "drvfs" or (
+            self.filesystem_type.casefold() == "9p"
+            and (
+                self.mount_source.casefold() == "drvfs"
+                or any(
+                    option.casefold().startswith("aname=drvfs")
+                    for option in self.super_options
+                )
+            )
+        )
+
+
+MountFilesystemResolver = Callable[[Path], _MountFilesystem]
+
+
+def _decode_mountinfo_field(value: str) -> str:
+    decoded = value
+    for encoded, plain in (
+        (r"\040", " "),
+        (r"\011", "\t"),
+        (r"\012", "\n"),
+        (r"\134", "\\"),
+    ):
+        decoded = decoded.replace(encoded, plain)
+    return decoded
+
+
+def _mount_filesystem_for_path(path: Path) -> _MountFilesystem:
+    """Resolve the longest mountpoint ancestor using Linux mountinfo."""
+
+    try:
+        lines = Path("/proc/self/mountinfo").read_text(encoding="utf-8").splitlines()
+    except OSError as exc:
+        raise ValueError("cannot verify OOB filesystem") from exc
+    selected: _MountFilesystem | None = None
+    for line in lines:
+        fields = line.split()
+        try:
+            separator = fields.index("-")
+            mount_point = Path(_decode_mountinfo_field(fields[4])).resolve(
+                strict=False
+            )
+            candidate = _MountFilesystem(
+                mount_point=mount_point,
+                filesystem_type=fields[separator + 1],
+                mount_source=_decode_mountinfo_field(fields[separator + 2]),
+                super_options=frozenset(fields[separator + 3].split(",")),
+            )
+        except (IndexError, OSError, ValueError):
+            continue
+        if path == mount_point or mount_point in path.parents:
+            if selected is None or len(mount_point.parts) > len(
+                selected.mount_point.parts
+            ):
+                selected = candidate
+    if selected is None:
+        raise ValueError("cannot verify OOB filesystem")
+    return selected
+
+
+def _is_reserved_wsl_mount_namespace(path: Path) -> bool:
+    parts = path.parts
+    if len(parts) < 3 or parts[1].casefold() != "mnt":
+        return False
+    mount_name = parts[2].casefold()
+    return (len(mount_name) == 1 and mount_name.isalpha()) or mount_name in {
+        "wsl",
+        "wslg",
+    }
+
+
+def _validated_oob_directory(
+    value: Path,
+    *,
+    filesystem_resolver: MountFilesystemResolver = _mount_filesystem_for_path,
+) -> Path:
+    try:
+        directory = Path(value).resolve(strict=False)
+    except (OSError, RuntimeError) as exc:
+        raise ValueError("cannot verify OOB directory") from exc
+    # Resolve aliases before checking the namespace, then verify the backing
+    # filesystem. DrvFS reports Windows entries as the gate uid and therefore
+    # cannot prove the Owner/gate principal separation.
+    if _is_reserved_wsl_mount_namespace(directory):
+        raise ValueError("OOB directory must use WSL native ext4 storage")
+    filesystem = filesystem_resolver(directory)
+    if filesystem.is_drvfs or filesystem.filesystem_type.casefold() != "ext4":
+        raise ValueError("OOB directory must use WSL native ext4 storage")
     return directory
 
 
@@ -614,8 +706,8 @@ def main(
             oob_directory = _validated_oob_directory(oob_directory)
         except ValueError:
             output.write(
-                "停止：OOB 目錄不可位於 /mnt/c；請使用 WSL 原生路徑，例如 "
-                "/var/hermes-phase9。\n"
+                "停止：OOB 目錄不是可驗證的 WSL 原生 ext4 路徑；請使用例如 "
+                "/var/hermes-phase9 的位置。\n"
             )
             return 2
     try:
