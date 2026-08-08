@@ -646,3 +646,25 @@ findings 僅存在於審查報告、未經登記，由 Opus 5 於合併後補登
 | **entry-state check-then-act 的理論競態**（`app/phase9_gate.py` 第 817 行附近）：多執行緒場景下理論上可競態。**非本批 diff 引入**（既存碼），且 `Phase9Gate` 在 `app/` 內零建構點故不可達 | 第二審 | 真正接線時一併處理；本批不構成阻擋 |
 
 **Opus 5 獨立複核（2026-08-07）**：已自行核對 master＝origin＝`bbfc013`、四個 commit 無額外自撰 commit、`10 files changed, 1108 insertions(+), 21 deletions(-)`、`data/audit_dev.jsonl` SHA-256 未變、`data/phase9_burn.jsonl` 不存在、四處紅線檔零 diff、`app/phase9_gate.py` 無 `threading`／`subprocess` import。
+
+## NIGHT-BATCH-32 補貨 — 2026-08-08（雙審 findings 登記，最重一項排 NB-33）
+
+NB-32 共五包（真實 principal／真實 OOB 讀取／token issuer 接線／Owner 自檢工具／
+清單修正），前兩包由 ChatGPT 於獨立 Windows clone 施工，後三包由 Codex 於 WSL 正牌
+repo 施工。雙審結論：主審 Fable 5 = accepted（自報 R-13 未完成）、
+第二審（fresh-context, Opus）= conditional pass，**零阻擋**，已 ff-merge 至 `010e182`。
+以下為登記事項；**不構成任何後續實作或執行授權**。
+
+| 條目 | 來源 | 邊界 |
+|---|---|---|
+| **自檢工具的執行視窗指示與其檢查的性質相反，且照做時根本執行不了**：`scripts/check_phase9_oob_wiring.py` 恆印「請在 hermes-owner 視窗執行此檢查」，僅在 `current_uid() == GATE_UID` 時才補印「這只是樣張」。但該工具要證明的是「gate（uid 1000）讀得到 Owner（uid 1001）寫的檔，且認得出不是自己寫的」——**此性質只有坐在 uid 1000 才驗得到**。照指示在 hermes-owner 視窗讀自己寫的檔，會得到無警語的成功訊息與 return code 0，實際上不證明任何事。Opus 5 另實測：`/home/lnovo` 權限為 `drwxr-x---`，`hermes-owner` 不在該群組，**連進入 repo 目錄執行該腳本都做不到**，故該指示不僅方向相反且無法遵循 | 第二審＋Opus 5 實測 | **排 NB-33，執行日前必須修**：警語應改掛在 uid 1001 側，並明確標示 uid 1000 那次才是決定性的；同時修正「在哪個視窗跑」的敘述。屬 C4 交付物本身的正確性缺陷，非新功能 |
+| **自檢工具唯一碰檔案系統的函式零測試覆蓋**：`scripts/check_phase9_oob_wiring.py` 的 `_observe_regular_file` 與 `_principal_name` 在五個模擬測試中一律被注入替身，故 symlink 拒絕、`S_ISREG` 判定、`pwd` 查詢皆無回歸保護。第二審手動補驗行為正確（symlink 拒、root 所有拒、同 uid 拒） | 第二審 | 補真實檔案系統邊界測試；tests only |
+| **preflight 與實際 gate 的接受條件不一致**：自檢工具只回 `writer_uid`，不檢查權限位；但 `RegularFilePresenceReader` 要求 `stat.S_IMODE & 0o077 == 0`，亦不檢查 payload 是否為合法 JSON。故工具給綠燈後，執行日 gate 仍可能以「owner presence response is unavailable」中止。方向為 fail-closed，非 fail-open | 第二審 | 讓 preflight 檢查條件與 gate 對齊；與上一條可同批 |
+| **`_validated_oob_directory` 用字串比對，可繞過**：`scripts/run_phase9_n1.py` 以 `as_posix()` 字串前綴判定 `/mnt/c`。第二審實測 `//mnt/c/...`（POSIX 保留雙斜線、`as_posix()` 不正規化）、`/mnt/C/...`、`/mnt/d/...`、`/mnt/wsl/...` 皆被接受。預設 automount（uid 1000）下仍 fail-closed，但若 `/etc/wsl.conf` 將 automount uid 設為 1001，會變成 fail-open 的假綠燈 | 第二審 | 改以 `Path.resolve()` 加掛載檔案系統型別判定；非預設設定才觸發 |
+| `PHASE9_IMPLEMENTATION_INVENTORY` 稱 `for_formal_runtime` 沒有呼叫者，實際 `tests/test_phase9_token_issuer.py` 有測試呼叫者；同檔他處慣例是標「測試接線」。實質結論（formal 未接線）正確 | 第二審 | 措辭精確化 only |
+| `tests/test_phase9_n1_entrypoint.py` 中 T2 的 docstring 稱 real cross-uid isolation 延後至 C4，但 C4 已落地且交付的是工具與模擬測試，**並未**完成真實跨 uid 驗證。該句現在會誤導 | 第二審 | 措辭修正 only |
+| `scripts/check_phase9_oob_wiring.py` 的 `GATE_UID` 為硬編 1000，而進入點用的是 runtime `os.getuid()`；兩處對 gate 身分的認定來源不同 | 第二審 | 統一為 runtime 取得 |
+| `_observe_regular_file` 的 `lstat` → `open` 之間存在理論 TOCTOU（`writer_uid` 取自 open 前的 lstat 而非 open 後的 fstat）。本機 Owner 自用工具，影響極小 | 主審＋第二審 | 觀察 only |
+| research 目錄下的文件不在任何 artifact integrity 清單內（v5 只收 `scripts/` 與 `docs/schemas/`，v6 只收 `agent_operating_system/*.md`），故其內容無防竄改釘死 | 第二審 | 觀察 only；擴大涵蓋範圍屬另案 |
+
+**Opus 5 獨立複核（2026-08-08）**：已自行核對 master 與 origin 於合併前皆為 `797a378`、本輪三筆 commit 與七個檔案範圍相符、`app/` 自 `797a378` 起零 diff、`docs/schemas/` 零 diff、`data/audit_dev.jsonl` SHA-256 未變、`data/phase9_burn.jsonl` 不存在、無 merge commit、未 push。另**更正第二審一項事實錯誤**：該報告稱 `/var/hermes-phase9` 尚不存在，實測該目錄存在且為 `drwxr-xr-x hermes-owner hermes-owner`，uid 1000 可讀取；其餘 findings 均經證據支持。
