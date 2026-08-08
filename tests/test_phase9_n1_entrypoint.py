@@ -20,6 +20,7 @@ from scripts.check_phase9_oob_wiring import OobFileObservation, main as wiring_m
 from app.phase9_gate import FreshChallenge
 from app.phase9_presence import compute_owner_presence
 from app.phase9_presence_channel import (
+    DedicatedGroupPolicy,
     JsonPresenceChannel,
     PresenceChannelError,
     PresenceEndpoint,
@@ -93,7 +94,21 @@ def _real_presence_channel(
     )
     return JsonPresenceChannel(
         endpoint=endpoint,
-        reader=RegularFilePresenceReader(clock=lambda: PRESENCE_NOW),
+        reader=RegularFilePresenceReader(
+            clock=lambda: PRESENCE_NOW,
+            group_policy=DedicatedGroupPolicy(
+                group_name="test-phase9-oob",
+                group_gid=path.lstat().st_gid,
+                gate_principal=endpoint.gate_principal,
+                expected_owner_principal=endpoint.expected_owner_principal,
+            ),
+            group_member_resolver=lambda _name, _gid: frozenset(
+                {
+                    int(endpoint.gate_principal.removeprefix("uid:")),
+                    int(endpoint.expected_owner_principal.removeprefix("uid:")),
+                }
+            ),
+        ),
         clock=lambda: PRESENCE_NOW,
     )
 
@@ -142,7 +157,7 @@ def test_t1_gate_owned_real_file_is_same_endpoint_and_not_authenticated(
     challenge = _presence_challenge()
     path = tmp_path / "owner-response.json"
     path.write_bytes(_presence_payload(challenge))
-    path.chmod(0o600)
+    path.chmod(0o640)
     gate_principal = _runtime_gate_principal()
 
     inputs = _real_presence_channel(
@@ -172,7 +187,7 @@ def test_t2_different_owner_principal_can_authenticate_only_under_simulation(
     challenge = _presence_challenge()
     path = tmp_path / "owner-response.json"
     path.write_bytes(_presence_payload(challenge))
-    path.chmod(0o600)
+    path.chmod(0o640)
     simulated_owner = _owner_principal_distinct_from_gate()
     original_read = RegularFilePresenceReader.read
 
@@ -234,11 +249,11 @@ def test_t3_real_oob_failures_close_without_synthetic_fallback(
         monkeypatch.setattr(RegularFilePresenceReader, "read", timed_out_read)
     elif failure_kind == "principal":
         response_path.write_text("{}", encoding="utf-8")
-        response_path.chmod(0o600)
+        response_path.chmod(0o640)
         expected_owner = _owner_principal_distinct_from_gate()
     elif failure_kind == "json":
         response_path.write_text("{not-json", encoding="utf-8")
-        response_path.chmod(0o600)
+        response_path.chmod(0o640)
 
     output = io.StringIO()
     factory = CountingRealExecutorFactory()
@@ -248,6 +263,11 @@ def test_t3_real_oob_failures_close_without_synthetic_fallback(
         real_executor_factory=factory,
         expected_owner_principal=expected_owner,
         oob_directory=oob_directory,
+        oob_group_name="test-phase9-oob",
+        oob_group_gid=oob_directory.lstat().st_gid,
+        group_member_resolver=lambda _name, _gid: frozenset(
+            {os.getuid(), int(expected_owner.removeprefix("uid:"))}
+        ),
     )
 
     text = output.getvalue()
@@ -310,6 +330,11 @@ def test_windows_mounted_oob_directory_is_rejected_before_rehearsal() -> None:
         output=output,
         expected_owner_principal=_owner_principal_distinct_from_gate(),
         oob_directory=Path("/mnt/c/unsafe-phase9-oob"),
+        oob_group_name="test-phase9-oob",
+        oob_group_gid=os.getgid(),
+        group_member_resolver=lambda _name, _gid: frozenset(
+            {os.getuid(), os.getuid() + 1}
+        ),
         workspace_factory=forbidden_workspace,
     )
 

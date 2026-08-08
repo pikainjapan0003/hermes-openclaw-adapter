@@ -8,6 +8,7 @@ import os
 from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Callable
 
 import pytest
@@ -15,6 +16,7 @@ import pytest
 from app.phase9_gate import FreshChallenge
 from app.phase9_presence import compute_owner_presence
 from app.phase9_presence_channel import (
+    DedicatedGroupPolicy,
     JsonPresenceChannel,
     PresenceChannelError,
     PresenceEndpoint,
@@ -120,6 +122,20 @@ def _channel(
     clock: Callable[[], datetime] = lambda: NOW,
 ) -> JsonPresenceChannel:
     return JsonPresenceChannel(endpoint=endpoint, reader=reader, clock=clock)
+
+
+def _group_policy(
+    endpoint: PresenceEndpoint,
+    *,
+    group_gid: int,
+    group_name: str = "test-phase9-oob",
+) -> DedicatedGroupPolicy:
+    return DedicatedGroupPolicy(
+        group_name=group_name,
+        group_gid=group_gid,
+        gate_principal=endpoint.gate_principal,
+        expected_owner_principal=endpoint.expected_owner_principal,
+    )
 
 
 @pytest.mark.parametrize(
@@ -265,19 +281,168 @@ def test_regular_file_reader_is_read_only_owner_checked_and_owner_only(
 ) -> None:
     path = tmp_path / "owner-response.json"
     path.write_bytes(_payload())
-    path.chmod(0o600)
+    path.chmod(0o640)
     endpoint = _endpoint(
         path,
         gate_principal="uid:9999",
         owner_principal=f"uid:{os.getuid()}",
     )
-    reader = RegularFilePresenceReader(clock=lambda: NOW)
+    policy = _group_policy(endpoint, group_gid=path.lstat().st_gid)
+    reader = RegularFilePresenceReader(
+        clock=lambda: NOW,
+        group_policy=policy,
+        group_member_resolver=lambda _name, _gid: policy.allowed_member_uids,
+    )
     before = path.read_bytes()
 
     inputs = _channel(endpoint, reader).collect_after_second_challenge(_challenge())
 
     assert inputs.same_endpoint is False
     assert path.read_bytes() == before
+
+
+@pytest.mark.parametrize(
+    ("mode", "old_rule_accepted", "new_rule_accepted"),
+    (
+        (0o600, True, False),
+        (0o640, False, True),
+        (0o644, False, False),
+        (0o604, False, False),
+    ),
+)
+def test_real_file_permission_matrix_matches_dedicated_group_rule(
+    tmp_path: Path,
+    mode: int,
+    old_rule_accepted: bool,
+    new_rule_accepted: bool,
+) -> None:
+    path = tmp_path / f"owner-response-{mode:o}.json"
+    path.write_bytes(_payload())
+    path.chmod(mode)
+    endpoint = _endpoint(
+        path,
+        gate_principal=f"uid:{os.getuid() + 1}",
+        owner_principal=f"uid:{os.getuid()}",
+    )
+    policy = _group_policy(endpoint, group_gid=path.lstat().st_gid)
+    reader = RegularFilePresenceReader(
+        clock=lambda: NOW,
+        group_policy=policy,
+        group_member_resolver=lambda _name, _gid: policy.allowed_member_uids,
+    )
+
+    observation = reader.read(endpoint, deadline=NOW + timedelta(seconds=30))
+
+    assert (mode & 0o077 == 0) is old_rule_accepted
+    assert observation.permissions_verified is new_rule_accepted
+
+
+@pytest.mark.parametrize("other_bit", (0o001, 0o002, 0o004))
+def test_real_file_other_access_bits_are_always_rejected(
+    tmp_path: Path,
+    other_bit: int,
+) -> None:
+    path = tmp_path / f"owner-response-other-{other_bit:o}.json"
+    path.write_bytes(_payload())
+    path.chmod(0o640 | other_bit)
+    endpoint = _endpoint(
+        path,
+        gate_principal=f"uid:{os.getuid() + 1}",
+        owner_principal=f"uid:{os.getuid()}",
+    )
+    policy = _group_policy(endpoint, group_gid=path.lstat().st_gid)
+
+    observation = RegularFilePresenceReader(
+        clock=lambda: NOW,
+        group_policy=policy,
+        group_member_resolver=lambda _name, _gid: policy.allowed_member_uids,
+    ).read(endpoint, deadline=NOW + timedelta(seconds=30))
+
+    assert observation.permissions_verified is False
+
+
+def test_real_file_wrong_group_is_rejected(tmp_path: Path) -> None:
+    path = tmp_path / "owner-response-wrong-group.json"
+    path.write_bytes(_payload())
+    path.chmod(0o640)
+    endpoint = _endpoint(
+        path,
+        gate_principal=f"uid:{os.getuid() + 1}",
+        owner_principal=f"uid:{os.getuid()}",
+    )
+    policy = _group_policy(endpoint, group_gid=path.lstat().st_gid + 1)
+
+    observation = RegularFilePresenceReader(
+        clock=lambda: NOW,
+        group_policy=policy,
+        group_member_resolver=lambda _name, _gid: policy.allowed_member_uids,
+    ).read(endpoint, deadline=NOW + timedelta(seconds=30))
+
+    assert observation.permissions_verified is False
+
+
+def test_real_file_wrong_owner_is_rejected_by_channel(tmp_path: Path) -> None:
+    path = tmp_path / "owner-response-wrong-owner.json"
+    path.write_bytes(_payload())
+    path.chmod(0o640)
+    endpoint = _endpoint(
+        path,
+        gate_principal=f"uid:{os.getuid()}",
+        owner_principal=f"uid:{os.getuid() + 1}",
+    )
+    policy = _group_policy(endpoint, group_gid=path.lstat().st_gid)
+    reader = RegularFilePresenceReader(
+        clock=lambda: NOW,
+        group_policy=policy,
+        group_member_resolver=lambda _name, _gid: policy.allowed_member_uids,
+    )
+
+    with pytest.raises(PresenceChannelError):
+        _channel(endpoint, reader).collect_after_second_challenge(_challenge())
+
+
+def test_simulated_cross_uid_owner_and_dedicated_group_success(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """This simulates st_uid; real cross-uid acceptance still needs Owner proof."""
+
+    path = tmp_path / "owner-response-simulated-cross-uid.json"
+    path.write_bytes(_payload())
+    path.chmod(0o640)
+    gate_uid = os.getuid()
+    owner_uid = gate_uid + 1
+    endpoint = _endpoint(
+        path,
+        gate_principal=f"uid:{gate_uid}",
+        owner_principal=f"uid:{owner_uid}",
+    )
+    actual = path.lstat()
+    simulated = SimpleNamespace(
+        st_mode=actual.st_mode,
+        st_uid=owner_uid,
+        st_gid=actual.st_gid,
+    )
+    original_lstat = Path.lstat
+
+    def simulated_lstat(candidate: Path) -> object:
+        if candidate == path:
+            return simulated
+        return original_lstat(candidate)
+
+    monkeypatch.setattr(Path, "lstat", simulated_lstat)
+    policy = _group_policy(endpoint, group_gid=actual.st_gid)
+    reader = RegularFilePresenceReader(
+        clock=lambda: NOW,
+        group_policy=policy,
+        group_member_resolver=lambda _name, _gid: policy.allowed_member_uids,
+    )
+
+    inputs = _channel(endpoint, reader).collect_after_second_challenge(_challenge())
+
+    assert inputs.same_endpoint is False
+    assert inputs.owner_response_authenticated is not None
+    assert inputs.owner_response_authenticated.verified is True
 
 
 def test_validity_configuration_cannot_exceed_ten_minutes(tmp_path: Path) -> None:

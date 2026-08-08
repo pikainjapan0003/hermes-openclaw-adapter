@@ -49,11 +49,14 @@ from app.phase9_preflight import (
 )
 from app.phase9_presence import PresenceInputs
 from app.phase9_presence_channel import (
+    DedicatedGroupPolicy,
+    GroupMemberResolver,
     JsonPresenceChannel,
     PresenceChannelError,
     PresenceEndpoint,
     PresenceRead,
     RegularFilePresenceReader,
+    resolve_system_group_member_uids,
 )
 from app.phase9_token import TokenPresentation
 from app.phase9_token_issuer import (
@@ -359,6 +362,9 @@ def run_dry_rehearsal(
     real_executor_factory: RealExecutorFactory,
     expected_owner_principal: str,
     oob_directory: Path | None = None,
+    oob_group_name: str | None = None,
+    oob_group_gid: int | None = None,
+    group_member_resolver: GroupMemberResolver = resolve_system_group_member_uids,
     synthetic_presence: bool = False,
     workspace_factory: WorkspaceFactory = _workspace_factory,
 ) -> RehearsalReport:
@@ -368,6 +374,13 @@ def run_dry_rehearsal(
         raise ValueError("synthetic presence and real OOB directory are mutually exclusive")
     if not synthetic_presence and oob_directory is None:
         raise ValueError("real OOB directory is required")
+    if not synthetic_presence and (
+        not isinstance(oob_group_name, str)
+        or not oob_group_name.strip()
+        or type(oob_group_gid) is not int
+        or oob_group_gid < 0
+    ):
+        raise ValueError("real OOB dedicated group is required")
     real_oob_directory = (
         None if oob_directory is None else _validated_oob_directory(oob_directory)
     )
@@ -469,7 +482,16 @@ def run_dry_rehearsal(
             )
             presence_channel = JsonPresenceChannel(
                 endpoint=endpoint,
-                reader=RegularFilePresenceReader(clock=clock),
+                reader=RegularFilePresenceReader(
+                    clock=clock,
+                    group_policy=DedicatedGroupPolicy(
+                        group_name=oob_group_name or "",
+                        group_gid=oob_group_gid if oob_group_gid is not None else -1,
+                        gate_principal=gate_principal,
+                        expected_owner_principal=expected_owner_principal,
+                    ),
+                    group_member_resolver=group_member_resolver,
+                ),
                 clock=clock,
             )
         else:
@@ -539,6 +561,9 @@ def main(
     real_executor_factory: RealExecutorFactory | None = None,
     expected_owner_principal: str | None = None,
     oob_directory: Path | None = None,
+    oob_group_name: str | None = None,
+    oob_group_gid: int | None = None,
+    group_member_resolver: GroupMemberResolver = resolve_system_group_member_uids,
     workspace_factory: WorkspaceFactory = _workspace_factory,
 ) -> int:
     """Select rehearsal mode; every real or malformed request stays denied."""
@@ -575,6 +600,16 @@ def main(
         )
         return 2
     if oob_directory is not None:
+        if (
+            not isinstance(oob_group_name, str)
+            or not oob_group_name.strip()
+            or type(oob_group_gid) is not int
+            or oob_group_gid < 0
+        ):
+            output.write(
+                "停止：未設定 OOB 專用群組名稱與 gid；請先執行唯讀接線自檢。\n"
+            )
+            return 2
         try:
             oob_directory = _validated_oob_directory(oob_directory)
         except ValueError:
@@ -589,6 +624,9 @@ def main(
             real_executor_factory=factory,
             expected_owner_principal=expected_owner_principal,
             oob_directory=oob_directory,
+            oob_group_name=oob_group_name,
+            oob_group_gid=oob_group_gid,
+            group_member_resolver=group_member_resolver,
             synthetic_presence=synthetic_presence,
             workspace_factory=workspace_factory,
         )
@@ -608,6 +646,13 @@ def main(
 
 if __name__ == "__main__":
     oob_directory_text = os.environ.get("PHASE9_OOB_DIRECTORY")
+    oob_group_gid_text = os.environ.get("PHASE9_OOB_GROUP_GID")
+    try:
+        oob_group_gid = (
+            int(oob_group_gid_text) if oob_group_gid_text is not None else None
+        )
+    except ValueError:
+        oob_group_gid = None
     raise SystemExit(
         main(
             sys.argv[1:],
@@ -616,6 +661,8 @@ if __name__ == "__main__":
             oob_directory=(
                 Path(oob_directory_text) if oob_directory_text else None
             ),
+            oob_group_name=os.environ.get("PHASE9_OOB_GROUP_NAME"),
+            oob_group_gid=oob_group_gid,
         )
     )
 

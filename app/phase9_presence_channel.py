@@ -11,7 +11,9 @@ implement the same read-only protocol.
 from __future__ import annotations
 
 import hashlib
+import grp
 import json
+import pwd
 import re
 import stat
 from dataclasses import dataclass
@@ -27,6 +29,8 @@ from app.phase9_presence import EvidenceSource, PredicateEvidence, PresenceInput
 MAX_PRESENCE_VALIDITY_SECONDS = 10 * 60
 MAX_RESPONSE_BYTES = 64 * 1024
 _DIGEST_RE = re.compile(r"^[0-9a-f]{64}$")
+_UID_PRINCIPAL_RE = re.compile(r"^uid:(0|[1-9][0-9]*)$")
+DEDICATED_GROUP_FILE_MODE = 0o640
 _ALLOWED_RESPONSE_KEYS = frozenset(
     {
         "action_hash",
@@ -40,6 +44,75 @@ _ALLOWED_RESPONSE_KEYS = frozenset(
 )
 class PresenceChannelError(RuntimeError):
     """Payload-free fail-closed response for an unusable Owner channel."""
+
+
+@dataclass(frozen=True)
+class DedicatedGroupPolicy:
+    """Injected owner/gate group boundary for one regular-file endpoint."""
+
+    group_name: str
+    group_gid: int
+    gate_principal: str
+    expected_owner_principal: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.group_name, str) or not self.group_name.strip():
+            raise PresenceChannelError("presence endpoint configuration is invalid")
+        if type(self.group_gid) is not int or self.group_gid < 0:
+            raise PresenceChannelError("presence endpoint configuration is invalid")
+        for principal in (self.gate_principal, self.expected_owner_principal):
+            if _UID_PRINCIPAL_RE.fullmatch(principal) is None:
+                raise PresenceChannelError("presence endpoint configuration is invalid")
+
+    @property
+    def allowed_member_uids(self) -> frozenset[int]:
+        return frozenset(
+            {
+                int(self.gate_principal.removeprefix("uid:")),
+                int(self.expected_owner_principal.removeprefix("uid:")),
+            }
+        )
+
+
+class GroupMemberResolver(Protocol):
+    def __call__(self, group_name: str, group_gid: int) -> frozenset[int]:
+        """Return every uid that can access files through the named group."""
+
+
+def resolve_system_group_member_uids(
+    group_name: str,
+    group_gid: int,
+) -> frozenset[int]:
+    """Resolve primary and supplementary members, rejecting name/gid drift."""
+
+    try:
+        group = grp.getgrgid(group_gid)
+        if group.gr_name != group_name:
+            raise PresenceChannelError("owner presence response is unavailable")
+        member_uids = {
+            record.pw_uid for record in pwd.getpwall() if record.pw_gid == group_gid
+        }
+        for member_name in group.gr_mem:
+            member_uids.add(pwd.getpwnam(member_name).pw_uid)
+    except (KeyError, OSError, ValueError) as exc:
+        raise PresenceChannelError("owner presence response is unavailable") from exc
+    return frozenset(member_uids)
+
+
+def dedicated_group_access_verified(
+    *,
+    file_mode: int,
+    file_gid: int,
+    policy: DedicatedGroupPolicy,
+    actual_member_uids: frozenset[int],
+) -> bool:
+    """Accept exactly owner-rw/group-r/no-other with the dedicated membership."""
+
+    return (
+        stat.S_IMODE(file_mode) == DEDICATED_GROUP_FILE_MODE
+        and file_gid == policy.group_gid
+        and actual_member_uids == policy.allowed_member_uids
+    )
 
 
 @dataclass(frozen=True)
@@ -99,10 +172,18 @@ class PresenceReader(Protocol):
 
 
 class RegularFilePresenceReader:
-    """Read one owner-only regular file without following symlinks or writing."""
+    """Read one owner-plus-dedicated-group file without following symlinks."""
 
-    def __init__(self, *, clock: Callable[[], datetime]) -> None:
+    def __init__(
+        self,
+        *,
+        clock: Callable[[], datetime],
+        group_policy: DedicatedGroupPolicy,
+        group_member_resolver: GroupMemberResolver = resolve_system_group_member_uids,
+    ) -> None:
         self._clock = clock
+        self._group_policy = group_policy
+        self._group_member_resolver = group_member_resolver
 
     def read(
         self,
@@ -117,7 +198,22 @@ class RegularFilePresenceReader:
             details = endpoint.path.lstat()
             if not stat.S_ISREG(details.st_mode) or endpoint.path.is_symlink():
                 raise PresenceChannelError("owner presence response is unavailable")
-            permissions_verified = stat.S_IMODE(details.st_mode) & 0o077 == 0
+            if (
+                endpoint.gate_principal != self._group_policy.gate_principal
+                or endpoint.expected_owner_principal
+                != self._group_policy.expected_owner_principal
+            ):
+                raise PresenceChannelError("owner presence response is unavailable")
+            member_uids = self._group_member_resolver(
+                self._group_policy.group_name,
+                self._group_policy.group_gid,
+            )
+            permissions_verified = dedicated_group_access_verified(
+                file_mode=details.st_mode,
+                file_gid=details.st_gid,
+                policy=self._group_policy,
+                actual_member_uids=member_uids,
+            )
             with endpoint.path.open("rb") as handle:
                 payload = handle.read(MAX_RESPONSE_BYTES + 1)
             observed = _as_utc(self._clock())
@@ -305,6 +401,9 @@ class JsonPresenceChannel:
 
 
 __all__ = [
+    "DEDICATED_GROUP_FILE_MODE",
+    "DedicatedGroupPolicy",
+    "GroupMemberResolver",
     "JsonPresenceChannel",
     "MAX_PRESENCE_VALIDITY_SECONDS",
     "PresenceChannelError",
@@ -312,4 +411,6 @@ __all__ = [
     "PresenceRead",
     "PresenceReader",
     "RegularFilePresenceReader",
+    "dedicated_group_access_verified",
+    "resolve_system_group_member_uids",
 ]
